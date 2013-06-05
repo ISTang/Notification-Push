@@ -1,0 +1,25 @@
+hset source:78F11945-9C67-474D-9307-E617CD20E5F6 title "搜狐每日焦点图片"
+hset source:78F11945-9C67-474D-9307-E617CD20E5F6 description "最新、最快新闻资讯。"
+hset source:78F11945-9C67-474D-9307-E617CD20E5F6 url  "http://rss.news.sohu.com/rss/pfocus.xml"
+sadd source:set 78F11945-9C67-474D-9307-E617CD20E5F6 
+
+
+hset source:B892306F-FC6F-4137-9D3A-C804BCC40AE9 title "搜狐每日焦点新闻"
+hset source:B892306F-FC6F-4137-9D3A-C804BCC40AE9 description "即时报道国内外时政大事，解读环球焦点事件。"
+hset source:B892306F-FC6F-4137-9D3A-C804BCC40AE9 url  "http://rss.news.sohu.com/rss/focus.xml"
+sadd source:set B892306F-FC6F-4137-9D3A-C804BCC40AE9 
+
+hset source:7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 title "国内新闻"
+hset source:7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 description "立足高端，关注民生，为您解读国家的大政方针，为您带来更多更快的民生资讯。"
+hset source:7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 url  "http://rss.news.sohu.com/rss/guonei.xml"
+sadd source:set 7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 
+
+
+hset source:0516FB76-AE24-4369-BF6B-EC244E0AD735 title "国际新闻"
+hset source:0516FB76-AE24-4369-BF6B-EC244E0AD735 description "着眼全球政经大事，透视世界焦点内幕，为您分析时代局势，网罗天下名人轶闻。"
+hset source:0516FB76-AE24-4369-BF6B-EC244E0AD735 url  "http://rss.news.sohu.com/rss/guoji.xml"
+sadd source:set 0516FB76-AE24-4369-BF6B-EC244E0AD735 
+
+
+
+
