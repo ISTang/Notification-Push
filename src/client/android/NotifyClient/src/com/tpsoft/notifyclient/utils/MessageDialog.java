@@ -32,8 +32,12 @@ import com.tpsoft.notifyclient.R;
 
 public class MessageDialog extends Activity implements OnTouchListener {
 
-	private static final int TOAST_INFO_TIME = 1000*60*5;
-	private static final int TOAST_ALERT_TIME = 1000*60*10;
+	private static final int INFO_SOUND = 1;
+	private static final int ALERT_SOUND = 2;
+	private static PlaySoundPool playSoundPool;
+
+	private static final int POPUP_INFO_TIME = 1000*60*5;
+	private static final int POPUP_ALERT_TIME = 1000*60*10;
 
 	private HttpDownloader httpDownloader = new HttpDownloader();
 
@@ -51,6 +55,12 @@ public class MessageDialog extends Activity implements OnTouchListener {
 		setTheme(R.style.Transparent);
 		setContentView(R.layout.transparent);
 
+		// 准备音效
+		playSoundPool = new PlaySoundPool(this);
+		playSoundPool.loadSfx(R.raw.info, INFO_SOUND);
+		playSoundPool.loadSfx(R.raw.alert, ALERT_SOUND);
+
+		// 显示消息
 		showMessage();
 
 		super.onCreate(savedInstanceState);
@@ -195,7 +205,7 @@ public class MessageDialog extends Activity implements OnTouchListener {
 				closeAlertDialog(alertDialog, t);
 			}
 
-		}, msgBundle.getBoolean("alert") ? TOAST_ALERT_TIME : TOAST_INFO_TIME);
+		}, msgBundle.getBoolean("alert") ? POPUP_ALERT_TIME : POPUP_INFO_TIME);
 
 		ImageButton closeButton = (ImageButton) notifyView
 				.findViewById(R.id.closeButton);
@@ -207,6 +217,9 @@ public class MessageDialog extends Activity implements OnTouchListener {
 			}
 		});
 
+		if (msgBundle.getBoolean("playSound")) {
+			playSoundPool.play(msgBundle.getBoolean("alert") ? ALERT_SOUND : INFO_SOUND, 0);
+		}
 		alertDialog.show();
 	}
 

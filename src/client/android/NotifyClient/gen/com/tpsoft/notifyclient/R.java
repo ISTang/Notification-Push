@@ -11,7 +11,19 @@ public final class R {
     public static final class attr {
     }
     public static final class color {
+        public static final int app_background=0x7f080001;
+        public static final int dark_red=0x7f080003;
+        public static final int light_red=0x7f080002;
+        public static final int tab_indicator_text=0x7f080006;
+        public static final int text_tab_selected=0x7f080004;
+        public static final int text_tab_unselected=0x7f080005;
         public static final int transparent_background=0x7f080000;
+    }
+    public static final class dimen {
+        public static final int corner_radius=0x7f090000;
+        public static final int tab_space=0x7f090002;
+        public static final int tab_space_plus1=0x7f090003;
+        public static final int tab_space_top=0x7f090001;
     }
     public static final class drawable {
         public static final int alert_bg=0x7f020000;
@@ -20,71 +32,91 @@ public final class R {
         public static final int ic_launcher=0x7f020003;
         public static final int info_bg=0x7f020004;
         public static final int info_icon=0x7f020005;
+        public static final int log=0x7f020006;
+        public static final int message=0x7f020007;
+        public static final int tab_focus=0x7f020008;
+        public static final int tab_indicator=0x7f020009;
+        public static final int tab_info=0x7f02000a;
+        public static final int tab_info_dark=0x7f02000b;
+        public static final int tab_info_light=0x7f02000c;
+        public static final int tab_press=0x7f02000d;
+        public static final int tab_selected=0x7f02000e;
+        public static final int tab_unselected=0x7f02000f;
     }
     public static final class id {
-        public static final int app_notification_id=0x7f090000;
-        public static final int closeButton=0x7f090005;
-        public static final int log=0x7f090002;
-        public static final int menu_settings=0x7f09000c;
-        public static final int menu_start=0x7f09000a;
-        public static final int menu_stop=0x7f09000b;
-        public static final int message=0x7f090003;
-        public static final int msgAttachment=0x7f090008;
-        public static final int msgBody=0x7f090007;
-        public static final int msgLevel=0x7f090004;
-        public static final int msgTitle=0x7f090006;
-        public static final int msgUrl=0x7f090009;
-        public static final int scrollView1=0x7f090001;
+        public static final int app_notification_id=0x7f0a0000;
+        public static final int closeButton=0x7f0a0008;
+        public static final int icon=0x7f0a000d;
+        public static final int log=0x7f0a0005;
+        public static final int logContainer=0x7f0a0004;
+        public static final int menu_settings=0x7f0a0011;
+        public static final int menu_start=0x7f0a000f;
+        public static final int menu_stop=0x7f0a0010;
+        public static final int message=0x7f0a0006;
+        public static final int msg=0x7f0a0003;
+        public static final int msgAttachment=0x7f0a000b;
+        public static final int msgBody=0x7f0a000a;
+        public static final int msgContainer=0x7f0a0002;
+        public static final int msgLevel=0x7f0a0007;
+        public static final int msgTitle=0x7f0a0009;
+        public static final int msgUrl=0x7f0a000c;
+        public static final int tab_relative_layout=0x7f0a0001;
+        public static final int title=0x7f0a000e;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
         public static final int notification_popup=0x7f030001;
         public static final int roundborder=0x7f030002;
-        public static final int transparent=0x7f030003;
+        public static final int tab_indicator=0x7f030003;
+        public static final int transparent=0x7f030004;
     }
     public static final class menu {
-        public static final int activity_main=0x7f0a0000;
+        public static final int activity_main=0x7f0b0000;
     }
     public static final class raw {
         public static final int alert=0x7f050000;
         public static final int info=0x7f050001;
     }
     public static final class string {
-        public static final int app_exit=0x7f060008;
-        public static final int app_log=0x7f060007;
+        public static final int app_exit=0x7f060007;
         public static final int app_name=0x7f060005;
         public static final int app_running=0x7f060006;
-        public static final int client_id=0x7f060016;
-        public static final int client_id_summary=0x7f06001b;
-        public static final int close_button=0x7f060023;
-        public static final int emulate_sms=0x7f060017;
-        public static final int emulate_sms_summary=0x7f06001c;
-        public static final int menu_settings=0x7f06000d;
-        public static final int menu_start=0x7f06000e;
-        public static final int menu_stop=0x7f06000f;
-        public static final int msg_attachment=0x7f060021;
-        public static final int msg_body=0x7f060020;
-        public static final int msg_level=0x7f06001e;
-        public static final int msg_title=0x7f06001f;
-        public static final int msg_url=0x7f060022;
-        public static final int new_message=0x7f06000b;
+        public static final int client_id=0x7f060015;
+        public static final int client_id_summary=0x7f06001a;
+        public static final int close_button=0x7f060022;
+        public static final int emulate_sms=0x7f060016;
+        public static final int emulate_sms_summary=0x7f06001b;
+        public static final int log=0x7f060027;
+        public static final int menu_settings=0x7f06000c;
+        public static final int menu_start=0x7f06000d;
+        public static final int menu_stop=0x7f06000e;
+        public static final int mock=0x7f060023;
+        public static final int msg=0x7f060025;
+        public static final int msg_attachment=0x7f060020;
+        public static final int msg_body=0x7f06001f;
+        public static final int msg_level=0x7f06001d;
+        public static final int msg_title=0x7f06001e;
+        public static final int msg_url=0x7f060021;
+        public static final int new_message=0x7f06000a;
         public static final int notification_message=0x7f060003;
         public static final int notification_title=0x7f060002;
-        public static final int play_sound=0x7f060018;
-        public static final int play_sound_summary=0x7f06001d;
-        public static final int receiver_starting=0x7f060009;
-        public static final int receiver_stopping=0x7f06000a;
-        public static final int server_host=0x7f060013;
-        public static final int server_host_summary=0x7f060019;
-        public static final int server_port=0x7f060014;
-        public static final int server_port_summary=0x7f06001a;
+        public static final int play_sound=0x7f060017;
+        public static final int play_sound_summary=0x7f06001c;
+        public static final int receiver_starting=0x7f060008;
+        public static final int receiver_stopping=0x7f060009;
+        public static final int server_host=0x7f060012;
+        public static final int server_host_summary=0x7f060018;
+        public static final int server_port=0x7f060013;
+        public static final int server_port_summary=0x7f060019;
         public static final int service_log=0x7f060004;
         public static final int service_name=0x7f060000;
-        public static final int service_started=0x7f060010;
-        public static final int service_stopped=0x7f060011;
-        public static final int settings=0x7f06000c;
-        public static final int settings_client=0x7f060015;
-        public static final int settings_server=0x7f060012;
+        public static final int service_started=0x7f06000f;
+        public static final int service_stopped=0x7f060010;
+        public static final int settings=0x7f06000b;
+        public static final int settings_client=0x7f060014;
+        public static final int settings_server=0x7f060011;
+        public static final int tab_1=0x7f060024;
+        public static final int tab_2=0x7f060026;
         public static final int ticker_text=0x7f060001;
     }
     public static final class style {

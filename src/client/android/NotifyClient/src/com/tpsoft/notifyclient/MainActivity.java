@@ -5,10 +5,10 @@ import java.util.Date;
 import java.util.Locale;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.TabActivity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentValues;
@@ -22,23 +22,26 @@ import android.os.Environment;
 import android.os.Handler;
 import android.provider.ContactsContract;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.tpsoft.notifyclient.model.UserSettings;
-import com.tpsoft.notifyclient.utils.HttpDownloader;
 import com.tpsoft.notifyclient.utils.MessageDialog;
-import com.tpsoft.notifyclient.utils.PlaySoundPool;
 import com.tpsoft.pushnotification.model.AppParams;
 import com.tpsoft.pushnotification.model.LoginParams;
 import com.tpsoft.pushnotification.model.MyMessage;
 import com.tpsoft.pushnotification.model.NetworkParams;
 import com.tpsoft.pushnotification.service.NotifyPushService;
 
+@SuppressWarnings("deprecation")
 @SuppressLint("SimpleDateFormat")
-public class MainActivity extends Activity {
+public class MainActivity extends TabActivity {
 
 	// //////////////////////////////////////
 	private BroadcastReceiver mExternalStorageReceiver;
@@ -47,11 +50,6 @@ public class MainActivity extends Activity {
 
 	// //////////////////////////////////////
 	private static final boolean ALERT_MSG = false;
-
-	private static final int INFO_SOUND = 1;
-	private static final int ALERT_SOUND = 2;
-	// private static final boolean TOAST_WITH_SOUND = true;
-	private PlaySoundPool playSoundPool;
 
 	// //////////////////////////////////////
 	private static final String SMS_SENDER_NUMBER = "10086";
@@ -65,8 +63,11 @@ public class MainActivity extends Activity {
 	private UserSettings userSettings;
 
 	// //////////////////////////////////////
-	private static final int MAX_LOG_COUNT = 512;
+	private static final int MAX_LOG_COUNT = 500;
+	private static final int MAX_MSG_COUNT = 500;
+	private TextView msg;
 	private TextView logger;
+	private int msgCount = 0;
 	private int logCount = 0;
 
 	// //////////////////////////////////////
@@ -78,23 +79,23 @@ public class MainActivity extends Activity {
 	private MyBroadcastReceiver myBroadcastReceiver;
 	private boolean clientStarted = true;
 
+	private TabHost tabHost;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		setTabs();
+
 		// 装入用户设置
 		loadUserSettings();
-
-		// 准备音效
-		playSoundPool = new PlaySoundPool(this);
-		playSoundPool.loadSfx(R.raw.info, INFO_SOUND);
-		playSoundPool.loadSfx(R.raw.alert, ALERT_SOUND);
 
 		// 准备通知
 		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
-		// 初始化日志控件
+		// 初始化消息和日志控件
+		msg = (TextView) findViewById(R.id.msg);
 		logger = (TextView) findViewById(R.id.log);
 
 		// 开始监视外部存储器状态
@@ -198,6 +199,37 @@ public class MainActivity extends Activity {
 		return super.dispatchKeyEvent(event);
 	}
 
+	private void setTabs() {
+		tabHost = getTabHost();
+
+		addTab(R.string.tab_1, R.drawable.message);
+		addTab(R.string.tab_2, R.drawable.log);
+	}
+
+	private void addTab(int labelId, int drawableId) {
+		TabHost.TabSpec spec = tabHost.newTabSpec("tab" + labelId);
+
+		View tabIndicator = LayoutInflater.from(this).inflate(
+				R.layout.tab_indicator, getTabWidget(), false);
+
+		TextView title = (TextView) tabIndicator.findViewById(R.id.title);
+		title.setText(labelId);
+		ImageView icon = (ImageView) tabIndicator.findViewById(R.id.icon);
+		icon.setImageResource(drawableId);
+
+		spec.setIndicator(tabIndicator);
+		switch (labelId) {
+		case R.string.tab_1:
+			spec.setContent(R.id.msgContainer);
+			break;
+		case R.string.tab_2:
+			spec.setContent(R.id.logContainer);
+			break;
+		}
+		tabHost.addTab(spec);
+
+	}
+
 	private void startMessageReceiver() {
 		Toast.makeText(this, getText(R.string.receiver_starting),
 				Toast.LENGTH_SHORT).show();
@@ -251,13 +283,7 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	@SuppressWarnings("deprecation")
 	private void showNotification(String msgText) {
-		// 用声音提示有新消息
-		if (userSettings.isPlaySound()) {
-			playSoundPool.play(ALERT_MSG ? ALERT_SOUND : INFO_SOUND, 0);
-		}
-
 		// 解析消息文本
 		MyMessage message;
 		try {
@@ -308,8 +334,7 @@ public class MainActivity extends Activity {
 
 			mNM.notify(R.id.app_notification_id, notification);
 		} else {
-			// 日志
-			showLog("[消息] " + formattedMessage);
+			showMsg(formattedMessage);
 		}
 
 		// 为消息对话框准备数据
@@ -326,11 +351,24 @@ public class MainActivity extends Activity {
 		}
 		msgParams.putBoolean("showPic", (attachmentUrl != null
 				&& mExternalStorageAvailable && mExternalStorageWriteable));
+		if (userSettings.isPlaySound())
+			msgParams.putBoolean("playSound", true);
 
 		// 显示消息对话框
 		Intent i = new Intent(MainActivity.this, MessageDialog.class);
 		i.putExtras(msgParams);
 		startActivity(i);
+	}
+
+	private void showMsg(String msgText) {
+		msgText = "[" + sdf.format(new Date()) + "] " + msgText;
+		if (msgCount < MAX_MSG_COUNT) {
+			msg.setText(msgText + "\r\n" + msg.getText());
+			msgCount++;
+		} else {
+			msg.setText(msgText + "\r\n");
+			logCount = 1;
+		}
 	}
 
 	private void showLog(String logText) {

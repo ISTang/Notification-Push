@@ -1,4 +1,7 @@
-
+logs
+files
+download
 .idea
 .metadata
 bin
+.DS_Store

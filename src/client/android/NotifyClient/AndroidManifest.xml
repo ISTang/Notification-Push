@@ -46,7 +46,7 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="android.preference.PreferenceActivity" />
         </activity>
-
+        
         <service android:name="com.tpsoft.pushnotification.service.NotifyPushService" />
         
     </application>

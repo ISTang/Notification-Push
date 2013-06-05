@@ -3,7 +3,6 @@
 
     <string name="app_name">我的消息</string>
     <string name="app_running">消息接收器已启动</string>
-    <string name="app_log"></string>
     <string name="app_exit">长按返回键可退出程序……</string>
 
     <string name="receiver_starting">启动消息接收器……</string>
@@ -39,6 +38,12 @@
     <string name="msg_url">详情URL</string>
     <string name="close_button">关闭</string>
     
+ 	<string name="mock"></string>
+    <string name="tab_1">消息</string>
+    <string name="msg"></string>
+    <string name="tab_2">日志</string>
+    <string name="log"></string>
+    	     
     <item name="app_notification_id" type="id"/>
     
 </resources>

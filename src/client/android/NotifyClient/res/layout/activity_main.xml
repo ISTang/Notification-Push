@@ -1,20 +1,51 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<?xml version="1.0" encoding="utf-8"?>
+<TabHost xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/tabhost"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    tools:context=".MainActivity" >
+    android:paddingTop="@dimen/tab_space_top" >
 
-    <ScrollView
-        android:id="@+id/scrollView1"
+    <RelativeLayout
+        android:id="@+id/tab_relative_layout"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:fillViewport="true" >
+        android:layout_height="fill_parent" >
 
-        <TextView
-            android:id="@+id/log"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_log" />
-    </ScrollView>
+        <TabWidget
+            android:id="@android:id/tabs"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" >
+        </TabWidget>
 
-</RelativeLayout>
+        <FrameLayout
+            android:id="@android:id/tabcontent"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_below="@android:id/tabs" >
+
+            <ScrollView
+                android:id="@+id/msgContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" >
+
+                <TextView
+                    android:id="@+id/msg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/msg" />
+            </ScrollView>
+
+            <ScrollView
+                android:id="@+id/logContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" >
+
+                <TextView
+                    android:id="@+id/log"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/log" />
+            </ScrollView>
+        </FrameLayout>
+    </RelativeLayout>
+
+</TabHost>
