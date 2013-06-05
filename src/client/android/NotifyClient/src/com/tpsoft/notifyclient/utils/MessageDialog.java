@@ -36,8 +36,8 @@ public class MessageDialog extends Activity implements OnTouchListener {
 	private static final int ALERT_SOUND = 2;
 	private static PlaySoundPool playSoundPool;
 
-	private static final int POPUP_INFO_TIME = 1000*60*5;
-	private static final int POPUP_ALERT_TIME = 1000*60*10;
+	private static final int POPUP_INFO_TIME = 1000*30;
+	private static final int POPUP_ALERT_TIME = 1000*40;
 
 	private HttpDownloader httpDownloader = new HttpDownloader();
 
