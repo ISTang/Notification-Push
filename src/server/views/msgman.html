@@ -1,0 +1,232 @@
+<% include header.html %>
+
+<div id="body">
+    <%if (err) {%>
+    <p class="message-error">Error: <%=err%></p>
+    <%} else {%>
+    <p class="message-info">消息总数: <strong><%=count%></strong>&nbsp;&nbsp;
+        <button id="clear-messages">清除消息</button>
+        <button id="push-message">立即推送</button>
+    </p>
+    <table id="messages">
+        <thead>
+        <tr>
+            <th>消息标识</th>
+            <th>应用名称</th>
+            <th>发送者</th>
+            <th>接收者</th>
+            <th>消息标题</th>
+            <th>消息正文</th>
+            <th>消息类型</th>
+            <th>相关链接</th>
+            <th>附件数量</th>
+            <!--<th>需要确认</th>-->
+            <!--<th>回调URL</th>-->
+            <th>生成时间</th>
+            <!--<th>过期时间</th>-->
+            <!--<th>希望发送时间</th>-->
+            <!--<th>实际发送时间</th>-->
+            <!--<th>确认时间</th>-->
+        </tr>
+        </thead>
+        <tbody>
+        <%messages.forEach(function(message){%>
+        <tr>
+            <td><%=message.messageId%></td>
+            <td><%=message.applicationName%></td>
+            <td><%=message.sender?message.sender:""%></td>
+            <td><%=message.receiver?message.receiver:""%></td>
+            <td><%=message.title?message.title:""%></td>
+            <td><%=message.body%></td>
+            <td><%=message.type%></td>
+            <td><%=message.url?message.url:""%></td>
+            <td><%=message.attachmentCount%></td>
+            <!--<td><%=message.needReceipt?"是":"否"%></td>-->
+            <!--<td><%=message.callback?message.callback:""%></td>-->
+            <td><%=message.generateTime%></td>
+            <!--<td><%=message.expiration?message.expiration:""%></td>-->
+            <!--<td><%=message.sendTime?message.sendTime:""%></td>-->
+            <!--<td><%=message.sentTime?message.sentTime:""%></td>-->
+            <!--<td><%=message.receiptTime?message.receiptTime:""%></td>-->
+        </tr>
+        <%})%>
+        </tbody>
+    </table>
+    <%}%>
+</div>
+
+<div id="msgpush-form" title="推送消息">
+    <form id="msgpush" method="post" enctype="multipart/form-data" action="/pushmsg">
+        <fieldset>
+            <div id="pushMethod">
+                <input type="radio" id="broadcast" name="pushMethod" value="broadcast" checked="checked"/><label for="broadcast">广播到所有接收者</label>
+                <input type="radio" id="multicast" name="pushMethod" value="multicast"/><label for="multicast">群发到多个接收者</label>
+                <input type="radio" id="send" name="pushMethod" value="send"/><label for="send">发送到指定接收者</label>
+            </div>
+            <label for="msgTitle">消息标题(可选)</label>
+            <input type="text" id="msgTitle" name="msgTitle" class="text ui-widget-content ui-corner-all"/>
+            <label for="msgBody">消息正文</label>
+            <textarea id="msgBody" name="msgBody" class="text ui-widget-content ui-corner-all"></textarea>
+            <label for="msgUrl">详情URL(可选)</label>
+            <input type="text" id="msgUrl" name="msgUrl" class="text ui-widget-content ui-corner-all"/>
+            <label for="attachment1">附件(可选，仅限图片)</label>
+            <input id="attachment1" type="file" name="attachment1">
+            <!--<input id="attachment2" type="file" name="attachment2">
+            <input id="attachment3" type="file" name="attachment3">
+            <input id="attachment4" type="file" name="attachment4">-->
+            <label for="expiration">过期时间(可选)</label>
+            <input id="expiration" type="text" name="expiration" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd HH:mm:ss'})"/>
+            <label for="appId">应用</label>
+            <select id="appId" name="appId" class="text ui-widget-content ui-corner-all">
+                <!--<option value="id">name</option>-->
+            </select>
+            <div id="receiver-container" style="display:none">
+                <label for="receiver">接收者</label>
+                <ol id="receiver" class="text ui-widget-content ui-corner-all">
+                    <!--<li class="ui-widget-content">Item 1</li>-->
+                </ol>
+                <input type="hidden" id="receivers" name="receivers"/>
+            </div>
+        </fieldset>
+    </form>
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        $('#messages').dataTable({
+            "oLanguage": dataTablesLanguage,
+            //"fnDrawCallback": groupMyTable,
+            "bPaginate": true,
+            "bLengthChange": true,
+            "bFilter": true,
+            "bSort": true,
+            "bInfo": true,
+            "bAutoWidth": true
+        });
+    
+        $("#pushMethod").buttonset();
+        $("#msgType").buttonset();
+        $("#receiver").selectable({
+            stop: function() {
+                var receivers = "";
+                $(".ui-selected", this).each(function(li) {
+                    var index = $("#receiver li").index(this);
+                    var li = $($("#receiver li")[index]);
+                    if (receivers!="") receivers += ",";
+                    receivers += li.attr("data-id");
+                });
+                $("#receivers").val(receivers);
+            }
+        });
+
+        $("#msgpush-form").dialog({
+            autoOpen: false,
+            height: 480,
+            width: 640,
+            modal: true,
+            buttons: {
+                "推送": function() {
+                    var bValid = true;
+
+                    if ( bValid ) {
+                        $("#msgpush").submit();
+                    }
+                },
+                Cancel: function() {
+                    $(this).dialog( "close" );
+                }
+            },
+            close: function() {
+                $("#msgpush")[0].reset();
+                $("#receivers").val("");
+                $("#receiver-container").hide("drop", {}, 1000);
+            }
+        });
+
+        $("#clear-messages")
+                .button()
+                .click(function() {
+                    var confirmed = window.confirm("是否真的要删除所有消息？\r\n\r\n单击“确定”继续。单击“取消”停止。");
+                    if (confirmed) {
+                        $.ajax({
+                            url: '/allMessages',
+                            type: 'DELETE',
+                            success: function(result) {
+                                if (result.success)
+                                    alert("所有消息均已被删除！");
+                                else
+                                    alert("清除消息失败："+result.errmsg+"(#"+result.errcode+")");
+                            },
+                            error: function(err) {
+                                alert("清除消息失败："+err);
+                            }
+                        });
+                    }
+                });
+
+        $("#push-message")
+                .button()
+                .click(function() {
+                    $("#appId option").remove();
+                    $.get("/appInfos", function(object) {
+                        object.appInfos.list.forEach(function(appInfo) {
+                            $("#appId").append("<option value='"+appInfo.id+"'>"+appInfo.name+"</option>");
+                        });
+                    }, "json");
+
+                    $("#receiver li").remove();
+                    $.get("/accounts", function(object) {
+                        object.list.forEach(function(accountInfo) {
+                            if (accountInfo.name!="") {
+                                var name = accountInfo.name;
+                                var tip = null;
+                                if (accountInfo.phone) {
+                                    name = accountInfo.phone;
+                                    tip = accountInfo.name;
+                                    if (accountInfo.email) tip += "("+accountInfo.email+")";
+                                } else if (accountInfo.email) {
+                                    name = accountInfo.email;
+                                    tip = accountInfo.name;
+                                }
+                                $("#receiver").append("<li class='ui-widget-content' data-id='"+accountInfo.name+"'><span "+(tip?"title='"+tip+"'":"")+">"+name+"</span></li>");
+                            }
+                        });
+                    }, "json");
+                    $("#msgpush-form").dialog("open");
+                });
+
+        $("#broadcast")
+                .button()
+                .click(function() {
+                    $("#receiver-container").hide("drop", {}, 1000);
+                });
+        $("#multicast")
+                .button()
+                .click(function() {
+                    $("#receiver-container").removeAttr("style").hide().fadeIn();
+                });
+        $("#send")
+                .button()
+                .click(function() {
+                    $("#receiver-container").removeAttr("style").hide().fadeIn();
+                });
+
+        // bind to the form's submit event
+        $('#msgpush').submit(function() {
+            $(this).ajaxSubmit({dataType:"json",success:showResponse});
+            return false;
+        });
+
+        // post-submit callback
+        function showResponse(data, statusText)  {
+            if (data.success) {
+                alert("要推送的消息已提交。");
+                $("#msgpush-form").dialog( "close" );
+            } else {
+                alert("消息推送失败："+data.errmsg+"(#"+data.errcode+")");
+            }
+        }
+    });
+</script>
+
+<% include footer.html %>

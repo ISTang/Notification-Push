@@ -1,0 +1,78 @@
+<% include header.html %>
+
+<div id="body">
+    <%if (err) {%>
+    <p class="message-error">Error: <%=err%></p>
+    <%} else {%>
+    <p class="message-info">连接总数: <strong><%=count%></strong></p>
+    <table id="connections">
+        <thead>
+        <tr>
+            <th>连接标识</th>
+            <th>
+                开始时间
+            </th>
+            <th>
+                应用名称
+            </th>
+            <th>
+                账号名称
+            </th>
+            <th>
+                连接时长(s)
+            </th>
+            <th>
+                消息通道
+            </th>
+            <th>
+                消息密钥
+            </th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <%connections.forEach(function(connection){%>
+        <tr>
+            <td><%=connection.connId%></td>
+            <td>
+                <%=connection.beginTime%>
+            </td>
+            <td>
+                <%=connection.applicationName%>
+            </td>
+            <td>
+                <%=connection.accountName%>
+            </td>
+            <td>
+                <%=connection.duration%>
+            </td>
+            <td>
+                <%=connection.msgChannel%>
+            </td>
+            <td>
+                <%=connection.msgKey%>
+            </td>
+        </tr>
+        <%})%>
+        </tbody>
+
+    </table>
+    <%}%>
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        $('#connections').dataTable({
+            "oLanguage": dataTablesLanguage,
+            //"fnDrawCallback": groupMyTable,
+            "bPaginate": true,
+            "bLengthChange": true,
+            "bFilter": true,
+            "bSort": true,
+            "bInfo": true,
+            "bAutoWidth": true
+        });
+    });
+</script>
+
+<% include footer.html %>

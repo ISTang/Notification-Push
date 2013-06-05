@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/message"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@drawable/info_bg"
+    android:contentDescription="240sp"
+    android:minWidth="240sp"
+    android:orientation="horizontal"
+    android:padding="10dp"
+    tools:ignore="HardcodedText" >
+
+    <ImageView
+        android:id="@+id/msgLevel"
+        android:layout_width="wrap_content"
+        android:layout_height="fill_parent"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="4dp"
+        android:contentDescription="@string/msg_level"
+        android:src="@drawable/info_icon" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="fill_parent"
+        android:layout_marginLeft="4dp"
+        android:layout_marginRight="10dp"
+        android:orientation="vertical" >
+
+        <ImageButton
+            android:id="@+id/closeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:contentDescription="@string/close_button"
+            android:src="@drawable/close"
+            android:background="#00000000" />
+
+        <TextView
+            android:id="@+id/msgTitle"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="黑体"
+            android:text="@string/msg_title"
+            android:textColor="#382d24"
+            android:textIsSelectable="true"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/msgBody"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:autoLink="all"
+            android:fontFamily="黑体"
+            android:text="@string/msg_body"
+            android:textColor="#382d24"
+            android:textIsSelectable="true"
+            android:textSize="14sp" />
+
+        <ImageView
+            android:id="@+id/msgAttachment"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/msg_attachment"
+            android:cropToPadding="true"
+            android:scaleType="fitStart"
+            android:src="@drawable/ic_launcher" />
+
+        <TextView
+            android:id="@+id/msgUrl"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:autoLink="web"
+            android:fontFamily="仿宋"
+            android:text="@string/msg_url"
+            android:textColor="#999999"
+            android:textSize="12sp"
+            android:textStyle="italic" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,101 @@
+<% include header.html %>
+
+<div id="body">
+    <%if (err) {%>
+    <p class="message-error">Error: <%=err%></p>
+    <%} else {%>
+    <p class="message-info">账号总数: <strong><%=count%></strong></p>
+    <table id="accounts">
+        <thead>
+        <tr>
+            <th>账号标识</th>
+            <th>账号名称</th>
+            <th>手机号码</th>
+            <th>邮箱地址</th>
+            <th>登录密码</th>
+            <th>账号状态</th>
+            <th>创建时间</th>
+            <th>修改时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        <%accounts.forEach(function(account){%>
+        <tr>
+            <td><%=account.accountId%></td>
+            <td><%=account.name%></td>
+            <td><%=account.phoneNumber%></td>
+            <td><%=account.emailAddress%></td>
+            <td><%=account.password%></td>
+            <td><%=account.disabled?"禁用":"允许"%></td>
+            <td><%=account.createTime%></td>
+            <td><%=account.updateTime%></td>
+        </tr>
+        <%})%>
+        </tbody>
+    </table>
+    <!--<button id="btnDeleteAccount">删除账号</button>-->
+    <%}%>
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        $('#accounts').dataTable({
+            "oLanguage": dataTablesLanguage,
+            //"fnDrawCallback": groupMyTable,
+            "bPaginate": true,
+            "bLengthChange": true,
+            "bFilter": true,
+            "bSort": true,
+            "bInfo": true,
+            "bAutoWidth": true
+        })/*.makeEditable({
+                    sUpdateURL: "/accman/update",
+                    sDeleteURL: "/accman/delete",
+                    sDeleteRowButtonId: "btnDeleteAccount",
+                    fnShowError: function (message, action) {
+                        switch (action) {
+                            case "update":
+                                $('#accounts').jAlert("修改失败: " + message, "fatal");
+                                break;
+                            case "delete":
+                                $('#accounts').jAlert("删除失败: " + message, "fatal");
+                                break;
+                        }
+                    },
+                    "aoColumns": [
+                        null,
+                        {
+                            indicator: '保存...',
+                            tooltip: '双击可以修改',
+                            onblur: 'submit'
+                        },
+                        {
+                            indicator: '保存...',
+                            tooltip: '双击可以修改',
+                            onblur: 'submit'
+                        },
+                        {
+                            indicator: '保存...',
+                            tooltip: '双击可以修改',
+                            onblur: 'submit'
+                        },
+                        {
+                            indicator: '保存...',
+                            tooltip: '双击可以修改',
+                            onblur: 'submit'
+                        },
+                        {
+                            indicator: '保存...',
+                            tooltip: '双击可以选择',
+                            loadtext: '装入...',
+                            type: 'select',
+                            onblur: 'submit',
+                            data: "{'':'请选择...', 'false':'允许','true':'禁止'}"
+                        },
+                        null,
+                        null]
+                })*/;
+    });
+</script>
+
+<% include footer.html %>
