@@ -24,24 +24,24 @@
 
             <ScrollView
                 android:id="@+id/msgContainer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" >
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" >
 
                 <TextView
                     android:id="@+id/msg"
-                    android:layout_width="wrap_content"
+                    android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/msg" />
             </ScrollView>
 
             <ScrollView
                 android:id="@+id/logContainer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" >
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" >
 
                 <TextView
                     android:id="@+id/log"
-                    android:layout_width="wrap_content"
+                    android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/log" />
             </ScrollView>
