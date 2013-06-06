@@ -14,7 +14,11 @@ public final class R {
         public static final int app_background=0x7f080001;
         public static final int dark_red=0x7f080003;
         public static final int light_red=0x7f080002;
-        public static final int tab_indicator_text=0x7f080006;
+        public static final int logBackground=0x7f080007;
+        public static final int message_color_1=0x7f080008;
+        public static final int message_color_2=0x7f080009;
+        public static final int msgBackground=0x7f080006;
+        public static final int tab_indicator_text=0x7f08000a;
         public static final int text_tab_selected=0x7f080004;
         public static final int text_tab_unselected=0x7f080005;
         public static final int transparent_background=0x7f080000;

@@ -15,12 +15,14 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.ContactsContract;
+import android.text.util.Linkify;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -28,6 +30,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -64,11 +67,12 @@ public class MainActivity extends TabActivity {
 	private UserSettings userSettings;
 
 	// //////////////////////////////////////
-	private static final int MAX_LOG_COUNT = 500;
-	private static final int MAX_MSG_COUNT = 500;
-	private TextView msg;
+	private static final int MAX_MSG_COUNT = 20;
+	private static final int MAX_LOG_COUNT = 100;
+	private LinearLayout msg;
 	private TextView logger;
 	private int msgCount = 0;
+	private boolean useMsgColor1 = true;
 	private int logCount = 0;
 
 	// //////////////////////////////////////
@@ -84,7 +88,7 @@ public class MainActivity extends TabActivity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		requestWindowFeature(Window.FEATURE_NO_TITLE); 
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
@@ -98,7 +102,7 @@ public class MainActivity extends TabActivity {
 		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
 		// 初始化消息和日志控件
-		msg = (TextView) findViewById(R.id.msg);
+		msg = (LinearLayout) findViewById(R.id.msg);
 		logger = (TextView) findViewById(R.id.log);
 
 		// 开始监视外部存储器状态
@@ -309,16 +313,16 @@ public class MainActivity extends TabActivity {
 			}
 		}
 
-		// 格式化消息
-		String formattedMessage = String.format("%s %s: %s%s%s",
-				MyMessage.dateFormat.format(message.getGenerateTime()),
-				(message.getTitle() == null ? "---" : message.getTitle()),
-				message.getBody(), attachmentUrl != null ? "[" + attachmentUrl
-						+ "]" : "", !message.getUrl().equals("") ? "["
-						+ message.getUrl() + "]" : "");
-
 		// 输出消息
 		if (userSettings.isEmulateSms()) {
+
+			// 格式化消息
+			String formattedMessage = String.format("%s %s: %s%s%s",
+					MyMessage.dateFormat.format(message.getGenerateTime()),
+					(message.getTitle() == null ? "---" : message.getTitle()),
+					message.getBody(), attachmentUrl != null ? "["
+							+ attachmentUrl + "]" : "", !message.getUrl()
+							.equals("") ? "[" + message.getUrl() + "]" : "");
 
 			// 模拟短信接收
 			writeSms(formattedMessage);
@@ -337,7 +341,7 @@ public class MainActivity extends TabActivity {
 
 			mNM.notify(R.id.app_notification_id, notification);
 		} else {
-			showMsg(formattedMessage);
+			showMsg(message);
 		}
 
 		// 为消息对话框准备数据
@@ -363,15 +367,31 @@ public class MainActivity extends TabActivity {
 		startActivity(i);
 	}
 
-	private void showMsg(String msgText) {
-		msgText = "[" + sdf.format(new Date()) + "] " + msgText;
+	private void showMsg(MyMessage message) {
+		Resources res = getResources();
+
+		TextView tv = new TextView(this);
+		tv.setAutoLinkMask(Linkify.WEB_URLS);
+		//
+		tv.setTextColor(res.getColor(useMsgColor1 ? R.color.message_color_1
+				: R.color.message_color_2));
+		//
+		String msgText = sdf.format(message.getGenerateTime())
+				+ (message.getTitle() == null || message.getTitle().equals("") ? ""
+						: " [" + message.getTitle() + "]")
+				+ " "
+				+ message.getBody()
+				+ (message.getUrl() == null || message.getUrl().equals("") ? ""
+						: " " + message.getUrl());
+		tv.setText(msgText+"\r\n");
 		if (msgCount < MAX_MSG_COUNT) {
-			msg.setText(msgText + "\r\n" + msg.getText());
+			msg.addView(tv, 0);
 			msgCount++;
 		} else {
-			msg.setText(msgText + "\r\n");
-			logCount = 1;
+			msg.removeViewAt(msg.getChildCount() - 1);
 		}
+
+		useMsgColor1 = !useMsgColor1;
 	}
 
 	private void showLog(String logText) {

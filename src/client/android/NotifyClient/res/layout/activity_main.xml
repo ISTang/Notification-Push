@@ -20,15 +20,17 @@
             android:id="@android:id/tabcontent"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:layout_below="@android:id/tabs" >
+            android:layout_below="@android:id/tabs"
+            android:background="@color/msgBackground" >
 
             <ScrollView
                 android:id="@+id/msgContainer"
                 android:layout_width="fill_parent"
                 android:layout_height="fill_parent" >
 
-                <TextView
+                <LinearLayout
                     android:id="@+id/msg"
+				    android:orientation="vertical"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/msg" />
@@ -37,13 +39,15 @@
             <ScrollView
                 android:id="@+id/logContainer"
                 android:layout_width="fill_parent"
-                android:layout_height="fill_parent" >
+                android:layout_height="fill_parent"
+                android:background="@color/logBackground" >
 
                 <TextView
                     android:id="@+id/log"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/log" />
+                    android:text="@string/log"
+                    android:textIsSelectable="true" />
             </ScrollView>
         </FrameLayout>
     </RelativeLayout>

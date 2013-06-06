@@ -3,9 +3,16 @@
 	<color name="transparent_background">#50000000</color>  
 
 	<color name="app_background">#fff5f5f5</color>
-	<color name="light_red">#ba0305</color>
-	<color name="dark_red">#9d0c0f</color>
+	<color name="light_red">#ccd3a7</color>
+	<color name="dark_red">#ccd3a7</color>
 	
-	<color name="text_tab_selected">#5d5d5d</color>
-	<color name="text_tab_unselected">#838183</color>
+	<color name="text_tab_selected">#000</color>
+	<color name="text_tab_unselected">#000</color>
+	
+	<color name="msgBackground">#bbbf97</color>
+	<color name="logBackground">#bbbf97</color>
+	
+	<color name="message_color_1">#3c2714</color>
+	<color name="message_color_2">#68482c</color>
+	
 </resources>
