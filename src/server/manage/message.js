@@ -188,13 +188,15 @@ function pushMessage(req, res) {
             });
             return;
         }
-		console.log("expiration: "+date+", now:"+new Date());
-        var diff = date.getTime()-new Date().getTime();
+		var now = new Date();
+        var diff = date.getTime()-now.getTime();
         if (diff<MIN_EXPIRATION_TIME) {
             res.json({
                 success:false,
                 errcode: 4,
-                errmsg: "过期时间必须不得少于 "+(MIN_EXPIRATION_TIME/(1000*60))+" 分钟"
+                errmsg: "过期时间必须不得少于 "+(MIN_EXPIRATION_TIME/(1000*60))+
+					" 分钟\r\r前台传入时间："+req.body.expiration+
+					"\r系统当前时间："+now.Format("yyyy-MM-dd HH:mm:ss")
             });
             return;
         }

@@ -74,7 +74,7 @@
             <!--<input id="attachment2" type="file" name="attachment2">
             <input id="attachment3" type="file" name="attachment3">
             <input id="attachment4" type="file" name="attachment4">-->
-            <label for="expiration">过期时间(可选)</label>
+            <label for="expiration">过期时间(可选)&nbsp;&nbsp;当前: <%=new Date().Format("yyyy-MM-dd")%> <span id="serverTime" class="clock"></span></label>
             <input id="expiration" type="text" name="expiration" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd HH:mm:ss'})"/>
             <label for="appId">应用</label>
             <select id="appId" name="appId" class="text ui-widget-content ui-corner-all">
@@ -227,6 +227,51 @@
             }
         }
     });
+</script>
+
+<script type="text/javascript">
+/*
+     This script downloaded from www.JavaScriptBank.com
+     Come to view and download over 2000+ free javascript at www.JavaScriptBank.com
+*/
+function moveClock(idClock,startTime){//move given clock
+	var timeout=1000;//miliseconds to repeat the function
+
+	if ( startTime === undefined ) {//just take the browser time
+	    	rightNow = new Date();
+		hour = rightNow.getHours();
+		minute = rightNow.getMinutes();
+		second = rightNow.getSeconds();		
+	}	
+	else{//starttime set
+		rightNow = startTime.split(':',3);
+		hour = parseInt(rightNow[0],10);
+		minute =  parseInt(rightNow[1],10);
+		second =  parseInt(rightNow[2],10);
+		if (second==59){
+			if (minute==59){
+				if (hour==23) hour=0;	
+				else hour++;
+				minute=0;
+			}else minute++;
+			second=0;
+		}else second++;
+	}
+
+	if (minute<10) minute= "0" + minute;
+	if (second<10) second= "0" + second;
+
+	currentTime=hour + ":" + minute + ":" +second;// tim to return
+	document.getElementById(idClock).innerHTML = currentTime;//tim for the HTML element
+
+	//recursivity
+	if (startTime===undefined) setTimeout("moveClock('"+idClock+"')",timeout);//browser time
+	else setTimeout("moveClock('"+idClock+"','"+currentTime+"')",timeout);//set time
+		
+}
+
+moveClock("serverTime", "<%=new Date().Format('HH:mm:ss')%>");
+
 </script>
 
 <% include footer.html %>

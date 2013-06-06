@@ -60,7 +60,7 @@ function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
 function getArticles(url, handleResult) {
     feedparser.parseStream(request({uri:url}), function (err, meta, articles) {
         if (err) return handleResult(err);
-        var logo = meta.image;
+        var logo = meta.image.url;
         var result = [];
         async.forEachSeries(articles, function (article, callback) {
             article.logo = logo;
