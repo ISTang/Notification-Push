@@ -12,21 +12,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.WindowManager;
 
 import com.tpsoft.pushnotification.R;
 import com.tpsoft.pushnotification.model.AppParams;
@@ -435,7 +431,7 @@ public class NotifyPushService extends Service {
 							out.write(String.format(CLOSE_CONN_RES,
 									INVALID_ACTION_LINE.length(),
 									INVALID_ACTION_LINE).getBytes("UTF-8"));
-							return;
+							throw new Exception("动作行格式不对");
 						}
 
 						action = starr[0].trim().toUpperCase(); // 动作
@@ -450,7 +446,7 @@ public class NotifyPushService extends Service {
 							out.write(String.format(CLOSE_CONN_RES,
 									INVALID_FIELD_LINE.length(),
 									INVALID_FIELD_LINE).getBytes("UTF-8"));
-							return;
+							throw new Exception("属性行格式不对");
 						}
 
 						String name = starr[0].trim().toUpperCase(); // 名字
@@ -492,7 +488,7 @@ public class NotifyPushService extends Service {
 						out.write(String.format(CLOSE_CONN_RES,
 								INVALID_LENGTH_VALUE_MSG.length(),
 								INVALID_LENGTH_VALUE_MSG).getBytes("UTF-8"));
-						return;
+						throw new Exception("体部长度值无效");
 					}
 					bodyLength = tmpBodyLength;
 				}
