@@ -389,6 +389,7 @@ public class MainActivity extends TabActivity {
 			msgCount++;
 		} else {
 			msg.removeViewAt(msg.getChildCount() - 1);
+			msg.addView(tv, 0);
 		}
 
 		useMsgColor1 = !useMsgColor1;
