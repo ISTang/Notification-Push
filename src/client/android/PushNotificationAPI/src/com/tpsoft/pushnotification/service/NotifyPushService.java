@@ -431,7 +431,7 @@ public class NotifyPushService extends Service {
 							out.write(String.format(CLOSE_CONN_RES,
 									INVALID_ACTION_LINE.length(),
 									INVALID_ACTION_LINE).getBytes("UTF-8"));
-							throw new Exception("动作行格式不对");
+							throw new Exception("动作行格式不对: "+line);
 						}
 
 						action = starr[0].trim().toUpperCase(); // 动作
@@ -446,7 +446,7 @@ public class NotifyPushService extends Service {
 							out.write(String.format(CLOSE_CONN_RES,
 									INVALID_FIELD_LINE.length(),
 									INVALID_FIELD_LINE).getBytes("UTF-8"));
-							throw new Exception("属性行格式不对");
+							throw new Exception("属性行格式不对: "+line);
 						}
 
 						String name = starr[0].trim().toUpperCase(); // 名字
@@ -488,7 +488,8 @@ public class NotifyPushService extends Service {
 						out.write(String.format(CLOSE_CONN_RES,
 								INVALID_LENGTH_VALUE_MSG.length(),
 								INVALID_LENGTH_VALUE_MSG).getBytes("UTF-8"));
-						throw new Exception("体部长度值无效");
+						throw new Exception("体部长度值无效: "+fields
+								.get(bodyLengthFieldName));
 					}
 					bodyLength = tmpBodyLength;
 				}
