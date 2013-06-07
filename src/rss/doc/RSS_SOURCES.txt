@@ -1,25 +1,56 @@
 hset source:78F11945-9C67-474D-9307-E617CD20E5F6 title "搜狐每日焦点图片"
 hset source:78F11945-9C67-474D-9307-E617CD20E5F6 description "最新、最快新闻资讯。"
 hset source:78F11945-9C67-474D-9307-E617CD20E5F6 url  "http://rss.news.sohu.com/rss/pfocus.xml"
-sadd source:set 78F11945-9C67-474D-9307-E617CD20E5F6 
+sadd source:set 78F11945-9C67-474D-9307-E617CD20E5F6
 
 
 hset source:B892306F-FC6F-4137-9D3A-C804BCC40AE9 title "搜狐每日焦点新闻"
 hset source:B892306F-FC6F-4137-9D3A-C804BCC40AE9 description "即时报道国内外时政大事，解读环球焦点事件。"
 hset source:B892306F-FC6F-4137-9D3A-C804BCC40AE9 url  "http://rss.news.sohu.com/rss/focus.xml"
-sadd source:set B892306F-FC6F-4137-9D3A-C804BCC40AE9 
+sadd source:set B892306F-FC6F-4137-9D3A-C804BCC40AE9
 
 hset source:7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 title "国内新闻"
 hset source:7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 description "立足高端，关注民生，为您解读国家的大政方针，为您带来更多更快的民生资讯。"
 hset source:7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 url  "http://rss.news.sohu.com/rss/guonei.xml"
-sadd source:set 7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4 
+sadd source:set 7BAA15D1-7A4B-43F2-8A81-5CB63EC185F4
 
 
 hset source:0516FB76-AE24-4369-BF6B-EC244E0AD735 title "国际新闻"
 hset source:0516FB76-AE24-4369-BF6B-EC244E0AD735 description "着眼全球政经大事，透视世界焦点内幕，为您分析时代局势，网罗天下名人轶闻。"
 hset source:0516FB76-AE24-4369-BF6B-EC244E0AD735 url  "http://rss.news.sohu.com/rss/guoji.xml"
-sadd source:set 0516FB76-AE24-4369-BF6B-EC244E0AD735 
+sadd source:set 0516FB76-AE24-4369-BF6B-EC244E0AD735
+
+<!--
+hset source:3913CB49-3511-4E07-A763-F377CBD81606 title "央视国内新闻"
+hset source:3913CB49-3511-4E07-A763-F377CBD81606 description "央视国内新闻"
+hset source:3913CB49-3511-4E07-A763-F377CBD81606 url  "http://www.cctv.com/program/rss/02/01/index.xml"
+sadd source:set 3913CB49-3511-4E07-A763-F377CBD81606
 
 
+hset source:D9AA1254-A92E-43C7-9138-AB0304160EA8 title "央视国际新闻"
+hset source:D9AA1254-A92E-43C7-9138-AB0304160EA8 description "央视国际新闻"
+hset source:D9AA1254-A92E-43C7-9138-AB0304160EA8 url  "http://www.cctv.com/program/rss/02/02/index.xml"
+sadd source:set D9AA1254-A92E-43C7-9138-AB0304160EA8
+-->
 
+hset source:2BC0040E-03B5-47A1-9F16-E5495F720F19 title "新浪网新闻中心"
+hset source:2BC0040E-03B5-47A1-9F16-E5495F720F19 description "新浪网新闻中心是新浪网最重要的频道之一，24小时滚动报道国内、国际及社会新闻 。每日编发新闻数以万计。"
+hset source:2BC0040E-03B5-47A1-9F16-E5495F720F19 url  "http://rss.sina.com.cn/news/marquee/ddt.xml"
+sadd source:set 2BC0040E-03B5-47A1-9F16-E5495F720F19
 
+hset source:E22BFCB0-039E-485D-89BA-CA50F4954B1B title "新浪科技"
+hset source:E22BFCB0-039E-485D-89BA-CA50F4954B1B description "24小时滚动报道IT业界，电信、互联网及大众 科技新闻，最及时权威的产业及事件报道平台，手机、数码、笔记本及软件下载"
+hset source:E22BFCB0-039E-485D-89BA-CA50F4954B1B url  "http://rss.sina.com.cn/news/allnews/tech.xml"
+sadd source:set E22BFCB0-039E-485D-89BA-CA50F4954B1B
+
+<!--
+hset source:12EDFEC1-E1CE-4BA3-8032-B553578A46EF title "陕西三和专修学院"
+hset source:12EDFEC1-E1CE-4BA3-8032-B553578A46EF description "陕西三和专修学院"
+hset source:12EDFEC1-E1CE-4BA3-8032-B553578A46EF url  "http://www.sxshxy.cn/rss.php?rssid=146"
+sadd source:set 12EDFEC1-E1CE-4BA3-8032-B553578A46EF
+
+hset source:FECC8679-7441-4DE7-AD50-8D8910479A58 title "广东招聘会"
+hset source:FECC8679-7441-4DE7-AD50-8D8910479A58 description "广东招聘会"
+hset source:FECC8679-7441-4DE7-AD50-8D8910479A58 url  "http://www.zph.com.cn/plus/rss/4.xml"
+sadd source:set FECC8679-7441-4DE7-AD50-8D8910479A58
+-->

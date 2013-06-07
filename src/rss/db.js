@@ -9,6 +9,7 @@
 exports.getAllSources = getAllSources;
 exports.existsArticle = existsArticle;
 exports.saveArticle = saveArticle;
+exports.updateFetchTime = updateFetchTime;
 
 var config = require(__dirname + '/config');
 var utils = require(__dirname + '/utils');
@@ -55,6 +56,7 @@ function getAllSources(handleResult) {
             redis.hgetall("source:"+sourceId, function (err, source) {
                 if (err) return callback(err);
                 log("源 ID: "+sourceId+"\r\n标题: "+source.title+"\r\n描述: "+source.description+"\r\nURL: "+source.url);
+                source.id = sourceId;
                 sources.push(source);
                 callback();
             });
@@ -74,21 +76,26 @@ function existsArticle(article, handleResult) {
 }
 
 function saveArticle(article, callback) {
-    log("保存文章 "+article.title+"["+article.link+"]...");
+    log("保存文章 "+article.link+"...");
     var id = uuid.v4().toUpperCase();
 
-    redis.hset("article:"+id, "title", article.title);
-    redis.hset("article:"+id, "description", article.description);
+    if (article.title) redis.hset("article:"+id, "title", article.title);
+    redis.hset("article:"+id, "description", (article.description?article.description:""));
     redis.hset("article:"+id, "link", article.link);
-    redis.hset("article:"+id, "logo", article.logo);
+    if (article.logo) redis.hset("article:"+id, "logo", article.logo);
     redis.hset("article:"+id, "timestamp", new Date().Format("yyyyMMddhhmmss"));
 
     redis.sadd("article:set", id);
 
     redis.sadd("article:links", article.link);
 
-    log("已保存文章 "+article.title+"["+article.link+"]。");
+    log("已保存文章 "+article.link+"。");
 
+    callback();
+}
+
+function updateFetchTime(source, since, callback) {
+    redis.hset("source:"+source.id, "since", since);
     callback();
 }
 

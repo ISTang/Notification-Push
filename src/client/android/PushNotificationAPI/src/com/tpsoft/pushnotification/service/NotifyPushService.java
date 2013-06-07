@@ -223,15 +223,17 @@ public class NotifyPushService extends Service {
 			InputStream in = null;
 			OutputStream out = null;
 			reconnect: while (!exitNow) {
+				clientLogon = false;
 				if (in != null) {
 					// 关闭已有的流(同时关闭套接字)
 					try {
-						if (in != null)
-							in.close();
+						if (socket != null) {
+							socket.close();
+							socket =  null;
+						}
 					} catch (IOException ee) {
 						ee.printStackTrace();
 					}
-					in = null;
 				}
 				if (!isNetworkAvailable()) {
 					if (networkOk) {
@@ -244,7 +246,6 @@ public class NotifyPushService extends Service {
 				networkOk = true;
 				showLog("连接服务器 " + loginParams.getServerHost() + "["
 						+ loginParams.getServerPort() + "]...");
-				clientLogon = false;
 				while (!exitNow) {
 					// 创建新的套接字
 					socket = new Socket();
