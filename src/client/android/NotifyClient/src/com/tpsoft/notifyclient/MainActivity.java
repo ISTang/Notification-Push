@@ -37,6 +37,7 @@ import android.widget.Toast;
 
 import com.tpsoft.notifyclient.model.UserSettings;
 import com.tpsoft.notifyclient.utils.MessageDialog;
+import com.tpsoft.notifyclient.utils.PlaySoundPool;
 import com.tpsoft.pushnotification.model.AppParams;
 import com.tpsoft.pushnotification.model.LoginParams;
 import com.tpsoft.pushnotification.model.MyMessage;
@@ -67,6 +68,11 @@ public class MainActivity extends TabActivity {
 	private UserSettings userSettings;
 
 	// //////////////////////////////////////
+	private static final int INFO_SOUND = 1;
+	private static final int ALERT_SOUND = 2;
+	private static PlaySoundPool playSoundPool;
+
+	// //////////////////////////////////////
 	private static final int MAX_MSG_COUNT = 20;
 	private static final int MAX_LOG_COUNT = 100;
 	private LinearLayout msg;
@@ -91,6 +97,11 @@ public class MainActivity extends TabActivity {
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		// 准备音效
+		playSoundPool = new PlaySoundPool(this);
+		playSoundPool.loadSfx(R.raw.info, INFO_SOUND);
+		playSoundPool.loadSfx(R.raw.alert, ALERT_SOUND);
 
 		// 设置外观
 		setTabs();
@@ -291,6 +302,11 @@ public class MainActivity extends TabActivity {
 	}
 
 	private void showNotification(String msgText) {
+		// 声音提醒
+		if (userSettings.isPlaySound()) {
+			playSoundPool.play(ALERT_MSG ? ALERT_SOUND : INFO_SOUND, 0);
+		}
+		
 		// 解析消息文本
 		MyMessage message;
 		try {
@@ -358,8 +374,6 @@ public class MainActivity extends TabActivity {
 		}
 		msgParams.putBoolean("showPic", (attachmentUrl != null
 				&& mExternalStorageAvailable && mExternalStorageWriteable));
-		if (userSettings.isPlaySound())
-			msgParams.putBoolean("playSound", true);
 
 		// 显示消息对话框
 		Intent i = new Intent(MainActivity.this, MessageDialog.class);

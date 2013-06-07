@@ -32,10 +32,6 @@ import com.tpsoft.notifyclient.R;
 
 public class MessageDialog extends Activity implements OnTouchListener {
 
-	private static final int INFO_SOUND = 1;
-	private static final int ALERT_SOUND = 2;
-	private static PlaySoundPool playSoundPool;
-
 	private static final int POPUP_INFO_TIME = 1000*30;
 	private static final int POPUP_ALERT_TIME = 1000*40;
 
@@ -54,11 +50,6 @@ public class MessageDialog extends Activity implements OnTouchListener {
 		// 设置窗口背景透明
 		setTheme(R.style.Transparent);
 		setContentView(R.layout.transparent);
-
-		// 准备音效
-		playSoundPool = new PlaySoundPool(this);
-		playSoundPool.loadSfx(R.raw.info, INFO_SOUND);
-		playSoundPool.loadSfx(R.raw.alert, ALERT_SOUND);
 
 		// 显示消息
 		showMessage();
@@ -217,9 +208,6 @@ public class MessageDialog extends Activity implements OnTouchListener {
 			}
 		});
 
-		if (msgBundle.getBoolean("playSound")) {
-			playSoundPool.play(msgBundle.getBoolean("alert") ? ALERT_SOUND : INFO_SOUND, 0);
-		}
 		alertDialog.show();
 	}
 
