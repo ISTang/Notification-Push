@@ -84,8 +84,10 @@ public class NotifyPushService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		// 让服务前台运行
-		Notification notification = new Notification(R.drawable.ic_launcher,
-				getText(R.string.ticker_text), System.currentTimeMillis());
+		Notification notification = new Notification(intent.getIntExtra(
+				"notification_logo", R.drawable.ic_launcher),
+				intent.getStringExtra("ticker_text"),
+				System.currentTimeMillis());
 		Intent notificationIntent;
 		try {
 			notificationIntent = new Intent(this, Class.forName(intent
@@ -97,8 +99,8 @@ public class NotifyPushService extends Service {
 		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
 				notificationIntent, 0);
 		notification.setLatestEventInfo(this,
-				getText(R.string.notification_title),
-				getText(R.string.notification_message), pendingIntent);
+				intent.getStringExtra("notification_title"),
+				intent.getStringExtra("notification_message"), pendingIntent);
 		startForeground(ONGOING_NOTIFICATION, notification);
 
 		return Service.START_STICKY;
@@ -248,6 +250,7 @@ public class NotifyPushService extends Service {
 			InputStream in = null;
 			OutputStream out = null;
 			reconnect: while (!exitNow) {
+				resetRecvStaus();
 				clientLogon = false;
 				// 关闭已有的套接字
 				try {
@@ -257,7 +260,7 @@ public class NotifyPushService extends Service {
 				} catch (IOException ee) {
 					ee.printStackTrace();
 				}
-				socket =  null;
+				socket = null;
 				if (!isNetworkAvailable()) {
 					if (networkOk) {
 						showLog("网络不可用");
@@ -456,9 +459,10 @@ public class NotifyPushService extends Service {
 						String[] starr = line.split("\\s+");
 						if (starr.length != 2) {
 							// 格式不对
-							String ss = INVALID_ACTION_LINE+":"+line;
-							out.write(String.format(CLOSE_CONN_RES, ss.length(),ss).getBytes("UTF-8"));
-							throw new Exception("动作行格式不对: "+line);
+							String ss = INVALID_ACTION_LINE + ":" + line;
+							out.write(String.format(CLOSE_CONN_RES,
+									ss.length(), ss).getBytes("UTF-8"));
+							throw new Exception("动作行格式不对: " + line);
 						}
 
 						action = starr[0].trim().toUpperCase(); // 动作
@@ -470,9 +474,10 @@ public class NotifyPushService extends Service {
 						String[] starr = line.split("\\s*:\\s*");
 						if (starr.length != 2) {
 							// 格式不对
-							String ss = INVALID_FIELD_LINE+":"+line;
-							out.write(String.format(CLOSE_CONN_RES, ss.length(),ss).getBytes("UTF-8"));
-							throw new Exception("属性行格式不对: "+line);
+							String ss = INVALID_FIELD_LINE + ":" + line;
+							out.write(String.format(CLOSE_CONN_RES,
+									ss.length(), ss).getBytes("UTF-8"));
+							throw new Exception("属性行格式不对: " + line);
 						}
 
 						String name = starr[0].trim().toUpperCase(); // 名字
@@ -514,8 +519,8 @@ public class NotifyPushService extends Service {
 						out.write(String.format(CLOSE_CONN_RES,
 								INVALID_LENGTH_VALUE_MSG.length(),
 								INVALID_LENGTH_VALUE_MSG).getBytes("UTF-8"));
-						throw new Exception("体部长度值无效: "+fields
-								.get(bodyLengthFieldName));
+						throw new Exception("体部长度值无效: "
+								+ fields.get(bodyLengthFieldName));
 					}
 					bodyLength = tmpBodyLength;
 				}
@@ -549,17 +554,7 @@ public class NotifyPushService extends Service {
 			} catch (Exception e) {
 				throw e;
 			} finally {
-				// 准备处理下一个报文
-				waitForHead = true;
-				actionLineFound = false;
-				//
-				action = target = "";
-				fields.clear();
-				bodyByteLength = false;
-				bodyLength = 0;
-				body = "";
-				bodyBytes = 0;
-				unhandledInput = new byte[0];
+				resetRecvStaus();
 			}
 		}
 
@@ -681,6 +676,18 @@ public class NotifyPushService extends Service {
 				// 无法理解的动作
 				throw new Exception("未知动作: " + action + " " + target);
 			}
+		}
+
+		private void resetRecvStaus() {
+			waitForHead = true;
+			actionLineFound = false;
+			//
+			action = target = "";
+			fields.clear();
+			bodyByteLength = false;
+			bodyLength = 0;
+			body = "";
+			unhandledInput = new byte[0];
 		}
 
 		private void waitForReconnect() {

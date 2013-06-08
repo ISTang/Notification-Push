@@ -47,7 +47,7 @@ public class MainActivity extends TabActivity {
 	private static final SimpleDateFormat sdf = new SimpleDateFormat(
 			"HH:mm:ss", Locale.CHINESE);
 
-	private static final int MAX_MSG_COUNT = 20;
+	private static final int MAX_MSG_COUNT = 100;
 	private static final int MAX_LOG_COUNT = 100;
 	private LinearLayout msg;
 	private TextView logger;
@@ -76,6 +76,13 @@ public class MainActivity extends TabActivity {
 		// 初始化消息和日志控件
 		msg = (LinearLayout) findViewById(R.id.msg);
 		logger = (TextView) findViewById(R.id.log);
+
+		// 恢复消息显示
+		Resources res = getResources();
+		for (MyMessage message : MyApplicationClass.savedMsgs) {
+			msg.addView(makeMessageView(message, res), 0);
+		}
+		msgCount = MyApplicationClass.savedMsgs.size();
 
 		if (myBroadcastReceiver == null) {
 			// 准备与后台服务通信
@@ -275,6 +282,8 @@ public class MainActivity extends TabActivity {
 	}
 
 	private void showNotification(String msgText) {
+		showLog(getText(R.string.msg_received).toString());
+
 		// 声音提醒
 		if (MyApplicationClass.userSettings.isPlaySound()) {
 			MyApplicationClass.playSoundPool
@@ -363,26 +372,20 @@ public class MainActivity extends TabActivity {
 	private void showMsg(MyMessage message) {
 		Resources res = getResources();
 
-		TextView tv = new TextView(this);
-		tv.setAutoLinkMask(Linkify.WEB_URLS);
-		//
-		tv.setTextColor(res.getColor(useMsgColor1 ? R.color.message_color_1
-				: R.color.message_color_2));
-		//
-		String msgText = sdf.format(message.getGenerateTime())
-				+ (message.getTitle() == null || message.getTitle().equals("") ? ""
-						: " [" + message.getTitle() + "]")
-				+ " "
-				+ message.getBody()
-				+ (message.getUrl() == null || message.getUrl().equals("") ? ""
-						: " " + message.getUrl());
-		tv.setText(msgText + "\r\n");
+		// 生成消息界面
+		View view = makeMessageView(message, res);
 		if (msgCount < MAX_MSG_COUNT) {
-			msg.addView(tv, 0);
+			msg.addView(view, 0);
 			msgCount++;
 		} else {
 			msg.removeViewAt(msg.getChildCount() - 1);
-			msg.addView(tv, 0);
+			msg.addView(view, 0);
+		}
+
+		// 保存消息界面
+		MyApplicationClass.savedMsgs.add(message);
+		if (MyApplicationClass.savedMsgs.size() == MAX_MSG_COUNT) {
+			MyApplicationClass.savedMsgs.remove(0);
 		}
 
 		useMsgColor1 = !useMsgColor1;
@@ -404,6 +407,24 @@ public class MainActivity extends TabActivity {
 		values.put("address", MyApplicationClass.SMS_SENDER_NUMBER);
 		values.put("body", message);
 		getContentResolver().insert(Uri.parse("content://sms/inbox"), values);
+	}
+
+	private View makeMessageView(MyMessage message, Resources res) {
+		TextView view = new TextView(this);
+		view.setAutoLinkMask(Linkify.WEB_URLS);
+		//
+		view.setTextColor(res.getColor(useMsgColor1 ? R.color.message_color_1
+				: R.color.message_color_2));
+		//
+		String msgText = sdf.format(message.getGenerateTime())
+				+ (message.getTitle() == null || message.getTitle().equals("") ? ""
+						: " [" + message.getTitle() + "]")
+				+ " "
+				+ message.getBody()
+				+ (message.getUrl() == null || message.getUrl().equals("") ? ""
+						: " " + message.getUrl());
+		view.setText(msgText + "\r\n");
+		return view;
 	}
 
 }

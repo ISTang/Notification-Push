@@ -1,11 +1,5 @@
 <resources>
 
-    <string name="service_name">Push Notification API</string>
+    <!-- <string name="service_name">Push Notification API</string> -->
 	
-    <string name="ticker_text">正在启动消息推送服务……</string>
-    <string name="notification_title">消息推送服务</string>
-    <string name="notification_message">服务正在后台运行</string>
-
-    <string name="service_log">服务日志</string>
-    
 </resources>

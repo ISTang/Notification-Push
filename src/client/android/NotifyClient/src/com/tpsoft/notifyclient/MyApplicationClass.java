@@ -1,5 +1,8 @@
 package com.tpsoft.notifyclient;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,6 +14,7 @@ import android.provider.ContactsContract;
 
 import com.tpsoft.notifyclient.model.UserSettings;
 import com.tpsoft.notifyclient.utils.PlaySoundPool;
+import com.tpsoft.pushnotification.model.MyMessage;
 import com.tpsoft.pushnotification.service.NotifyPushService;
 
 public class MyApplicationClass extends Application {
@@ -34,6 +38,7 @@ public class MyApplicationClass extends Application {
 	public static boolean mExternalStorageWriteable = false;
 
 	public static boolean clientStarted = false;
+	public static List<MyMessage> savedMsgs = new ArrayList<MyMessage>();
 
 	private BroadcastReceiver mExternalStorageReceiver;
 
@@ -55,6 +60,9 @@ public class MyApplicationClass extends Application {
 		// 启动后台服务
 		Intent intent = new Intent(this, NotifyPushService.class);
 		intent.putExtra("ActivityClassName", "com.tpsoft.notifyclient.MainActivity");
+		intent.putExtra("notification_logo", R.drawable.app_logo);
+		intent.putExtra("notification_title", getText(R.string.notification_title).toString());
+		intent.putExtra("notification_message", getText(R.string.notification_message).toString());
 		startService(intent);
 
 	}
