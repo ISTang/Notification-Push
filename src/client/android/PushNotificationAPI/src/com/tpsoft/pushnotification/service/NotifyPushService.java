@@ -456,9 +456,8 @@ public class NotifyPushService extends Service {
 						String[] starr = line.split("\\s+");
 						if (starr.length != 2) {
 							// 格式不对
-							out.write(String.format(CLOSE_CONN_RES,
-									INVALID_ACTION_LINE.length(),
-									INVALID_ACTION_LINE).getBytes("UTF-8"));
+							String ss = INVALID_ACTION_LINE+":"+line;
+							out.write(String.format(CLOSE_CONN_RES, ss.length(),ss).getBytes("UTF-8"));
 							throw new Exception("动作行格式不对: "+line);
 						}
 
@@ -471,9 +470,8 @@ public class NotifyPushService extends Service {
 						String[] starr = line.split("\\s*:\\s*");
 						if (starr.length != 2) {
 							// 格式不对
-							out.write(String.format(CLOSE_CONN_RES,
-									INVALID_FIELD_LINE.length(),
-									INVALID_FIELD_LINE).getBytes("UTF-8"));
+							String ss = INVALID_FIELD_LINE+":"+line;
+							out.write(String.format(CLOSE_CONN_RES, ss.length(),ss).getBytes("UTF-8"));
 							throw new Exception("属性行格式不对: "+line);
 						}
 
