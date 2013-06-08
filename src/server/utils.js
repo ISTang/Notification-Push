@@ -109,4 +109,23 @@ void main(function () {
     /*makeFileChecksum("server.js", "md5", function (checksum) {
         console.log("checksum: "+checksum);
     });*/
+
+    Date.prototype.DateFormat = DateFormat;
+
+    var str = "2013-06-07 09:20:32";
+    var date = DateParse2(str);
+    console.log(str);
+    console.log(date.DateFormat("yyyy-MM-dd HH:mm:ss"));
+
+    var nowStr = "2013-06-07 09:16:06"
+    var now = DateParse2(nowStr);
+    console.log(nowStr);
+    console.log(now.DateFormat("yyyy-MM-dd HH:mm:ss"));
+
+    var diff = date.getTime()-now.getTime();
+    var MIN_EXPIRATION_TIME = 1000 * 60 * 1;
+    console.log(diff, diff/1000);
+    if (diff<MIN_EXPIRATION_TIME) {
+        log("Error");
+    }
 });

@@ -82,9 +82,8 @@ public final class R {
         public static final int info=0x7f050001;
     }
     public static final class string {
-        public static final int app_exit=0x7f060007;
+        public static final int app_exit=0x7f060006;
         public static final int app_name=0x7f060005;
-        public static final int app_running=0x7f060006;
         public static final int client_id=0x7f060015;
         public static final int client_id_summary=0x7f06001a;
         public static final int close_button=0x7f060022;
@@ -101,13 +100,14 @@ public final class R {
         public static final int msg_level=0x7f06001d;
         public static final int msg_title=0x7f06001e;
         public static final int msg_url=0x7f060021;
-        public static final int new_message=0x7f06000a;
         public static final int notification_message=0x7f060003;
         public static final int notification_title=0x7f060002;
         public static final int play_sound=0x7f060017;
         public static final int play_sound_summary=0x7f06001c;
-        public static final int receiver_starting=0x7f060008;
-        public static final int receiver_stopping=0x7f060009;
+        public static final int receiver_started=0x7f060009;
+        public static final int receiver_starting=0x7f060007;
+        public static final int receiver_stopped=0x7f06000a;
+        public static final int receiver_stopping=0x7f060008;
         public static final int server_host=0x7f060012;
         public static final int server_host_summary=0x7f060018;
         public static final int server_port=0x7f060013;

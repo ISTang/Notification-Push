@@ -2,13 +2,13 @@
 <resources>
 
     <string name="app_name">我的消息</string>
-    <string name="app_running">消息接收器已启动</string>
     <string name="app_exit">长按返回键可退出程序……</string>
 
     <string name="receiver_starting">启动消息接收器……</string>
     <string name="receiver_stopping">停止消息接收器……</string>
-    <string name="new_message">您有新消息了！请触摸返回键回主界面。</string>
-
+    <string name="receiver_started">消息接收器已启动</string>
+    <string name="receiver_stopped">消息接收器已停止</string>
+    
     <string name="settings">设置</string>
     <string name="menu_settings">设置</string>
     <string name="menu_start">启动</string>

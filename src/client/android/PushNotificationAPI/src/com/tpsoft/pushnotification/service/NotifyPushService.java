@@ -12,21 +12,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.WindowManager;
 
 import com.tpsoft.pushnotification.R;
 import com.tpsoft.pushnotification.model.AppParams;
@@ -49,6 +45,8 @@ public class NotifyPushService extends Service {
 	private LoginParams loginParams;
 	private NetworkParams networkParams;
 
+	private boolean receiverStarted = false;
+
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -61,14 +59,13 @@ public class NotifyPushService extends Service {
 
 	@Override
 	public void onDestroy() {
-		if (mServiceThread != null) {
+		if (receiverStarted) {
 			exitNow = true;
 			try {
 				mServiceThread.join();
 			} catch (InterruptedException e) {
 				showLog(e.getMessage());
 			}
-			mServiceThread = null;
 		}
 
 		unregisterReceiver(myBroadcastReceiver);
@@ -108,15 +105,6 @@ public class NotifyPushService extends Service {
 		return Service.START_STICKY;
 	}
 
-	private void showLog(String logText) {
-		Intent activityIntent = new Intent();
-		activityIntent
-				.setAction("com.tpsoft.pushnotification.NotifyPushService");
-		activityIntent.putExtra("action", "log");
-		activityIntent.putExtra("logText", logText);
-		sendBroadcast(activityIntent);
-	}
-
 	private void showNotification(String msgText) {
 		Intent activityIntent = new Intent();
 		activityIntent
@@ -126,11 +114,35 @@ public class NotifyPushService extends Service {
 		sendBroadcast(activityIntent);
 	}
 
+	private void showLog(String logText) {
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "log");
+		activityIntent.putExtra("logText", logText);
+		sendBroadcast(activityIntent);
+	}
+
+	private void showStatus(boolean started) {
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "status");
+		activityIntent.putExtra("started", started);
+		sendBroadcast(activityIntent);
+	}
+
 	private class MyBroadcastReceiver extends BroadcastReceiver {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			String command = intent.getStringExtra("command");
 			if (command.equals("start")) {
+				// 避免重复启动
+				if (receiverStarted) {
+					showStatus(true);
+					return;
+				}
+
 				// 获取登录参数
 				appParams = new AppParams(
 						intent.getBundleExtra("com.tpsoft.pushnotification.AppParams"));
@@ -138,22 +150,32 @@ public class NotifyPushService extends Service {
 						intent.getBundleExtra("com.tpsoft.pushnotification.LoginParams"));
 				networkParams = new NetworkParams(
 						intent.getBundleExtra("com.tpsoft.pushnotification.NetworkParams"));
+
 				// 启动工作线程
 				exitNow = false;
 				mServiceThread = new SocketClientThread();
 				mServiceThread.start();
+
+				// 设置已启动标志
+				receiverStarted = true;
+				showStatus(true);
 			} else if (command.equals("stop")) {
-				// 结束工作线程
-				if (mServiceThread != null) {
-					// showLog(getText(R.string.receiver_stopping).toString());
-					exitNow = true;
-					try {
-						mServiceThread.join();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					mServiceThread = null;
+				// 已停止则直接返回
+				if (!receiverStarted) {
+					showStatus(false);
+					return;
 				}
+
+				// 停止工作线程
+				exitNow = true;
+				try {
+					mServiceThread.join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+				// 设置已停止标志
+				receiverStarted = false;
 			}
 		}
 
@@ -230,12 +252,12 @@ public class NotifyPushService extends Service {
 				if (in != null) {
 					// 关闭已有的流(同时关闭套接字)
 					try {
-						if (in != null)
-							in.close();
+						if (socket != null)
+							socket.close();
 					} catch (IOException ee) {
 						ee.printStackTrace();
 					}
-					in = null;
+					socket = null;
 				}
 				if (!isNetworkAvailable()) {
 					if (networkOk) {
@@ -373,14 +395,18 @@ public class NotifyPushService extends Service {
 				}
 			}
 
-			// 关闭已有的流(同时关闭套接字)
+			// 关闭已有的套接字
 			try {
-				if (in != null)
-					in.close();
+				if (socket != null) {
+					socket.close();
+					socket = null;
+				}
 			} catch (IOException ee) {
 				ee.printStackTrace();
 			}
-			in = null;
+
+			receiverStarted = false;
+			showStatus(false);
 		}
 
 		private void handleServerData(byte data[], OutputStream out)

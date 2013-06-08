@@ -15,13 +15,11 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
-import android.provider.ContactsContract;
 import android.text.util.Linkify;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -35,9 +33,7 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.tpsoft.notifyclient.model.UserSettings;
 import com.tpsoft.notifyclient.utils.MessageDialog;
-import com.tpsoft.notifyclient.utils.PlaySoundPool;
 import com.tpsoft.pushnotification.model.AppParams;
 import com.tpsoft.pushnotification.model.LoginParams;
 import com.tpsoft.pushnotification.model.MyMessage;
@@ -48,31 +44,9 @@ import com.tpsoft.pushnotification.service.NotifyPushService;
 @SuppressLint("SimpleDateFormat")
 public class MainActivity extends TabActivity {
 
-	// //////////////////////////////////////
-	private BroadcastReceiver mExternalStorageReceiver;
-	private boolean mExternalStorageAvailable = false;
-	private boolean mExternalStorageWriteable = false;
+	private static final SimpleDateFormat sdf = new SimpleDateFormat(
+			"HH:mm:ss", Locale.CHINESE);
 
-	// //////////////////////////////////////
-	private static final boolean ALERT_MSG = false;
-
-	// //////////////////////////////////////
-	private static final String SMS_SENDER_NUMBER = "10086";
-	private static final String SMS_SENDER_NAME = "10086";
-	private String smsSenderName = SMS_SENDER_NAME;
-
-	// //////////////////////////////////////
-	public static final String APP_ID = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
-	public static final String APP_PASSWORD = "@0Vd*4Ak";
-	public static final String LOGIN_PROTECT_KEY = "n9SfmcRs";
-	private UserSettings userSettings;
-
-	// //////////////////////////////////////
-	private static final int INFO_SOUND = 1;
-	private static final int ALERT_SOUND = 2;
-	private static PlaySoundPool playSoundPool;
-
-	// //////////////////////////////////////
 	private static final int MAX_MSG_COUNT = 20;
 	private static final int MAX_LOG_COUNT = 100;
 	private LinearLayout msg;
@@ -81,33 +55,20 @@ public class MainActivity extends TabActivity {
 	private boolean useMsgColor1 = true;
 	private int logCount = 0;
 
-	// //////////////////////////////////////
-	private static final SimpleDateFormat sdf = new SimpleDateFormat(
-			"HH:mm:ss", Locale.CHINESE);
-
-	// //////////////////////////////////////
 	private NotificationManager mNM;
-	private MyBroadcastReceiver myBroadcastReceiver;
-	private boolean clientStarted = true;
+	private MyBroadcastReceiver myBroadcastReceiver = null;
 
 	private TabHost tabHost;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
+
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		// 准备音效
-		playSoundPool = new PlaySoundPool(this);
-		playSoundPool.loadSfx(R.raw.info, INFO_SOUND);
-		playSoundPool.loadSfx(R.raw.alert, ALERT_SOUND);
-
 		// 设置外观
 		setTabs();
-
-		// 装入用户设置
-		loadUserSettings();
 
 		// 准备通知
 		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -116,37 +77,35 @@ public class MainActivity extends TabActivity {
 		msg = (LinearLayout) findViewById(R.id.msg);
 		logger = (TextView) findViewById(R.id.log);
 
-		// 开始监视外部存储器状态
-		startWatchingExternalStorage();
+		if (myBroadcastReceiver == null) {
+			// 准备与后台服务通信
+			myBroadcastReceiver = new MyBroadcastReceiver();
+			IntentFilter filter = new IntentFilter();
+			filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
+			registerReceiver(myBroadcastReceiver, filter);
 
-		// 启动后台服务
-		Intent intent = new Intent(MainActivity.this, NotifyPushService.class);
-		intent.putExtra("ActivityClassName", this.getClass().getName());
-		startService(intent);
-
-		// 准备与后台服务通信
-		myBroadcastReceiver = new MyBroadcastReceiver();
-		IntentFilter filter = new IntentFilter();
-		filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
-		registerReceiver(myBroadcastReceiver, filter);
-
-		// 启动消息接收器
-		Handler handler = new Handler();
-		Runnable runnable = new Runnable() {
-			public void run() {
-				startMessageReceiver();
-			}
-		};
-		handler.postDelayed(runnable, 1000); // 启动Timer
+			// 启动消息接收器
+			Handler handler = new Handler();
+			Runnable runnable = new Runnable() {
+				public void run() {
+					startMessageReceiver();
+				}
+			};
+			handler.postDelayed(runnable, 1000); // 启动Timer
+		}
 	}
 
 	@Override
 	protected void onDestroy() {
 		mNM.cancel(R.id.app_notification_id);
 
-		stopWatchingExternalStorage();
-
 		super.onDestroy();
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+		setContentView(R.layout.activity_main);
 	}
 
 	@Override
@@ -157,15 +116,14 @@ public class MainActivity extends TabActivity {
 
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
-		if (clientStarted) {
+		if (MyApplicationClass.clientStarted) {
 			menu.findItem(R.id.menu_start).setEnabled(false);
 			menu.findItem(R.id.menu_stop).setEnabled(true);
-			menu.findItem(R.id.menu_settings).setEnabled(false);
 		} else {
 			menu.findItem(R.id.menu_start).setEnabled(true);
 			menu.findItem(R.id.menu_stop).setEnabled(false);
-			menu.findItem(R.id.menu_settings).setEnabled(true);
 		}
+		menu.findItem(R.id.menu_settings).setEnabled(true);
 		return true;
 	}
 
@@ -180,7 +138,6 @@ public class MainActivity extends TabActivity {
 		case R.id.menu_stop:
 			// 停止消息接收器
 			stopMessageReceiver();
-			showLog("已停止消息接收器");
 			break;
 		case R.id.menu_settings:
 			// 打开设置界面
@@ -249,17 +206,24 @@ public class MainActivity extends TabActivity {
 	}
 
 	private void startMessageReceiver() {
+		if (MyApplicationClass.clientStarted)
+			return;
+
 		Toast.makeText(this, getText(R.string.receiver_starting),
 				Toast.LENGTH_SHORT).show();
 
 		// 获取最新设置
-		loadUserSettings();
+		MyApplicationClass myApp = (MyApplicationClass) getApplication();
+		myApp.loadUserSettings();
 
-		AppParams appParams = new AppParams(APP_ID, APP_PASSWORD,
-				LOGIN_PROTECT_KEY);
-		LoginParams loginParams = new LoginParams(userSettings.getServerHost(),
-				userSettings.getServerPort(), userSettings.getClientId(),
-				userSettings.getClientPassword());
+		AppParams appParams = new AppParams(MyApplicationClass.APP_ID,
+				MyApplicationClass.APP_PASSWORD,
+				MyApplicationClass.LOGIN_PROTECT_KEY);
+		LoginParams loginParams = new LoginParams(
+				MyApplicationClass.userSettings.getServerHost(),
+				MyApplicationClass.userSettings.getServerPort(),
+				MyApplicationClass.userSettings.getClientId(),
+				MyApplicationClass.userSettings.getClientPassword());
 		NetworkParams networkParams = new NetworkParams();
 
 		Intent serviceIntent = new Intent();
@@ -273,11 +237,12 @@ public class MainActivity extends TabActivity {
 		serviceIntent.putExtra("com.tpsoft.pushnotification.NetworkParams",
 				networkParams.getBundle());
 		sendBroadcast(serviceIntent);
-
-		clientStarted = true;
 	}
 
 	private void stopMessageReceiver() {
+		if (!MyApplicationClass.clientStarted)
+			return;
+
 		showLog(getText(R.string.receiver_stopping).toString());
 		Toast.makeText(this, getText(R.string.receiver_stopping),
 				Toast.LENGTH_SHORT).show();
@@ -286,7 +251,6 @@ public class MainActivity extends TabActivity {
 				.setAction("com.tpsoft.pushnotification.ServiceController");
 		serviceIntent.putExtra("command", "stop");
 		sendBroadcast(serviceIntent);
-		clientStarted = false;
 	}
 
 	private class MyBroadcastReceiver extends BroadcastReceiver {
@@ -295,18 +259,29 @@ public class MainActivity extends TabActivity {
 			String action = intent.getStringExtra("action");
 			if (action.equals("notify")) {
 				showNotification(intent.getStringExtra("msgText"));
-			} else {
+			} else if (action.equals("log")) {
 				showLog(intent.getStringExtra("logText"));
+			} else if (action.equals("status")) {
+				boolean receiverStarted = intent.getBooleanExtra("started",
+						false);
+				MyApplicationClass.clientStarted = receiverStarted;
+				showLog(getText(
+						receiverStarted ? R.string.receiver_started
+								: R.string.receiver_stopped).toString());
+			} else {
+				;
 			}
 		}
 	}
 
 	private void showNotification(String msgText) {
 		// 声音提醒
-		if (userSettings.isPlaySound()) {
-			playSoundPool.play(ALERT_MSG ? ALERT_SOUND : INFO_SOUND, 0);
+		if (MyApplicationClass.userSettings.isPlaySound()) {
+			MyApplicationClass.playSoundPool
+					.play(MyApplicationClass.ALERT_MSG ? MyApplicationClass.ALERT_SOUND
+							: MyApplicationClass.INFO_SOUND, 0);
 		}
-		
+
 		// 解析消息文本
 		MyMessage message;
 		try {
@@ -330,7 +305,7 @@ public class MainActivity extends TabActivity {
 		}
 
 		// 输出消息
-		if (userSettings.isEmulateSms()) {
+		if (MyApplicationClass.userSettings.isEmulateSms()) {
 
 			// 格式化消息
 			String formattedMessage = String.format("%s %s: %s%s%s",
@@ -352,8 +327,9 @@ public class MainActivity extends TabActivity {
 			PendingIntent contentIntent = PendingIntent.getActivity(
 					MainActivity.this, 0, intent,
 					PendingIntent.FLAG_CANCEL_CURRENT);
-			notification.setLatestEventInfo(this, smsSenderName,
-					formattedMessage, contentIntent);
+			notification.setLatestEventInfo(this,
+					MyApplicationClass.smsSenderName, formattedMessage,
+					contentIntent);
 
 			mNM.notify(R.id.app_notification_id, notification);
 		} else {
@@ -362,7 +338,7 @@ public class MainActivity extends TabActivity {
 
 		// 为消息对话框准备数据
 		Bundle msgParams = new Bundle();
-		msgParams.putBoolean("alert", ALERT_MSG);
+		msgParams.putBoolean("alert", MyApplicationClass.ALERT_MSG);
 		if (message.getTitle() != null && !message.getTitle().equals(""))
 			msgParams.putString("title", message.getTitle());
 		msgParams.putString("body", message.getBody());
@@ -372,8 +348,11 @@ public class MainActivity extends TabActivity {
 			msgParams.putString("picUrl", attachmentUrl);
 			msgParams.putString("picFilename", attachmentFilename);
 		}
-		msgParams.putBoolean("showPic", (attachmentUrl != null
-				&& mExternalStorageAvailable && mExternalStorageWriteable));
+		msgParams
+				.putBoolean(
+						"showPic",
+						(attachmentUrl != null
+								&& MyApplicationClass.mExternalStorageAvailable && MyApplicationClass.mExternalStorageWriteable));
 
 		// 显示消息对话框
 		Intent i = new Intent(MainActivity.this, MessageDialog.class);
@@ -397,7 +376,7 @@ public class MainActivity extends TabActivity {
 				+ message.getBody()
 				+ (message.getUrl() == null || message.getUrl().equals("") ? ""
 						: " " + message.getUrl());
-		tv.setText(msgText+"\r\n");
+		tv.setText(msgText + "\r\n");
 		if (msgCount < MAX_MSG_COUNT) {
 			msg.addView(tv, 0);
 			msgCount++;
@@ -422,72 +401,9 @@ public class MainActivity extends TabActivity {
 
 	private void writeSms(String message) {
 		ContentValues values = new ContentValues();
-		values.put("address", SMS_SENDER_NUMBER);
+		values.put("address", MyApplicationClass.SMS_SENDER_NUMBER);
 		values.put("body", message);
 		getContentResolver().insert(Uri.parse("content://sms/inbox"), values);
 	}
 
-	private void loadUserSettings() {
-		userSettings = new UserSettings(this);
-		if (userSettings.isEmulateSms()) {
-			String name = queryNameByNum(SMS_SENDER_NUMBER, this);
-			if (name != null) {
-				smsSenderName = name;
-			}
-		}
-	}
-
-	private static String queryNameByNum(String num, Context context) {
-		Cursor cursorOriginal = context
-				.getContentResolver()
-				.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-						new String[] { ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME },
-						ContactsContract.CommonDataKinds.Phone.NUMBER + "='"
-								+ num + "'", null, null);
-		if (null != cursorOriginal) {
-			if (cursorOriginal.getCount() > 1) {
-				return null;
-			} else {
-				if (cursorOriginal.moveToFirst()) {
-					return cursorOriginal
-							.getString(cursorOriginal
-									.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-				} else {
-					return null;
-				}
-			}
-		} else {
-			return null;
-		}
-	}
-
-	private void startWatchingExternalStorage() {
-		mExternalStorageReceiver = new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				updateExternalStorageState();
-			}
-		};
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
-		filter.addAction(Intent.ACTION_MEDIA_REMOVED);
-		registerReceiver(mExternalStorageReceiver, filter);
-		updateExternalStorageState();
-	}
-
-	private void stopWatchingExternalStorage() {
-		unregisterReceiver(mExternalStorageReceiver);
-	}
-
-	private void updateExternalStorageState() {
-		String state = Environment.getExternalStorageState();
-		if (Environment.MEDIA_MOUNTED.equals(state)) {
-			mExternalStorageAvailable = mExternalStorageWriteable = true;
-		} else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
-			mExternalStorageAvailable = true;
-			mExternalStorageWriteable = false;
-		} else {
-			mExternalStorageAvailable = mExternalStorageWriteable = false;
-		}
-	}
 }
