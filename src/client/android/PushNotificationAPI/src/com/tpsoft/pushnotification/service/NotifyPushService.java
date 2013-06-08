@@ -10,7 +10,6 @@ import java.net.SocketTimeoutException;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
-
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -249,16 +248,16 @@ public class NotifyPushService extends Service {
 			InputStream in = null;
 			OutputStream out = null;
 			reconnect: while (!exitNow) {
-				if (in != null) {
-					// 关闭已有的流(同时关闭套接字)
-					try {
-						if (socket != null)
-							socket.close();
-					} catch (IOException ee) {
-						ee.printStackTrace();
+				clientLogon = false;
+				// 关闭已有的套接字
+				try {
+					if (socket != null) {
+						socket.close();
 					}
-					socket = null;
+				} catch (IOException ee) {
+					ee.printStackTrace();
 				}
+				socket =  null;
 				if (!isNetworkAvailable()) {
 					if (networkOk) {
 						showLog("网络不可用");
@@ -270,7 +269,6 @@ public class NotifyPushService extends Service {
 				networkOk = true;
 				showLog("连接服务器 " + loginParams.getServerHost() + "["
 						+ loginParams.getServerPort() + "]...");
-				clientLogon = false;
 				while (!exitNow) {
 					// 创建新的套接字
 					socket = new Socket();
@@ -461,7 +459,7 @@ public class NotifyPushService extends Service {
 							out.write(String.format(CLOSE_CONN_RES,
 									INVALID_ACTION_LINE.length(),
 									INVALID_ACTION_LINE).getBytes("UTF-8"));
-							return;
+							throw new Exception("动作行格式不对: "+line);
 						}
 
 						action = starr[0].trim().toUpperCase(); // 动作
@@ -476,7 +474,7 @@ public class NotifyPushService extends Service {
 							out.write(String.format(CLOSE_CONN_RES,
 									INVALID_FIELD_LINE.length(),
 									INVALID_FIELD_LINE).getBytes("UTF-8"));
-							return;
+							throw new Exception("属性行格式不对: "+line);
 						}
 
 						String name = starr[0].trim().toUpperCase(); // 名字
@@ -518,7 +516,8 @@ public class NotifyPushService extends Service {
 						out.write(String.format(CLOSE_CONN_RES,
 								INVALID_LENGTH_VALUE_MSG.length(),
 								INVALID_LENGTH_VALUE_MSG).getBytes("UTF-8"));
-						return;
+						throw new Exception("体部长度值无效: "+fields
+								.get(bodyLengthFieldName));
 					}
 					bodyLength = tmpBodyLength;
 				}

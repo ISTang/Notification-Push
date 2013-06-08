@@ -44,15 +44,15 @@ function DateFormat(fmt) { //author: meizz
 
 function DateParse(str) {
     var fields = str.split(DATE_FORMAT_REGEX);
-    var date = new Date(parseInt(fields[1]), parseInt(fields[2])-1, parseInt(fields[3]),
-        parseInt(fields[4]), parseInt(fields[5]), parseInt(fields[6]));
+    var date = new Date(parseInt(fields[1],10), parseInt(fields[2],10)-1, parseInt(fields[3],10),
+        parseInt(fields[4],10), parseInt(fields[5],10), parseInt(fields[6],10));
     return date;
 }
 
 function DateParse2(str) {
     var fields = str.split(DATE_FORMAT_REGEX2);
-    var date = new Date(parseInt(fields[1]), parseInt(fields[2])-1, parseInt(fields[3]),
-        parseInt(fields[4]), parseInt(fields[5]), parseInt(fields[6]));
+    var date = new Date(parseInt(fields[1],10), parseInt(fields[2],10)-1, parseInt(fields[3],10),
+        parseInt(fields[4],10), parseInt(fields[5],10), parseInt(fields[6],10));
     return date;
 }
 
@@ -110,7 +110,7 @@ void main(function () {
         console.log("checksum: "+checksum);
     });*/
 
-    Date.prototype.DateFormat = DateFormat;
+    /*Date.prototype.DateFormat = DateFormat;
 
     var str = "2013-06-07 09:20:32";
     var date = DateParse2(str);
@@ -127,5 +127,5 @@ void main(function () {
     console.log(diff, diff/1000);
     if (diff<MIN_EXPIRATION_TIME) {
         log("Error");
-    }
+    }*/
 });

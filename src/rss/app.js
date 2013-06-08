@@ -38,27 +38,33 @@ function log(msg) {
 }
 
 function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
-	var bodyText = JSON.stringify({title: msgTitle, body: msgBody,
+    var bodyText = JSON.stringify({title: msgTitle, body: msgBody,
         attachments: [{title:"logo",type:'image/xxx',filename:'logo',url:logoUrl}], url: msgUrl});
-	
-	var options = url.parse("http://"+PLATFORM_SERVER+":"+PLATFORM_PORT+"/application/"+APP_ID+"/message");
-	options.method = "POST";
-	options.headers = {
-          'Content-Type': 'application/json;charset=utf-8',
-          'Content-Length': Buffer.byteLength(bodyText)
-      };
-	var req = http.request(options, function (res) {
-		callback();
-	});
-	req.on("error", function (err) {
-		callback(err.message);
-	});
-	req.write(bodyText);
-	req.end();
+
+    var options = url.parse("http://"+PLATFORM_SERVER+":"+PLATFORM_PORT+"/application/"+APP_ID+"/message");
+    options.method = "POST";
+    options.headers = {
+        'Content-Type': 'application/json;charset=utf-8',
+        'Content-Length': Buffer.byteLength(bodyText)
+    };
+    var req = http.request(options, function (res) {
+        callback();
+    });
+    req.on("error", function (err) {
+        callback(err.message);
+    });
+    req.write(bodyText);
+    req.end();
 }
 
-function getArticles(url, handleResult) {
-    feedparser.parseStream(request({uri:url}), function (err, meta, articles) {
+function getArticles(url, since, handleResult) {
+    if (!since) {
+        since = utils.DateAdd("d", -7, new Date());
+    }
+    var reqObj = {'uri': url,
+        'headers': {'If-Modified-Since' : since.toString()/*,
+         'If-None-Match' : <your cached 'etag' value>*/}};
+    feedparser.parseStream(request(reqObj), function (err, meta, articles) {
         if (err) return handleResult(err);
         var logo = meta.image.url;
         var result = [];
@@ -73,17 +79,18 @@ function getArticles(url, handleResult) {
 }
 
 function getAllArticles(handleResult) {
+    var now = new Date();
     db.getAllSources(function (err, sources) {
         if (err) return handleResult(err);
         var result = [];
         async.forEachSeries(sources, function (source, callback) {
-            log("获取源 "+source.title+" 上的文章...");
-            getArticles(source.url, function (err, articles) {
+            log("获取源 "+source.url+" 上的文章...");
+            getArticles(source.url, source.since, function (err, articles) {
                 if (err) {
                     log(err);
                     return callback(); // 忽略错误
                 }
-                log("从源 "+source.title+" 获取到 "+articles.length+" 篇文章。");
+                log("从源 "+source.url+" 获取到 "+articles.length+" 篇文章。");
                 async.forEachSeries(articles, function (article, callback) {
                     db.existsArticle(article, function (err, exists) {
                         if (err) return callback(err);
@@ -98,7 +105,11 @@ function getAllArticles(handleResult) {
                         }
                     });
                 }, function (err) {
-                    callback(err);
+                    if (!err) {
+                        db.updateFetchTime(source, now, callback);
+                    } else {
+                        callback(err);
+                    }
                 });
             });
         }, function (err) {

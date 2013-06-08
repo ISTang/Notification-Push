@@ -334,9 +334,14 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "APPID") {
 
+                    if (action=="CLOSE" && target=="CONN") {
+                        log(clientAddress + " closed connection");
+                        return false;
+                    }
+
                     // 错误的响应
                     log(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
                     return false;
                 }
 
@@ -409,9 +414,14 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "USERNAME") {
 
+                    if (action=="CLOSE" && target=="CONN") {
+                        log(clientAddress + " closed connection");
+                        return false;
+                    }
+
                     // 错误的响应
                     log(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
                     return false;
                 }
 
@@ -480,9 +490,14 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "MSGKEY") {
 
+                    if (action=="CLOSE" && target=="CONN") {
+                        log(clientAddress + " closed connection");
+                        return false;
+                    }
+
                     // 错误的响应
                     log(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
                     return false;
                 }
 
@@ -500,6 +515,11 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
 
                 // 检查动作和目标
                 if (action != "SET" || target != "ALIVEINT") {
+
+                    if (action=="CLOSE" && target=="CONN") {
+                        log(clientAddress + " closed connection");
+                        return false;
+                    }
 
                     // 错误的响应
                     log(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
