@@ -393,12 +393,22 @@ public class MainActivity extends TabActivity {
 
 	private void showLog(String logText) {
 		String log = "[" + sdf.format(new Date()) + "] " + logText;
+		MyApplicationClass.savedLogs.add(0, log);
 		if (logCount < MAX_LOG_COUNT) {
 			logger.setText(log + "\r\n" + logger.getText());
 			logCount++;
 		} else {
-			logger.setText(log + "\r\n");
-			logCount = 1;
+			MyApplicationClass.savedLogs.remove(MyApplicationClass.savedLogs
+					.size() - 1);
+			StringBuilder sb = new StringBuilder();
+			boolean firstLog = true;
+			for (String savedLog : MyApplicationClass.savedLogs) {
+				if (firstLog)
+					firstLog = false;
+				else
+					sb.append("\r\n");
+				sb.append(savedLog);
+			}
 		}
 	}
 

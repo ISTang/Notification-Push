@@ -39,6 +39,7 @@ public class MyApplicationClass extends Application {
 
 	public static boolean clientStarted = false;
 	public static List<MyMessage> savedMsgs = new ArrayList<MyMessage>();
+	public static List<String> savedLogs = new ArrayList<String>();
 
 	private BroadcastReceiver mExternalStorageReceiver;
 

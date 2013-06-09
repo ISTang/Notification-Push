@@ -50,6 +50,7 @@ public class NotifyPushService extends Service {
 	public void onCreate() {
 		super.onCreate();
 
+		// 开始结束广播
 		myBroadcastReceiver = new MyBroadcastReceiver();
 		IntentFilter filter = new IntentFilter();
 		filter.addAction("com.tpsoft.pushnotification.ServiceController");
@@ -58,19 +59,21 @@ public class NotifyPushService extends Service {
 
 	@Override
 	public void onDestroy() {
+		// 停止接收广播
+		unregisterReceiver(myBroadcastReceiver);
+
+		// 取消前台服务
+		stopForeground(true);
+
+		// 结束工作线程
 		if (receiverStarted) {
 			exitNow = true;
 			try {
 				mServiceThread.join();
 			} catch (InterruptedException e) {
-				showLog(e.getMessage());
+				e.printStackTrace();
 			}
 		}
-
-		unregisterReceiver(myBroadcastReceiver);
-
-		// 取消前台服务
-		stopForeground(true);
 
 		super.onDestroy();
 	}
@@ -107,6 +110,7 @@ public class NotifyPushService extends Service {
 	}
 
 	private void showNotification(String msgText) {
+		// 广播新消息通知
 		Intent activityIntent = new Intent();
 		activityIntent
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
@@ -116,6 +120,7 @@ public class NotifyPushService extends Service {
 	}
 
 	private void showLog(String logText) {
+		// 广播日志
 		Intent activityIntent = new Intent();
 		activityIntent
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
@@ -125,6 +130,7 @@ public class NotifyPushService extends Service {
 	}
 
 	private void showStatus(boolean started) {
+		// 广播接收器状态
 		Intent activityIntent = new Intent();
 		activityIntent
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
@@ -138,6 +144,7 @@ public class NotifyPushService extends Service {
 		public void onReceive(Context context, Intent intent) {
 			String command = intent.getStringExtra("command");
 			if (command.equals("start")) {
+				// 启动消息接收器：
 				// 避免重复启动
 				if (receiverStarted) {
 					showStatus(true);
@@ -161,6 +168,7 @@ public class NotifyPushService extends Service {
 				receiverStarted = true;
 				showStatus(true);
 			} else if (command.equals("stop")) {
+				// 停止消息接收器：
 				// 已停止则直接返回
 				if (!receiverStarted) {
 					showStatus(false);
@@ -250,7 +258,8 @@ public class NotifyPushService extends Service {
 			InputStream in = null;
 			OutputStream out = null;
 			reconnect: while (!exitNow) {
-				resetRecvStaus();
+				headInput = "";
+				resetPacketStaus();
 				clientLogon = false;
 				// 关闭已有的套接字
 				try {
@@ -319,10 +328,10 @@ public class NotifyPushService extends Service {
 							waitForReconnect();
 							continue reconnect;
 						} else if (byteCount == 0) {
-							continue waitData;
+							throw new SocketTimeoutException("空数据");
 						}
 					} catch (SocketTimeoutException e) {
-						// 读取失败
+						// 读取超时
 						Calendar now = Calendar.getInstance();
 						if (clientLogon) {
 							// 已登录，必要时发送心跳信号
@@ -352,8 +361,7 @@ public class NotifyPushService extends Service {
 								waitForReconnect();
 								continue reconnect;
 							}
-
-						} else /* if (clientLogining) */{
+						} else {
 							// 正在登录，检测登录超时
 							long diff = now.getTimeInMillis()
 									- connectedTime.getTimeInMillis();
@@ -513,7 +521,8 @@ public class NotifyPushService extends Service {
 						tmpBodyLength = Integer.parseInt(fields
 								.get(bodyLengthFieldName));
 					} catch (NumberFormatException e) {
-						;
+						throw new Exception("体部长度格式不对: "
+								+ fields.get(bodyLengthFieldName));
 					}
 					if (tmpBodyLength < 0) {
 						out.write(String.format(CLOSE_CONN_RES,
@@ -554,7 +563,7 @@ public class NotifyPushService extends Service {
 			} catch (Exception e) {
 				throw e;
 			} finally {
-				resetRecvStaus();
+				resetPacketStaus();
 			}
 		}
 
@@ -678,7 +687,7 @@ public class NotifyPushService extends Service {
 			}
 		}
 
-		private void resetRecvStaus() {
+		private void resetPacketStaus() {
 			waitForHead = true;
 			actionLineFound = false;
 			//
