@@ -39,7 +39,7 @@ function log(msg) {
 
 function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
     var bodyText = JSON.stringify({title: msgTitle, body: msgBody,
-        attachments: [{title:"logo",type:'image/xxx',filename:'logo',url:logoUrl}], url: msgUrl});
+        attachments: [{title:"logo",type:'image/xxx',filename:'logo',url:logoUrl}], url: msgUrl, need_receipt:true});
 
     var options = url.parse("http://"+PLATFORM_SERVER+":"+PLATFORM_PORT+"/application/"+APP_ID+"/message");
     options.method = "POST";

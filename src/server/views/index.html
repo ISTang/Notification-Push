@@ -10,13 +10,16 @@
         <tr>
             <th>连接标识</th>
             <th>
-                开始时间
+                客户地址
+            </th>
+            <th>
+                账号信息
             </th>
             <th>
                 应用名称
             </th>
             <th>
-                账号名称
+                开始时间
             </th>
             <th>
                 连接时长(s)
@@ -25,7 +28,7 @@
                 消息通道
             </th>
             <th>
-                消息密钥
+                最近活动
             </th>
         </tr>
         </thead>
@@ -35,13 +38,16 @@
         <tr>
             <td><%=connection.connId%></td>
             <td>
-                <%=connection.beginTime%>
+                <%=(connection.clientAddress?connection.clientAddress:"")%>
+            </td>
+            <td>
+                <%=connection.accountInfo%>
             </td>
             <td>
                 <%=connection.applicationName%>
             </td>
             <td>
-                <%=connection.accountName%>
+                <%=connection.beginTime%>
             </td>
             <td>
                 <%=connection.duration%>
@@ -50,7 +56,7 @@
                 <%=connection.msgChannel%>
             </td>
             <td>
-                <%=connection.msgKey%>
+                <%=connection.latestActivity%>
             </td>
         </tr>
         <%})%>

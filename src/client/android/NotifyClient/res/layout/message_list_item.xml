@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="4dp"
+    android:background="@drawable/message_background" >
+
+    <ImageView
+        android:id="@+id/msgAttachment"
+        android:layout_width="48dip"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="4dip"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/msg_attachment"
+        android:cropToPadding="true"
+        android:scaleType="fitStart"
+        android:src="@drawable/app_logo" />
+
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dip" >
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginRight="64dip">
+
+            <TextView
+                android:id="@+id/msgTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="黑体"
+                android:text="@string/msg_title"
+                android:textColor="#382d24"
+                android:textIsSelectable="true"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/msgBody"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toEndOf="@id/msgAttachment"
+                android:autoLink="all"
+                android:fontFamily="宋体"
+                android:text="@string/msg_body"
+                android:textColor="#382d24"
+                android:textIsSelectable="true"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/msgTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_marginRight="2dp"
+            android:layout_marginTop="2dp"
+            android:autoLink="all"
+            android:fontFamily="宋体"
+            android:maxLines="10"
+            android:text="@string/msg_time"
+            android:textColor="#382d24"
+            android:textIsSelectable="true"
+            android:textSize="14sp" />
+    </RelativeLayout>
+
+</LinearLayout>

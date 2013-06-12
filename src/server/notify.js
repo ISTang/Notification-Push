@@ -135,6 +135,7 @@ process.on('message', function (m, socket) {
             if (diff >= MAX_INACTIVE_TIME) {
 
                 log("[" + accountName + "] inactive timeout");
+                db.recordLatestActivity(connId, "已下线");
 
                 inactive = true;
                 socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
@@ -149,6 +150,7 @@ process.on('message', function (m, socket) {
             // 收到客户端心跳包
             lastActiveTime = new Date();
             log("[" + accountName + "] still alive");
+            db.recordLatestActivity(connId, "在线");
         }
 
         function msgConfirmed() {
@@ -167,6 +169,7 @@ process.on('message', function (m, socket) {
                     if (err) return log(err);
 
                     log("[" + accountName + "] message " + pendingMsg.msgId + " confirmed");
+                    db.recordLatestActivity(connId, "已确认一条消息");
 
                     var msgs = queuedMsgs[connId];
                     if (typeof msgs!="undefined") {
@@ -313,10 +316,12 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
         if (err) return log(err);
         log("Message " + msgId + " on connection " + connId + " sent");
         if (needReceipt) {
+            db.recordLatestActivity(connId, "已发送一条消息，等待确认...");
             setTimeout(function() {
                 var pendingMsg = pendingMsgs[connId];
                 if (typeof pendingMsg!="undefined") {
                     log("Send message " + msgId + " on connection " + connId + " timeout");
+                    db.recordLatestActivity(connId, "确认消息超时");
                     var socket = clientConns[connId];
                     if (typeof socket!="undefined") {
                         socket.end();
@@ -329,6 +334,8 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                     }
                 }
             }, RECEIVE_RECEIPT_TIMEOUT);
+        } else {
+            db.recordLatestActivity(connId, "已发送一条不需要确认的消息");
         }
     });
 }

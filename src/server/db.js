@@ -23,6 +23,7 @@ exports.saveMessage = saveMessage;
 exports.addMessageToAccounts = addMessageToAccounts;
 exports.recordMessageSentTime = recordMessageSentTime;
 exports.recordMessageReceiptTime = recordMessageReceiptTime;
+exports.recordLatestActivity = recordLatestActivity;
 exports.getAccountIdByName = getAccountIdByName;
 exports.getActiveConnections = getActiveConnections;
 exports.getApplicationById = getApplicationById;
@@ -330,9 +331,10 @@ function checkUsername(username, password, autoCreateAccount, handleCheckResult)
  * @param appId 应用ID
  * @param msgKey 消息密钥(空代表消息不需要加密)
  * @param channelId 消息通道ID
+ * @param clientAddress 客户地址
  * @param handleResult(err)
  */
-function saveLoginInfo(connId, accountId, appId, msgKey, channelId, handleResult) {
+function saveLoginInfo(connId, accountId, appId, msgKey, channelId, clientAddress, handleResult) {
 
     var beginTimeStr = new Date().Format("yyyyMMddHHmmss");
 
@@ -345,6 +347,7 @@ function saveLoginInfo(connId, accountId, appId, msgKey, channelId, handleResult
     if (msgKey != null) redis.hset("connection:" + connId, "key", msgKey);
     redis.hset("connection:" + connId, "begin_time", beginTimeStr);
     redis.hset("connection:" + connId, "channel_id", channelId);
+    redis.hset("connection:" + connId, "client_address", clientAddress);
     //
     redis.sadd("connection:set", connId);
     redis.sadd("application:" + appId + ":connections", connId);
@@ -502,6 +505,15 @@ function recordMessageReceiptTime(connId, msgId, receiptTime, handleResult) {
         redis.zadd("account:" + connectionInfo.account_id + ":application:" + connectionInfo.application_id + ":sent_messages", receiptTime.getTime(), msgId);
         handleResult();
     });
+}
+
+/**
+ * 记录最新活动
+ * @param connId 连接ID
+ * @param activity 活动内容
+ */
+function recordLatestActivity(connId, activity) {
+    redis.hset("connection:"+connId, "latest_activity", activity+"["+new Date().Format("HH:mm:ss")+"]");
 }
 
 /**
@@ -1410,8 +1422,8 @@ function getAllConnections(handleResult) {
             redis.hgetall("connection:" + connId, function (err, connectionInfo) {
                 if (err) return callback(err);
                 if (!connectionInfo) return callback("Connection " + connId + " not exists");
-                var applicationName, accountName;
-                async.parallel([
+                var applicationName, accountInfo;
+                async.series([
                     function (callback) {
                         redis.get("application:" + connectionInfo.application_id + ":name", function (err, name) {
                             if (err) return callback(err);
@@ -1420,9 +1432,25 @@ function getAllConnections(handleResult) {
                         });
                     },
                     function (callback) {
+                        redis.get("account:" + connectionInfo.account_id + ":phone", function (err, name) {
+                            if (err) return callback(err);
+                            accountInfo = (name ? name : "");
+                            callback();
+                        });
+                    },
+                    function (callback) {
+                        if (accountInfo) return callback();
+                        redis.get("account:" + connectionInfo.account_id + ":email", function (err, name) {
+                            if (err) return callback(err);
+                            accountInfo = (name ? name : "");
+                            callback();
+                        });
+                    },
+                    function (callback) {
+                        if (accountInfo) return callback();
                         redis.get("account:" + connectionInfo.account_id + ":name", function (err, name) {
                             if (err) return callback(err);
-                            accountName = (name ? name : "");
+                            accountInfo = (name ? name : "");
                             callback();
                         });
                     }
@@ -1431,12 +1459,13 @@ function getAllConnections(handleResult) {
                     var duration = (now.getTime() - utils.DateParse(connectionInfo.begin_time).getTime()) / 1000;
                     connections.push({
                         connId: connId,
-                        beginTime: connectionInfo.begin_time,
+                        clientAddress: connectionInfo.client_address,
+                        accountInfo: accountInfo,
                         applicationName: applicationName,
-                        accountName: accountName,
+                        beginTime: connectionInfo.begin_time,
                         duration: duration,
                         msgChannel: connectionInfo.channel_id,
-                        msgKey: connectionInfo.key ? connectionInfo.key : ""});
+                        latestActivity: connectionInfo.latest_activity ? connectionInfo.latest_activity : ""});
                     callback();
                 });
             });

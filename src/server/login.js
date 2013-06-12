@@ -203,7 +203,7 @@ void main(function () {
 
             var connId = uuid.v4().toUpperCase();
             var channelId = "notify-"+myIndex+"-"+nextNotifyProcessIndex;
-            db.saveLoginInfo(connId, accountId, appId, msgKey, channelId,handleResult);
+            db.saveLoginInfo(connId, accountId, appId, msgKey, channelId,clientAddress, handleResult);
 
             var notifyProcess = notifyProcessPool[nextNotifyProcessIndex++];
             nextNotifyProcessIndex = nextNotifyProcessIndex % NOTIFY_NUMBER;
