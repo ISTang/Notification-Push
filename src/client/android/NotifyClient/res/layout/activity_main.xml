@@ -46,6 +46,7 @@
                     android:id="@+id/log"
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
+	                android:fontFamily="黑体"
                     android:text="@string/log"
                     android:textIsSelectable="true" />
             </ScrollView>

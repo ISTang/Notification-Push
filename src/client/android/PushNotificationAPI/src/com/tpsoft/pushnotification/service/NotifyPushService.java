@@ -292,7 +292,7 @@ public class NotifyPushService extends Service {
 										.getServerPort()), networkParams
 										.getConnectTimeout());
 						socket.setSoTimeout(networkParams.getReadTimeout()); // 设置读超时(ms)
-						socket.setKeepAlive(true);
+						//socket.setKeepAlive(true);
 						//
 						in = socket.getInputStream();
 						out = socket.getOutputStream();
@@ -329,6 +329,9 @@ public class NotifyPushService extends Service {
 							continue reconnect;
 						} else if (byteCount == 0) {
 							throw new SocketTimeoutException("空数据");
+						} else {
+							// 读取到数据
+							serverActiveTime = Calendar.getInstance();
 						}
 					} catch (SocketTimeoutException e) {
 						// 读取超时
@@ -378,8 +381,8 @@ public class NotifyPushService extends Service {
 						waitForReconnect();
 						continue reconnect;
 					}
+					
 					// 处理来自服务器的数据
-					serverActiveTime = Calendar.getInstance();
 					byte[] data = new byte[byteCount];
 					for (int i = 0; i < byteCount; i++) {
 						data[i] = buffer[i];

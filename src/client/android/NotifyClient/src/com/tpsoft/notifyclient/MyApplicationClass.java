@@ -1,7 +1,9 @@
 package com.tpsoft.notifyclient;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import android.app.Application;
 import android.content.BroadcastReceiver;
@@ -29,7 +31,7 @@ public class MyApplicationClass extends Application {
 	// //////////////////////////////////////
 	public static final String SMS_SENDER_NUMBER = "10086";
 	public static final String SMS_SENDER_NAME = "10086";
-	
+
 	public static PlaySoundPool playSoundPool;
 	public static UserSettings userSettings;
 	public static String smsSenderName = SMS_SENDER_NAME;
@@ -39,7 +41,7 @@ public class MyApplicationClass extends Application {
 
 	public static boolean clientStarted = false;
 	public static List<MyMessage> savedMsgs = new ArrayList<MyMessage>();
-	public static List<String> savedLogs = new ArrayList<String>();
+	public static Map<String, String> savedImages = new HashMap<String, String>();
 
 	private BroadcastReceiver mExternalStorageReceiver;
 
@@ -60,14 +62,17 @@ public class MyApplicationClass extends Application {
 
 		// 启动后台服务
 		Intent intent = new Intent(this, NotifyPushService.class);
-		intent.putExtra("ActivityClassName", "com.tpsoft.notifyclient.MainActivity");
+		intent.putExtra("ActivityClassName",
+				"com.tpsoft.notifyclient.MainActivity");
 		intent.putExtra("notification_logo", R.drawable.app_logo);
-		intent.putExtra("notification_title", getText(R.string.notification_title).toString());
-		intent.putExtra("notification_message", getText(R.string.notification_message).toString());
+		intent.putExtra("notification_title",
+				getText(R.string.notification_title).toString());
+		intent.putExtra("notification_message",
+				getText(R.string.notification_message).toString());
 		startService(intent);
 
 	}
-	
+
 	@Override
 	public void onTerminate() {
 		stopWatchingExternalStorage();

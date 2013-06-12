@@ -32,11 +32,14 @@
     <string name="play_sound_summary">收到新消息时，发出声音提醒</string>
     
     <string name="msg_received">接收到一条新消息</string>
-    <string name="msg_level">消息重要级别</string>
+    <string name="msg_index"></string>
     <string name="msg_title">消息标题</string>
     <string name="msg_body">消息正文</string>
     <string name="msg_attachment">消息附件</string>   
     <string name="msg_url">详情URL</string>
+    <string name="msg_time">消息时间</string>
+    <string name="msg_first">已经是第一条消息了</string>
+    <string name="msg_last">已经是最后一条消息了</string>
     <string name="close_button">关闭</string>
     
  	<string name="mock"></string>

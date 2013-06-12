@@ -9,10 +9,12 @@
 	<color name="text_tab_selected">#000</color>
 	<color name="text_tab_unselected">#000</color>
 	
-	<color name="msgBackground">#bbbf97</color>
-	<color name="logBackground">#bbbf97</color>
+	<color name="msgBackground">#fff</color>
+	<color name="logBackground">#fff</color>
 	
 	<color name="message_color_1">#3c2714</color>
 	<color name="message_color_2">#68482c</color>
 	
+	<color name="message_url">#c8c8c8</color>
+		
 </resources>

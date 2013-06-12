@@ -1,5 +1,6 @@
 package com.tpsoft.notifyclient;
 
+import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -17,15 +18,19 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
-import android.text.util.Linkify;
+import android.os.Message;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -33,6 +38,7 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.tpsoft.notifyclient.utils.HttpDownloader;
 import com.tpsoft.notifyclient.utils.MessageDialog;
 import com.tpsoft.pushnotification.model.AppParams;
 import com.tpsoft.pushnotification.model.LoginParams;
@@ -44,11 +50,43 @@ import com.tpsoft.pushnotification.service.NotifyPushService;
 @SuppressLint("SimpleDateFormat")
 public class MainActivity extends TabActivity {
 
+	private class MyBroadcastReceiver extends BroadcastReceiver {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (intent.getAction().equals(
+					"com.tpsoft.pushnotification.NotifyPushService")) {
+				String action = intent.getStringExtra("action");
+				if (action.equals("notify")) {
+					showNotification(intent.getStringExtra("msgText"));
+				} else if (action.equals("log")) {
+					showLog(intent.getStringExtra("logText"));
+				} else if (action.equals("status")) {
+					boolean receiverStarted = intent.getBooleanExtra("started",
+							false);
+					MyApplicationClass.clientStarted = receiverStarted;
+					showLog(getText(
+							receiverStarted ? R.string.receiver_started
+									: R.string.receiver_stopped).toString());
+				} else {
+					;
+				}
+			} else if (intent.getAction().equals(
+					"com.tpsoft.notifyclient.utils.MessageDialog")) {
+				String action = intent.getStringExtra("action");
+				if (action.equals("popupClosed")) {
+					messagePopupClosed = true;
+				} else {
+					;
+				}
+			}
+		}
+	}
+
 	private static final SimpleDateFormat sdf = new SimpleDateFormat(
 			"HH:mm:ss", Locale.CHINESE);
 
-	private static final int MAX_MSG_COUNT = 100;
-	private static final int MAX_LOG_COUNT = 100;
+	private static final int MAX_MSG_COUNT = 20;
+	private static final int MAX_LOG_COUNT = 200;
 	private LinearLayout msg;
 	private TextView logger;
 	private int msgCount = 0;
@@ -57,8 +95,11 @@ public class MainActivity extends TabActivity {
 
 	private NotificationManager mNM;
 	private MyBroadcastReceiver myBroadcastReceiver = null;
+	private boolean messagePopupClosed = true;
 
 	private TabHost tabHost;
+
+	private HttpDownloader httpDownloader = new HttpDownloader();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -80,15 +121,36 @@ public class MainActivity extends TabActivity {
 		// 恢复消息显示
 		Resources res = getResources();
 		for (MyMessage message : MyApplicationClass.savedMsgs) {
-			msg.addView(makeMessageView(message, res), 0);
+			// 获取图片URL
+			String imageUrl = null;
+			if (message.getAttachments() != null) {
+				for (MyMessage.Attachment attachment : message.getAttachments()) {
+					if (attachment.getType().matches("image/.*")) {
+						imageUrl = attachment.getUrl();
+						break;
+					}
+				}
+			}
+			msg.addView(
+					makeMessageView(
+							message,
+							(imageUrl != null ? MyApplicationClass.savedImages
+									.get(imageUrl) : null), res), 0);
 		}
 		msgCount = MyApplicationClass.savedMsgs.size();
 
 		if (myBroadcastReceiver == null) {
 			// 准备与后台服务通信
 			myBroadcastReceiver = new MyBroadcastReceiver();
+			try {
+				unregisterReceiver(myBroadcastReceiver);
+			} catch (Exception e) {
+				;
+			}
+			//
 			IntentFilter filter = new IntentFilter();
 			filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
+			filter.addAction("com.tpsoft.notifyclient.utils.MessageDialog");
 			registerReceiver(myBroadcastReceiver, filter);
 
 			// 启动消息接收器
@@ -260,39 +322,11 @@ public class MainActivity extends TabActivity {
 		sendBroadcast(serviceIntent);
 	}
 
-	private class MyBroadcastReceiver extends BroadcastReceiver {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getStringExtra("action");
-			if (action.equals("notify")) {
-				showNotification(intent.getStringExtra("msgText"));
-			} else if (action.equals("log")) {
-				showLog(intent.getStringExtra("logText"));
-			} else if (action.equals("status")) {
-				boolean receiverStarted = intent.getBooleanExtra("started",
-						false);
-				MyApplicationClass.clientStarted = receiverStarted;
-				showLog(getText(
-						receiverStarted ? R.string.receiver_started
-								: R.string.receiver_stopped).toString());
-			} else {
-				;
-			}
-		}
-	}
-
 	private void showNotification(String msgText) {
 		showLog(getText(R.string.msg_received).toString());
 
-		// 声音提醒
-		if (MyApplicationClass.userSettings.isPlaySound()) {
-			MyApplicationClass.playSoundPool
-					.play(MyApplicationClass.ALERT_MSG ? MyApplicationClass.ALERT_SOUND
-							: MyApplicationClass.INFO_SOUND, 0);
-		}
-
 		// 解析消息文本
-		MyMessage message;
+		final MyMessage message;
 		try {
 			message = MyMessage.extractMessage(msgText);
 		} catch (Exception e) {
@@ -341,39 +375,114 @@ public class MainActivity extends TabActivity {
 					contentIntent);
 
 			mNM.notify(R.id.app_notification_id, notification);
-		} else {
-			showMsg(message);
 		}
 
 		// 为消息对话框准备数据
-		Bundle msgParams = new Bundle();
+		final Bundle msgParams = new Bundle();
 		msgParams.putBoolean("alert", MyApplicationClass.ALERT_MSG);
 		if (message.getTitle() != null && !message.getTitle().equals(""))
 			msgParams.putString("title", message.getTitle());
 		msgParams.putString("body", message.getBody());
 		if (message.getUrl() != null && !message.getUrl().equals(""))
 			msgParams.putString("url", message.getUrl());
-		if (attachmentUrl != null) {
-			msgParams.putString("picUrl", attachmentUrl);
-			msgParams.putString("picFilename", attachmentFilename);
-		}
-		msgParams
-				.putBoolean(
-						"showPic",
-						(attachmentUrl != null
-								&& MyApplicationClass.mExternalStorageAvailable && MyApplicationClass.mExternalStorageWriteable));
+		//
+		final Intent messageDialogIntent = (messagePopupClosed ? new Intent(
+				MainActivity.this, MessageDialog.class) : new Intent());
+		if (attachmentUrl != null
+				&& (MyApplicationClass.mExternalStorageAvailable && MyApplicationClass.mExternalStorageWriteable)) {
+			final String imageFilename = new Date().getTime() + "_"
+					+ attachmentFilename;
+			final String imageUrl = attachmentUrl;
+			//
+			String sdcardPath = Environment.getExternalStorageDirectory()
+					.getPath();
+			final String imageFilepath = sdcardPath + "/tmp/" + imageFilename;
+			final Handler handler = new Handler() {
+				@Override
+				public void handleMessage(Message msg) {
+					switch (msg.what) {
+					case 0:
+						if (msg.arg1 == 0) {
+							msgParams.putBoolean("showPic", true);
+							msgParams.putString("imageFilepath", imageFilepath);
+							MyApplicationClass.savedImages.put(imageUrl,
+									imageFilepath);
+						} else {
+							msgParams.putBoolean("showPic", false);
+						}
+						// 添加到消息列表
+						showMsg(message, msg.arg1 == 0 ? imageFilepath : null);
+						// 显示/更新消息对话框
+						messageDialogIntent.putExtras(msgParams);
+						if (messagePopupClosed) {
+							// 声音提醒
+							if (MyApplicationClass.userSettings.isPlaySound()) {
+								MyApplicationClass.playSoundPool
+										.play(MyApplicationClass.ALERT_MSG ? MyApplicationClass.ALERT_SOUND
+												: MyApplicationClass.INFO_SOUND,
+												0);
+							}
+							// 显示消息对话框
+							startActivity(messageDialogIntent);
+							messagePopupClosed = false;
+						} else {
+							// 更新消息对话框
+							messageDialogIntent
+									.setAction("com.tpsoft.notifyclient.MainActivity");
+							messageDialogIntent.putExtra("action", "update");
+							sendBroadcast(messageDialogIntent);
+						}
+						break;
+					default:
+						super.handleMessage(msg);
+					}
+				}
+			};
 
-		// 显示消息对话框
-		Intent i = new Intent(MainActivity.this, MessageDialog.class);
-		i.putExtras(msgParams);
-		startActivity(i);
+			new Thread() {
+				public void run() {
+					int errCode = 0;
+					if (!MyApplicationClass.savedImages.containsKey(imageUrl)) {
+						errCode = httpDownloader.downFile(imageUrl, "tmp",
+								imageFilename, true);
+					}
+					Message msg = new Message();
+					msg.what = 0;
+					msg.arg1 = errCode;
+					handler.sendMessage(msg);
+				}
+			}.start();
+		} else {
+			// 添加到消息列表
+			showMsg(message, null);
+			// 显示/更新消息对话框
+			msgParams.putBoolean("showPic", false);
+			messageDialogIntent.putExtras(msgParams);
+			if (messagePopupClosed) {
+				// 声音提醒
+				if (MyApplicationClass.userSettings.isPlaySound()) {
+					MyApplicationClass.playSoundPool
+							.play(MyApplicationClass.ALERT_MSG ? MyApplicationClass.ALERT_SOUND
+									: MyApplicationClass.INFO_SOUND, 0);
+				}
+				// 显示消息对话框
+				startActivity(messageDialogIntent);
+				messagePopupClosed = false;
+			} else {
+				// 更新消息对话框
+				messageDialogIntent
+						.setAction("com.tpsoft.notifyclient.MainActivity");
+				messageDialogIntent.putExtra("action", "update");
+				sendBroadcast(messageDialogIntent);
+			}
+		}
 	}
 
-	private void showMsg(MyMessage message) {
+	private void showMsg(MyMessage message, String imageFilepath) {
 		Resources res = getResources();
 
 		// 生成消息界面
-		View view = makeMessageView(message, res);
+		View view = makeMessageView(message, imageFilepath, res);
 		if (msgCount < MAX_MSG_COUNT) {
 			msg.addView(view, 0);
 			msgCount++;
@@ -393,22 +502,12 @@ public class MainActivity extends TabActivity {
 
 	private void showLog(String logText) {
 		String log = "[" + sdf.format(new Date()) + "] " + logText;
-		MyApplicationClass.savedLogs.add(0, log);
 		if (logCount < MAX_LOG_COUNT) {
 			logger.setText(log + "\r\n" + logger.getText());
 			logCount++;
 		} else {
-			MyApplicationClass.savedLogs.remove(MyApplicationClass.savedLogs
-					.size() - 1);
-			StringBuilder sb = new StringBuilder();
-			boolean firstLog = true;
-			for (String savedLog : MyApplicationClass.savedLogs) {
-				if (firstLog)
-					firstLog = false;
-				else
-					sb.append("\r\n");
-				sb.append(savedLog);
-			}
+			logger.setText(log);
+			logCount = 1;
 		}
 	}
 
@@ -419,22 +518,42 @@ public class MainActivity extends TabActivity {
 		getContentResolver().insert(Uri.parse("content://sms/inbox"), values);
 	}
 
-	private View makeMessageView(MyMessage message, Resources res) {
-		TextView view = new TextView(this);
-		view.setAutoLinkMask(Linkify.WEB_URLS);
+	@SuppressLint("ResourceAsColor")
+	private View makeMessageView(MyMessage message, String imageFilepath,
+			Resources res) {
+		LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+		final View listItemView = inflater.inflate(R.layout.message_list_item,
+				(ViewGroup) findViewById(R.id.message));
+		ImageView msgAttachmentView = (ImageView) listItemView
+				.findViewById(R.id.msgAttachment);
+		Bitmap bitmap = null;
+		if (imageFilepath != null) {
+			try {
+				FileInputStream fis = new FileInputStream(imageFilepath);
+				bitmap = BitmapFactory.decodeStream(fis);
+				fis.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		msgAttachmentView.setImageBitmap(bitmap);
 		//
-		view.setTextColor(res.getColor(useMsgColor1 ? R.color.message_color_1
-				: R.color.message_color_2));
+		TextView msgTitleView = (TextView) listItemView
+				.findViewById(R.id.msgTitle);
+		msgTitleView.setText(message.getTitle() != null ? message.getTitle()
+				: "");
 		//
-		String msgText = sdf.format(message.getGenerateTime())
-				+ (message.getTitle() == null || message.getTitle().equals("") ? ""
-						: " [" + message.getTitle() + "]")
-				+ " "
-				+ message.getBody()
-				+ (message.getUrl() == null || message.getUrl().equals("") ? ""
-						: " " + message.getUrl());
-		view.setText(msgText + "\r\n");
-		return view;
+		TextView msgBodyView = (TextView) listItemView
+				.findViewById(R.id.msgBody);
+		msgBodyView.setText(message.getBody());
+		//
+		TextView msgTimeView = (TextView) listItemView
+				.findViewById(R.id.msgTime);
+		msgTimeView.setText(makeTimeString(message.getGenerateTime()));
+		return listItemView;
 	}
 
+	private String makeTimeString(Date time) {
+		return sdf.format(time);
+	}
 }
