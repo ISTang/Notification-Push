@@ -33,7 +33,7 @@ var logStream = LOG_ENABLED ? fs.createWriteStream("logs/notify.log", {"flags": 
 var loginIndex;
 var myIndex;
 
-var clientConns = []; // connId->socket
+var clientConns = []; // connId->账号/socket/上次活动时间/inactive
 var queuedMsgs = []; // connId->待发送的消息表
 var pendingMsgs = []; // connId->待确认的消息
 
@@ -119,36 +119,15 @@ process.on('message', function (m, socket) {
         var connId = m.connId;
         var msgKey = m.msgKey;
 
-        clientConns[connId] = socket;
-
-        var lastActiveTime = new Date();
-        var inactive = false;
+        clientConns[connId] = {accountName:accountName, socket:socket, lastActiveTime: new Date(), inactive: false};
 
 		if (KEEPALVE_PROBEINTERVAL!=0)
             socket.setKeepAlive(KEEPALVE_INIIALDELAY, KEEPALVE_PROBEINTERVAL, KEEPALVE_FAILURECOUNT);
-		
-        setTimeout(ensureActive, MAX_INACTIVE_TIME / 2);
-
-        function ensureActive() {
-
-            var diff = (new Date().getTime() - lastActiveTime.getTime()); //ms
-            if (diff >= MAX_INACTIVE_TIME) {
-
-                log("[" + accountName + "] inactive timeout");
-                db.recordLatestActivity(connId, "已下线");
-
-                inactive = true;
-                socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
-				return;
-            }
-
-            setTimeout(ensureActive, MAX_INACTIVE_TIME / 2);
-        }
 
         function keepAlive() {
 
             // 收到客户端心跳包
-            lastActiveTime = new Date();
+            clientConns[connId].lastActiveTime = new Date();
             log("[" + accountName + "] still alive");
             db.recordLatestActivity(connId, "在线");
         }
@@ -159,12 +138,13 @@ process.on('message', function (m, socket) {
             var pendingMsg = pendingMsgs[connId];
             if (typeof pendingMsg!="undefined") {
 
-                lastActiveTime = new Date();
+                var now = new Date();
+                clientConns[connId].lastActiveTime = now;
 
                 log("[" + accountName + "] received message " + pendingMsg.msgId);
                 delete pendingMsgs[connId];
 
-                db.recordMessageReceiptTime(connId, pendingMsg.msgId, lastActiveTime, function (err) {
+                db.recordMessageReceiptTime(connId, pendingMsg.msgId, now, function (err) {
 
                     if (err) return log(err);
 
@@ -253,7 +233,7 @@ process.on('message', function (m, socket) {
 
         function handleClose(hadError) {
 
-            if (!inactive)
+            if (!clientConns[connId].inactive)
                 log("[" + accountName + "] " + (hadError ? "error" : "disconnected"));
 
             db.removeLoginInfo(connId, function (err) {
@@ -310,7 +290,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
     if (secure) msgBody = crypt.desEncrypt(msgBody, msgKey);
     var msgStr = formatMessage(msgBody, secure, needReceipt);
     //
-    var socket = clientConns[connId];
+    var socket = clientConns[connId].socket;
     socket.write(/*protocol.PNTP_FLAG+*/msgStr);
     db.recordMessageSentTime(connId, msgId, new Date(), needReceipt, function (err) {
         if (err) return log(err);
@@ -322,7 +302,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                 if (typeof pendingMsg!="undefined") {
                     log("Send message " + msgId + " on connection " + connId + " timeout");
                     db.recordLatestActivity(connId, "确认消息超时");
-                    var socket = clientConns[connId];
+                    var socket = clientConns[connId].socket;
                     if (typeof socket!="undefined") {
                         socket.end();
                         //
@@ -367,4 +347,36 @@ void main(function () {
     msgPub.on("error", function (err) {
         log("Error " + err);
     });
+
+    function ensureActive() {
+
+        var now = new Date();
+
+        for (var connId in clientConns) {
+
+            if (!clientConns[connId].inactive) {
+
+                var lastActiveTime = clientConns[connId].lastActiveTime;
+                var diff = (now.getTime() - lastActiveTime.getTime()); //ms
+                if (diff >= MAX_INACTIVE_TIME) {
+
+                    log("[" + clientConns[connId].accountName + "] inactive timeout");
+                    clientConns[connId].inactive = true;
+                    db.recordLatestActivity(connId, "已下线");
+
+                    var socket = clientConns[connId].socket;
+                    socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+                }
+            } else {
+
+                db.removeLoginInfo(connId, function (err) {
+
+                    if (err) return log(err);
+                    clientConns.splice(clientConns.indexOf(connId), 1);
+                });
+            }
+        }
+        setTimeout(ensureActive, MAX_INACTIVE_TIME / 2);
+    }
+    setTimeout(ensureActive, MAX_INACTIVE_TIME / 2);
 });
