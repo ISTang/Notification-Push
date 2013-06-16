@@ -1201,7 +1201,7 @@ function updateApplicationInfo(id, name, newName, needLogin, needLoginPassword, 
     if (needLoginPassword != null) redis.set("application:" + id + ":client:need_password", needLoginPassword ? 1 : 0);
     if (autoCreateAccount != null) redis.set("application:" + id + ":account:auto_create", autoCreateAccount ? 1 : 0);
     if (protectLogin != null) redis.set("application:" + id + ":login:need_protect", protectLogin ? 1 : 0);
-    if (encryptMessage != null) redis.set("application:" + id + ":password", encryptMessage ? 1 : 0);
+    if (encryptMessage != null) redis.set("application:" + id + ":message:need_encrypt", encryptMessage ? 1 : 0);
     redis.set("application:" + id + ":update_time", updateTime);
 
     handleResult();
@@ -1228,12 +1228,29 @@ function getApplicationInfos(handleResult) {
         var applicationInfos = [];
         async.forEachSeries(appIds, function (appId, callback) {
             var applicationInfo = {id: appId};
-            redis.get("application:" + appId + ":name", function (err, name) {
+            var deleted = false;
+            async.series([
+                function (callback) {
+                    redis.get("application:" + appId + ":name", function (err, name) {
+                        if (err) return callback(err);
+                        applicationInfo.name = name;
+                        callback();
+                    })
+                },
+                function (callback) {
+                    redis.get("application:" + appId + ":delete_time", function (err, deleteTime) {
+                        if (err) return callback(err);
+                        deleted = (deleteTime ? true: false);
+                        callback();
+                    });
+                }
+            ], function (err) {
                 if (err) return callback(err);
-                applicationInfo.name = name;
-                applicationInfos.push(applicationInfo);
+                if (!deleted) {
+                    applicationInfos.push(applicationInfo);
+                }
                 callback();
-            })
+            });
         }, function (err) {
             if (err) return handleResult(err);
             handleResult(null, {count: applicationInfos.length, list: applicationInfos});
@@ -1254,60 +1271,60 @@ function getApplicationInfo(appId, handleResult) {
                 if (err) return callback(err);
                 applicationInfo.name = name;
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.get("application:" + appId + ":password", function (err, password) {
                 if (err) return callback(err);
                 applicationInfo.password = password;
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.get("application:" + appId + ":client:need_login", function (err, needLogin) {
                 if (err) return callback(err);
                 applicationInfo.needLogin = (needLogin == 1);
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.get("application:" + appId + ":client:need_password", function (err, needLoginPassword) {
                 if (err) return callback(err);
                 applicationInfo.needLoginPassword = (needLoginPassword == 1);
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.get("application:" + appId + ":account:auto_create", function (err, autoCreateAccount) {
                 if (err) return callback(err);
                 applicationInfo.autoCreateAccount = !(autoCreateAccount == 0);
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.get("application:" + appId + ":login:need_protect", function (err, protectLogin) {
                 if (err) return callback(err);
                 applicationInfo.protectLogin = (protectLogin == 1);
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.get("application:" + appId + ":message:need_encrypt", function (err, encryptMessage) {
                 if (err) return callback(err);
                 applicationInfo.encryptMessage = (encryptMessage == 1);
                 callback();
-            })
+            });
         },
         function (callback) {
             redis.hgetall("application:" + appId + ":login:protect_key", function (err, protectKey) {
                 if (err) return callback(err);
                 if (protectKey) {
-                    applicationInfo.protectKey = {public: protectKey.public_key, private: protectKey.private_key};
+                    applicationInfo.protectKey = protectKey;
                 } else {
                     applicationInfo.protectKey = {public: "", private: ""};
                 }
                 callback();
-            })
+            });
         }
     ], function (err) {
         handleResult(err, applicationInfo);
@@ -1567,7 +1584,9 @@ function getAllApplications(handleResult) {
                 }
             ], function (err) {
                 if (err) return callback(err);
-                applications.push(application);
+                if (!application.deleteTime) {
+                    applications.push(application);
+                }
                 callback();
             });
         }, function (err) {

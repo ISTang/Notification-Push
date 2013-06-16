@@ -8,15 +8,15 @@ import com.tpsoft.pushnotification.manage.exception.GetApplicationException;
 import com.tpsoft.pushnotification.manage.exception.RegisterApplicationException;
 import com.tpsoft.pushnotification.manage.exception.UnregisterApplicationException;
 import com.tpsoft.pushnotification.manage.exception.UpdateApplicationException;
-import com.tpsoft.pushnotification.manage.model.ApplicationAccess;
+import com.tpsoft.pushnotification.manage.model.Application;
 
 /**
- * 应用接入管理接口
+ * 应用接入接口
  * 
  * @author joebin.don@gmail.com
  * @since 2013-04-10
  */
-public interface IApplicationAccessManage {
+public interface IApplicationAccess {
 
 	/**
 	 * 注册新应用
@@ -29,8 +29,8 @@ public interface IApplicationAccessManage {
 	 * @throws RegisterApplicationException
 	 *             错误消息格式: "#<错误代码>:<失败原因>"
 	 */
-	public ApplicationAccess.ClientParams register(String name,
-			ApplicationAccess.AccessParams params)
+	public Application.ClientParams register(String name,
+			Application.AccessParams params)
 			throws RegisterApplicationException;
 
 	/**
@@ -50,7 +50,7 @@ public interface IApplicationAccessManage {
 	 *             错误消息格式: "#<错误代码>:<失败原因>"
 	 */
 	public void update(String id, String name, String newName,
-			ApplicationAccess.AccessParams params, Set<String> updatedFields)
+			Application.AccessParams params, Set<String> updatedFields)
 			throws UpdateApplicationException;
 
 	/**
@@ -69,7 +69,7 @@ public interface IApplicationAccessManage {
 	 * @return 应用ID/名称对照表
 	 * @throws GetApplicationException
 	 */
-	public Map<String, String> getAll() throws GetApplicationException;
+	public Map<String, String> listAll() throws GetApplicationException;
 
 	/**
 	 * 获取应用接入信息
@@ -79,8 +79,7 @@ public interface IApplicationAccessManage {
 	 * @return 应用接入信息
 	 * @throws GetApplicationException
 	 */
-	public ApplicationAccess getDetails(String id)
-			throws GetApplicationException;
+	public Application get(String id) throws GetApplicationException;
 
 	/**
 	 * 检查应用名称是否已经存在

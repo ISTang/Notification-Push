@@ -4,7 +4,7 @@ package com.tpsoft.pushnotification.manage.exception;
  * 获取应用接入信息异常
  * 
  * @author jeobin.don@gmail.com
- * @since 2013-04-10
+ * @since 2013-06-10
  */
 public class GetApplicationException extends Exception {
 

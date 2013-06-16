@@ -12,7 +12,7 @@ public class Message {
 	/**
 	 * 消息附件
 	 */
-	public class Attachment {
+	public static class Attachment {
 		private String title; // 附件标题: 1-256个字符
 		private String type; // 附件类型: MIME类型，如text/plain, text/html, image/jpeg,
 								// audio/mpeg, video/mpeg,
@@ -69,8 +69,11 @@ public class Message {
 	private String type; // 正文类型: text、html或xml，可选，默认为text
 	private List<Attachment> attachments; // 附件: 可选，最多4个
 	private String url; // 消息链接: 可选，1-1024个字符，仅支持HTTP协议
-	private String sendTime; // 发送时间: 延迟发送时间，格式为yyyyMMddhhmmss可选，默认为立即发送
+	private String send_time; // 发送时间: 延迟发送时间，格式为yyyyMMddhhmmss可选，默认为立即发送
 	private String expiration; // 过期时间: 可选，格式为yyyyMMddhhmmss，默认为永不过期
+	private String callback; // 用于在消息发送成功或失败时通知发送者，可选，仅支持HTTP协议，1-1024个字符
+	private boolean need_receipt; // 是否需要回执(true/false)，可选，默认为不需要回执(false)
+
 	public Message() {
 	}
 
@@ -131,11 +134,11 @@ public class Message {
 	}
 
 	public String getSendTime() {
-		return sendTime;
+		return send_time;
 	}
 
 	public void setSendTime(String sendTime) {
-		this.sendTime = sendTime;
+		this.send_time = sendTime;
 	}
 
 	public String getExpiration() {
@@ -144,5 +147,21 @@ public class Message {
 
 	public void setExpiration(String expiration) {
 		this.expiration = expiration;
+	}
+
+	public String getCallback() {
+		return callback;
+	}
+
+	public void setCallback(String callback) {
+		this.callback = callback;
+	}
+
+	public boolean isNeedReceipt() {
+		return need_receipt;
+	}
+
+	public void setNeedReceipt(boolean needReceipt) {
+		this.need_receipt = needReceipt;
 	}
 }

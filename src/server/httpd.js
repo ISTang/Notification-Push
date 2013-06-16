@@ -187,6 +187,7 @@ void main(function () {
     // 4)推送消息(适合web提交)
     webapp.post('/pushmsg', msgpush.pushMessage);
     // 5)清除所有消息(适合web提交)
+    // curl -X DELETE http://localhost:4567/allMessages
     webapp.delete('/allMessages', function (req, res) {
         db.clearMessages(function (err) {
             if (err) {

@@ -56,14 +56,10 @@ function registerApplication(req, res) {
 
     var appId = uuid.v4().toUpperCase();
     var appPassword = crypt.makeAppKey();
-    if (application.protect_login) {
-        crypt.makeRsaKeys(function (err, protectKey) {
-            if (err) return res.json({success: false, reason: err});
-            saveNewApplicationInfo(protectKey);
-        });
-    } else {
-        saveNewApplicationInfo();
-    }
+    crypt.makeRsaKeys(function (err, protectKey) {
+        if (err) return res.json({success: false, reason: err});
+        saveNewApplicationInfo(protectKey);
+    });
     function saveNewApplicationInfo(protectKey) {
         var pass = utils.md5(appPassword);
         db.saveNewApplicationInfo(appId, req.params.name, pass, application.need_login, application.need_login_password,
@@ -71,7 +67,8 @@ function registerApplication(req, res) {
             new Date().Format("yyyyMMddHHmmss"),
             function (err) {
                 if (err) res.json({success: false, reason: err});
-                else res.json({success: true, id: appId, password: appPassword});
+                else res.json({success: true, id: appId, password: appPassword,
+                    public_key:protectKey.public, private_key:protectKey.private});
             }
         );
     }

@@ -1,5 +1,6 @@
 package com.tpsoft.pushnotification.manage.model;
 
+
 /**
  * 账号信息
  * 
@@ -15,6 +16,12 @@ public class Account {
 	private boolean disabled = false; // 是否禁用: 是否禁止客户端使用该账号(true/false[默认])
 
 	public Account() {
+	}
+
+	public Account(String name, String phone, String email) {
+		this.name = name;
+		this.phone = phone;
+		this.email = email;
 	}
 
 	public Account(String name, String phone, String email, String password) {
