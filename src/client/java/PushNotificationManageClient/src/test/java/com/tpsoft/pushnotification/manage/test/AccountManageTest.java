@@ -29,8 +29,8 @@ public class AccountManageTest {
 
 	@Test
 	public void testCreate() {
-		Account account = new Account("≤‚ ‘’À∫≈", "15881449872",
-				"test@gmail.com", "12345678");
+		Account account = new Account("≤‚ ‘’À∫≈", "15881449872", "test@gmail.com",
+				"12345678");
 		try {
 			String accountId = accountManage.create(account);
 			System.out.println(String.format("New account %s created.",
@@ -44,8 +44,8 @@ public class AccountManageTest {
 	@Test
 	public void testUpdate() {
 		String accountId = "A1A130C4-6D60-4BD2-A396-B3F4708A8708";
-		Account account = new Account("≤‚ ‘’À∫≈", "13808188051",
-				"test2@gmail.com", "87654321");
+		Account account = new Account("≤‚ ‘’À∫≈", "13808188051", "test2@gmail.com",
+				"87654321");
 		try {
 			accountManage.update(accountId, account, new HashSet<String>() {
 				{
@@ -111,11 +111,10 @@ public class AccountManageTest {
 			System.out.println(String.format("Total %d accounts:",
 					accounts.size()));
 			for (String accountId : accounts.keySet()) {
-				System.out.println(String.format("%s: %s, %s, %s, %s",
-						accountId, accounts.get(accountId).getName(), accounts
-								.get(accountId).getPhone(),
-						accounts.get(accountId).getEmail(),
-						accounts.get(accountId).getPassword()));
+				System.out.println(String.format("%s: %s, %s, %s", accountId,
+						accounts.get(accountId).getName(),
+						accounts.get(accountId).getPhone(),
+						accounts.get(accountId).getEmail()));
 			}
 		} catch (GetAccountException e) {
 			System.err.println(e.getMessage());
@@ -127,9 +126,8 @@ public class AccountManageTest {
 		String accountId = "080AE452-7C76-40D9-BE16-75641F412E5F";
 		try {
 			Account account = accountManage.get(accountId);
-			System.out.println(String.format("%s: %s, %s, %s, %s", accountId,
-					account.getName(), account.getPhone(), account.getEmail(),
-					account.getPassword()));
+			System.out.println(String.format("%s: %s, %s, %s", accountId,
+					account.getName(), account.getPhone(), account.getEmail()));
 		} catch (GetAccountException e) {
 			System.err.println(e.getMessage());
 		}
@@ -148,7 +146,7 @@ public class AccountManageTest {
 	}
 
 	@Test
-	public void testPhoneUsed() {
+	public void testExistsPhone() {
 		String accountPhone = "13808188051";
 		try {
 			boolean exists = accountManage.existsPhone(accountPhone);
@@ -160,7 +158,7 @@ public class AccountManageTest {
 	}
 
 	@Test
-	public void testEmailUsed() {
+	public void testExistsEmail() {
 		String accountEmail = "joebin.don@gmail.com";
 		try {
 			boolean exists = accountManage.existsEmail(accountEmail);
