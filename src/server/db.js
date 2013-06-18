@@ -75,6 +75,8 @@ const RANDOM_ACCOUNTNAME_SIZE = config.RANDOM_ACCOUNTNAME_SIZE;
 const EMAIL_ADDRESS_FORMAT = config.EMAIL_ADDRESS_FORMAT;
 const PHONE_NUMBER_FORMAT = config.PHONE_NUMBER_FORMAT;
 
+const MAX_INACTIVE_TIME = config.MAX_INACTIVE_TIME;
+
 var logStream = LOG_ENABLED ? fs.createWriteStream("logs/db.log", {"flags": "a"}) : null;
 
 var redis;
@@ -513,7 +515,8 @@ function recordMessageReceiptTime(connId, msgId, receiptTime, handleResult) {
  * @param activity 活动内容
  */
 function recordLatestActivity(connId, activity) {
-    redis.hset("connection:"+connId, "latest_activity", activity+"["+new Date().Format("HH:mm:ss")+"]");
+    redis.hset("connection:"+connId, "latest_activity", activity);
+    redis.hset("connection:"+connId, "latest_activity_time", new Date().Format("yyyy-MM-dd HH:mm:ss"));
 }
 
 /**
@@ -1473,16 +1476,24 @@ function getAllConnections(handleResult) {
                     }
                 ], function (err) {
                     if (err) return callback(err);
-                    var duration = (now.getTime() - utils.DateParse(connectionInfo.begin_time).getTime()) / 1000;
-                    connections.push({
-                        connId: connId,
-                        clientAddress: connectionInfo.client_address,
-                        accountInfo: accountInfo,
-                        applicationName: applicationName,
-                        beginTime: connectionInfo.begin_time,
-                        duration: duration,
-                        msgChannel: connectionInfo.channel_id,
-                        latestActivity: connectionInfo.latest_activity ? connectionInfo.latest_activity : ""});
+                    var inactiveTime = (now.getTime() - utils.DateParse(connectionInfo.latest_activity_time).getTime());
+                    if (inactiveTime>MAX_INACTIVE_TIME) {
+                        removeLoginInfo(connId, function(err) {
+                            if (err) log(err);
+                        });
+                    } else {
+                        var duration = (now.getTime() - utils.DateParse(connectionInfo.begin_time).getTime()) / 1000;
+                        connections.push({
+                            connId: connId,
+                            clientAddress: connectionInfo.client_address,
+                            accountInfo: accountInfo,
+                            applicationName: applicationName,
+                            beginTime: connectionInfo.begin_time,
+                            duration: duration,
+                            msgChannel: connectionInfo.channel_id,
+                            latestActivity: connectionInfo.latest_activity ? connectionInfo.latest_activity+
+                                "["+connectionInfo.latest_activity_time+"]" : ""});
+                    }
                     callback();
                 });
             });

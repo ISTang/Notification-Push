@@ -55,8 +55,8 @@ String.prototype.format = utils.StringFormat;
 // 设置为0，相应的设置保持默认或最新值。
 //
 net.Socket.prototype.setKeepAlive = function(setting, msecs, interval, count) {
-	if (this._handle && this._handle.setKeepAlive)
-		this._handle.setKeepAlive(setting, ~~(msecs / 1000), ~~(interval / 1000), count);
+    if (this._handle && this._handle.setKeepAlive)
+        this._handle.setKeepAlive(setting, ~~(msecs / 1000), ~~(interval / 1000), count);
 }
 
 /*
@@ -122,7 +122,7 @@ process.on('message', function (m, socket) {
         clientConns[connId] = {accountName:accountName, socket:socket, lastActiveTime: new Date()};
         db.recordLatestActivity(connId, "刚登录");
 
-		if (KEEPALVE_PROBEINTERVAL!=0)
+        if (KEEPALVE_PROBEINTERVAL!=0)
             socket.setKeepAlive(KEEPALVE_INIIALDELAY, KEEPALVE_PROBEINTERVAL, KEEPALVE_FAILURECOUNT);
 
         function keepAlive() {
@@ -305,15 +305,16 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                 var pendingMsg = pendingMsgs[connId];
                 if (typeof pendingMsg!="undefined") {
                     log("Send message " + msgId + " on connection " + connId + " timeout");
-                    db.recordLatestActivity(connId, "确认消息超时");
-                    var socket = clientConns[connId].socket;
-                    if (typeof socket!="undefined") {
-                        socket.end();
-                        //
-                        clientConns.splice(clientConns.indexOf(connId), 1);
+                    if (typeof clientConns[connId]!="undefined") {
                         db.removeLoginInfo(connId, function (err) {
-
                             if (err) log(err);
+                            var socket = clientConns[connId].socket;
+                            clientConns.splice(clientConns.indexOf(connId), 1);
+                            try {
+                                socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+                            } catch (err) {
+                                log(err);
+                            }
                         });
                     }
                 }
@@ -361,20 +362,19 @@ void main(function () {
             var lastActiveTime = clientConns[connId].lastActiveTime;
             var diff = (now.getTime() - lastActiveTime.getTime()); //ms
             if (diff >= MAX_INACTIVE_TIME) {
-
                 log("[" + clientConns[connId].accountName + "] inactive timeout");
                 db.removeLoginInfo(connId, function (err) {
-
                     if (err) log(err);
-
                     var socket = clientConns[connId].socket;
                     clientConns.splice(clientConns.indexOf(connId), 1);
-
-                    socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+                    try {
+                        socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+                    } catch (err) {
+                        log(err);
+                    }
                 });
             }
         }
-        setTimeout(ensureActive, MAX_INACTIVE_TIME / 2);
     }
-    setTimeout(ensureActive, MAX_INACTIVE_TIME / 2);
+    setInterval(ensureActive, MAX_INACTIVE_TIME / 2);
 });
