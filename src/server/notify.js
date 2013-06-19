@@ -357,24 +357,30 @@ void main(function () {
 
         var now = new Date();
 
+		var inactiveConnIds = [];
         for (var connId in clientConns) {
 
             var lastActiveTime = clientConns[connId].lastActiveTime;
             var diff = (now.getTime() - lastActiveTime.getTime()); //ms
-            if (diff >= MAX_INACTIVE_TIME) {
-                log("[" + clientConns[connId].accountName + "] inactive timeout");
-                db.removeLoginInfo(connId, function (err) {
-                    if (err) log(err);
-                    var socket = clientConns[connId].socket;
-                    clientConns.splice(clientConns.indexOf(connId), 1);
-                    try {
-                        socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
-                    } catch (err) {
-                        log(err);
-                    }
-                });
+            if (diff > MAX_INACTIVE_TIME*2) {
+			    inactiveConnIds.push(connId);
             }
         }
+		
+		for ( var i in inactiveConnIds) {
+		    var connId = inactiveConnIds[i];
+			                log("[" + clientConns[connId].accountName + "] inactive timeout");
+			db.removeLoginInfo(connId, function (err) {
+				if (err) log(err);
+				var socket = clientConns[connId].socket;
+				clientConns.splice(clientConns.indexOf(connId), 1);
+				try {
+					socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+				} catch (err) {
+					log(err);
+				}
+			});
+		}
     }
     setInterval(ensureActive, MAX_INACTIVE_TIME / 2);
 });

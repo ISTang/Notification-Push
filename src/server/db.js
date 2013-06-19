@@ -516,7 +516,7 @@ function recordMessageReceiptTime(connId, msgId, receiptTime, handleResult) {
  */
 function recordLatestActivity(connId, activity) {
     redis.hset("connection:"+connId, "latest_activity", activity);
-    redis.hset("connection:"+connId, "latest_activity_time", new Date().Format("yyyy-MM-dd HH:mm:ss"));
+    redis.hset("connection:"+connId, "latest_activity_time", new Date().Format("yyyyMMddHHmmss"));
 }
 
 /**
@@ -1477,7 +1477,7 @@ function getAllConnections(handleResult) {
                 ], function (err) {
                     if (err) return callback(err);
                     var inactiveTime = (now.getTime() - utils.DateParse(connectionInfo.latest_activity_time).getTime());
-                    if (inactiveTime>MAX_INACTIVE_TIME) {
+                    if (inactiveTime>MAX_INACTIVE_TIME*2) {
                         removeLoginInfo(connId, function(err) {
                             if (err) log(err);
                         });
