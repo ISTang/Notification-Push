@@ -16,6 +16,7 @@ exports.StringFormat = StringFormat;
 exports.StringTrim = StringTrim;
 exports.md5 = md5;
 exports.makeFileChecksum = makeFileChecksum;
+exports.timeDiff = timeDiff;
 
 const DATE_FORMAT_REGEX = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/g;
 const DATE_FORMAT_REGEX2 = /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/g;
@@ -44,15 +45,15 @@ function DateFormat(fmt) { //author: meizz
 
 function DateParse(str) {
     var fields = str.split(DATE_FORMAT_REGEX);
-    var date = new Date(parseInt(fields[1],10), parseInt(fields[2],10)-1, parseInt(fields[3],10),
-        parseInt(fields[4],10), parseInt(fields[5],10), parseInt(fields[6],10));
+    var date = new Date(parseInt(fields[1], 10), parseInt(fields[2], 10) - 1, parseInt(fields[3], 10),
+        parseInt(fields[4], 10), parseInt(fields[5], 10), parseInt(fields[6], 10));
     return date;
 }
 
 function DateParse2(str) {
     var fields = str.split(DATE_FORMAT_REGEX2);
-    var date = new Date(parseInt(fields[1],10), parseInt(fields[2],10)-1, parseInt(fields[3],10),
-        parseInt(fields[4],10), parseInt(fields[5],10), parseInt(fields[6],10));
+    var date = new Date(parseInt(fields[1], 10), parseInt(fields[2], 10) - 1, parseInt(fields[3], 10),
+        parseInt(fields[4], 10), parseInt(fields[5], 10), parseInt(fields[6], 10));
     return date;
 }
 
@@ -82,11 +83,35 @@ function makeFileChecksum(file, algo, handleResult) {
     var shasum = crypto.createHash(algo);
 
     var s = fs.ReadStream(file);
-    s.on('data', function(d) { shasum.update(d); });
-    s.on('end', function() {
+    s.on('data', function (d) {
+        shasum.update(d);
+    });
+    s.on('end', function () {
         var d = shasum.digest('hex');
         handleResult(d);
     });
+}
+
+function timeDiff(oneMoment, anotherMoment) {
+
+    var past = (oneMoment < anotherMoment) ? 1 : 0; //输入的时间过去了就是1，否则为0
+    var difference = 0; //差值
+    //下面的差值减去八个小时，是因为new Date(0)是"Thu Jan 1 08:00:00 UTC+0800 1970"，从八点开始算的
+    if (past) difference = new Date(anotherMoment.getTime() - oneMoment.getTime() - 8 * 3600 * 1000);
+    else difference = new Date(oneMoment.getTime() - anotherMoment.getTime() - 8 * 3600 * 1000);
+
+    //计算过去的天数、小时、分钟和秒。天数要自己算，其它的get就行了
+    var dDays = parseInt(difference.getTime() / 3600 / 24 / 1000);
+    var dHours = difference.getHours();
+    var dMinutes = difference.getMinutes();
+    var dSeconds = difference.getSeconds();
+
+    var result = new Array();
+    result[0] = dDays;
+    result[1] = dHours;
+    result[2] = dMinutes;
+    result[3] = dSeconds;
+    return result;
 }
 
 function main(fn) {
@@ -101,31 +126,31 @@ void main(function () {
     //console.log("random string: "+randomstring.generate(8));
 
     /*var a = new Date();  var aa=a.getTime();
-    var b = DateParse("20130327225800"); var bb= b.getTime();
-    console.log(aa);
-    console.log(bb);
-    console.log(''+a+','+b+','+(a-b)/1000);*/
+     var b = DateParse("20130327225800"); var bb= b.getTime();
+     console.log(aa);
+     console.log(bb);
+     console.log(''+a+','+b+','+(a-b)/1000);*/
 
     /*makeFileChecksum("server.js", "md5", function (checksum) {
-        console.log("checksum: "+checksum);
-    });*/
+     console.log("checksum: "+checksum);
+     });*/
 
     /*Date.prototype.DateFormat = DateFormat;
 
-    var str = "2013-06-07 09:20:32";
-    var date = DateParse2(str);
-    console.log(str);
-    console.log(date.DateFormat("yyyy-MM-dd HH:mm:ss"));
+     var str = "2013-06-07 09:20:32";
+     var date = DateParse2(str);
+     console.log(str);
+     console.log(date.DateFormat("yyyy-MM-dd HH:mm:ss"));
 
-    var nowStr = "2013-06-07 09:16:06"
-    var now = DateParse2(nowStr);
-    console.log(nowStr);
-    console.log(now.DateFormat("yyyy-MM-dd HH:mm:ss"));
+     var nowStr = "2013-06-07 09:16:06"
+     var now = DateParse2(nowStr);
+     console.log(nowStr);
+     console.log(now.DateFormat("yyyy-MM-dd HH:mm:ss"));
 
-    var diff = date.getTime()-now.getTime();
-    var MIN_EXPIRATION_TIME = 1000 * 60 * 1;
-    console.log(diff, diff/1000);
-    if (diff<MIN_EXPIRATION_TIME) {
-        log("Error");
-    }*/
+     var diff = date.getTime()-now.getTime();
+     var MIN_EXPIRATION_TIME = 1000 * 60 * 1;
+     console.log(diff, diff/1000);
+     if (diff<MIN_EXPIRATION_TIME) {
+     log("Error");
+     }*/
 });

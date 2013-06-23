@@ -318,6 +318,7 @@ function checkUsername(username, password, autoCreateAccount, handleCheckResult)
     ], function (err) {
         if (err) {
             checkResult.passed = false;
+            checkResult.passed = false;
             checkResult.reason = err;
         } else {
             checkResult.passed = true;
@@ -1482,7 +1483,9 @@ function getAllConnections(handleResult) {
                             if (err) log(err);
                         });
                     } else {
-                        var duration = (now.getTime() - utils.DateParse(connectionInfo.begin_time).getTime()) / 1000;
+                        var arr = utils.timeDiff(now, utils.DateParse(connectionInfo.begin_time));
+                        var duration = arr[1]+":"+arr[2]+":"+arr[3];
+                        if (arr[0]!=0) duration = arr[0]+"天 "+duration;
                         connections.push({
                             connId: connId,
                             clientAddress: connectionInfo.client_address,
@@ -1491,8 +1494,8 @@ function getAllConnections(handleResult) {
                             beginTime: connectionInfo.begin_time,
                             duration: duration,
                             msgChannel: connectionInfo.channel_id,
-                            latestActivity: connectionInfo.latest_activity ? connectionInfo.latest_activity+
-                                "["+connectionInfo.latest_activity_time+"]" : ""});
+                            latestActivity: connectionInfo.latest_activity ? "["+connectionInfo.latest_activity_time+"]"+
+                                connectionInfo.latest_activity : ""});
                     }
                     callback();
                 });
