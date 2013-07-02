@@ -144,6 +144,7 @@ function getArticles(url, since, handleResult) {
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
 
+                    article.description = $(article.description).text();
                     article.logo = logo;
                     result.push(article);
                     callback();

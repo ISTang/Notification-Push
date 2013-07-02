@@ -1,6 +1,6 @@
 ﻿var path = require("path");
 
-exports.SERVER_HOST = '192.168.1.103'; // 218.200.212.120
+exports.SERVER_HOST = '118.244.9.191'; // 218.200.212.120
 exports.SERVER_PORT = 3456;
 exports.HTTPD_PORT = 4567;
 
@@ -8,7 +8,7 @@ exports.LOGIN_NUMBER = 5; // 5
 exports.NOTIFY_NUMBER = 2; // 2
 
 exports.LOGIN_TIMEOUT = 1000 * 60; // ms
-exports.MAX_INACTIVE_TIME = 1000 * 60 * 5 * 1; // 心跳检测最长时间(ms)
+exports.MAX_INACTIVE_TIME = 1000 * 60 * 2 * 1; // 心跳检测最长时间(ms)
 exports.KEEPALVE_INIIALDELAY = 1000 * 30; // keepalive 首次探测时延(ms)
 exports.KEEPALVE_PROBEINTERVAL = 1000 * 30; // keepalive 探测间隔时间(ms)--0表示不探测
 exports.KEEPALVE_FAILURECOUNT = 2; // keepalive 探测失败最大次数(ms)

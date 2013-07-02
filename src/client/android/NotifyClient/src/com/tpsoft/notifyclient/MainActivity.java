@@ -503,7 +503,7 @@ public class MainActivity extends TabActivity {
 	private void showLog(String logText) {
 		String log = "[" + sdf.format(new Date()) + "] " + logText;
 		if (logCount < MAX_LOG_COUNT) {
-			logger.setText(log + "\r\n" + logger.getText());
+			logger.setText(log + "\r\n[ÍÆÐÅ]" + logger.getText());
 			logCount++;
 		} else {
 			logger.setText(log);

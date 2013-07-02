@@ -38,12 +38,14 @@ import com.tpsoft.notifyclient.R;
 public class MessageDialog extends Activity implements OnTouchListener,
 		OnGestureListener {
 
+	private static final String MAIN_ACTIVITY_CLASSNAME = "com.tpsoft.tuixin.MainActivity";
+
 	private class MyBroadcastReceiver extends BroadcastReceiver {
 		@SuppressWarnings("deprecation")
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if (intent.getAction().equals(
-					"com.tpsoft.notifyclient.MainActivity")) {
+					MAIN_ACTIVITY_CLASSNAME)) {
 				if (intent.getStringExtra("action").equals("update")) {
 					autoCloseTimer.cancel();
 
@@ -110,7 +112,7 @@ public class MessageDialog extends Activity implements OnTouchListener,
 		}
 		//
 		IntentFilter filter = new IntentFilter();
-		filter.addAction("com.tpsoft.notifyclient.MainActivity");
+		filter.addAction(MAIN_ACTIVITY_CLASSNAME);
 		registerReceiver(myBroadcastReceiver, filter);
 	}
 
@@ -241,7 +243,7 @@ public class MessageDialog extends Activity implements OnTouchListener,
 					// receive a crash report
 		// 通知调用方当前活动已关闭
 		Intent i = new Intent();
-		i.setAction("com.tpsoft.notifyclient.utils.MessageDialog");
+		i.setAction(MessageDialog.this.getClass().getName());
 		i.putExtra("action", "popupClosed");
 		sendBroadcast(i);
 

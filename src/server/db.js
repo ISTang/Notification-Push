@@ -1477,6 +1477,7 @@ function getAllConnections(handleResult) {
                     }
                 ], function (err) {
                     if (err) return callback(err);
+                    if (typeof connectionInfo.latest_activity_time=="undefined") return callback();
                     var inactiveTime = (now.getTime() - utils.DateParse(connectionInfo.latest_activity_time).getTime());
                     if (inactiveTime>MAX_INACTIVE_TIME*2) {
                         removeLoginInfo(connId, function(err) {
