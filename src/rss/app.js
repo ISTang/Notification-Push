@@ -3,6 +3,7 @@ var utils = require(__dirname + '/utils');
 var db = require(__dirname + '/db');
 var channel = require(__dirname + '/channel');
 
+var $ = require('jquery');
 var fs = require('fs');
 var url = require("url");
 var http = require("http");
