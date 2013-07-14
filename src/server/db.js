@@ -423,8 +423,6 @@ function saveMessage(appId, message, accountIds) {
     var now = new Date();
     var msgId = uuid.v4().toUpperCase();
 
-    if (message.sender) redis.set("message:" + msgId + ":sender", message.sender);
-
     if (message.title != null) redis.set("message:" + msgId + ":title", message.title);
     redis.set("message:" + msgId + ":body", message.body);
     if (message.type != null) redis.set("message:" + msgId + ":body:type", message.type);
@@ -448,12 +446,20 @@ function saveMessage(appId, message, accountIds) {
     }
     redis.set("message:" + msgId + ":generate_time", (now.Format("yyyyMMddHHmmss")));
     if (message.need_receipt != null) redis.set("message:" + msgId + ":need_receipt", message.need_receipt ? 1 : 0);
+    //
+    if (message.sender_id != null) redis.hset("message:"+msgId+":sender_id", message.sender_id);
+
+    //
+    redis.zadd("message:set", now.getTime(), msgId);
+    redis.hset("message:"+msgId+":meta", "application_id", appId);
 
     if (accountIds) {
         // 群发/私信
         accountIds.forEach(function (accountId) {
             redis.zadd("account:" + accountId + ":application:" + appId + ":messages", now.getTime(), msgId);
         });
+        //
+        redis.hset("message:"+msgId+":meta", "receiver_ids", accountIds.join(","));
     } else {
         // 广播消息
         redis.zadd("application:" + appId + ":messages", now.getTime(), msgId);
@@ -548,7 +554,7 @@ function getActiveConnections(appId, accountId, handleResult) {
         async.forEachSeries(connIds, function (connId, callback) {
             redis.hgetall("connection:" + connId, function (err, connectionInfo) {
                 if (err) return callback(err);
-                if (!connectionInfo) return callback("Connection " + connId + " not exists");
+                if (!connectionInfo) return callback(/*"Connection " + connId + " not exists"*/);
                 connectionInfos.push({channelId: connectionInfo.channel_id, connId: connId, msgKey: connectionInfo.key});
                 callback();
             });
@@ -597,13 +603,6 @@ function getMessageById(msgId, handleResult) {
     var needReceipt;
 
     async.parallel([
-        function (callback) {
-            redis.get("message:" + msgId + ":sender", function (err, sender) {
-                if (err) return callback(err);
-                if (sender) message.sender = sender;
-                callback();
-            });
-        },
         function (callback) {
             redis.get("message:" + msgId + ":title", function (err, title) {
                 if (err) return callback(err);
@@ -702,13 +701,6 @@ function getMessageAllById(msgId, handleResult) {
     var message = {messageId: msgId};
 
     async.series([
-        function (callback) {
-            redis.get("message:" + msgId + ":sender", function (err, sender) {
-                if (err) return callback(err);
-                if (sender) message.sender = sender;
-                callback();
-            });
-        },
         function (callback) {
             redis.get("message:" + msgId + ":title", function (err, title) {
                 if (err) return callback(err);
@@ -1442,7 +1434,7 @@ function getAllConnections(handleResult) {
         async.forEachSeries(connIds, function (connId, callback) {
             redis.hgetall("connection:" + connId, function (err, connectionInfo) {
                 if (err) return callback(err);
-                if (!connectionInfo) return callback("Connection " + connId + " not exists");
+                if (!connectionInfo) return callback(/*"Connection " + connId + " not exists"*/);
                 var applicationName, accountInfo;
                 async.series([
                     function (callback) {
@@ -1689,90 +1681,71 @@ function getAllAccounts(handleResult) {
  */
 function getAllMessages(handleResult) {
     log("获取所有消息...");
-    redis.smembers("application:set", function (err, applicationIds) {
+    redis.zrange("message:set", 0, -1, function (err, messageIds) {
         if (err) return handleResult(err);
-        log("总共获取到 " + applicationIds.length + " 个应用");
+        log("总共获取到 " + messageIds.length + " 条消息");
         var messages = [];
-        async.forEachSeries(applicationIds, function (applicationId, callback) {
-            log("获取 ID 为 " + applicationId + " 的应用的信息...");
-            var applicationName;
-            async.series([
-                function (callback) {
-                    log("获取 ID 为 " + applicationId + " 的应用的名称...");
-                    redis.get("application:" + applicationId + ":name", function (err, name) {
-                        if (err) return callback(err);
-                        applicationName = name;
-                        callback();
-                    });
-                },
-                function (callback) {
-                    log("获取所有账号基本信息...");
-                    redis.smembers("account:set", function (err, accountIds) {
-                        if (err) return callback(err);
-                        log("总共获取到 " + accountIds.length + " 个账号");
-                        async.forEachSeries(accountIds, function (accountId, callback) {
-                            var receiver;
-                            log("获取 ID 为 " + accountId + " 的账号的基本信息...");
-                            async.series([
-                                function (callback) {
-                                    log("获取 ID 为 " + accountId + " 的账号的名称...");
-                                    redis.get("account:" + accountId + ":name", function (err, name) {
-                                        if (err) return callback(err);
-                                        receiver = name;
-                                        callback();
-                                    });
-                                },
-                                function (callback) {
-                                    log("获取 ID 为 " + accountId + " 的账号在 ID 为 " + applicationId + " 的应用中的所有消息...");
-                                    redis.zrange("account:" + accountId + ":application:" + applicationId + ":messages", 0, -1, function (err, msgIds) {
-                                        if (err) return callback(err);
-                                        log("总共获取到 " + msgIds.length + " 条消息");
-                                        async.forEachSeries(msgIds, function (msgId, callback) {
-                                            log("获取 ID 为 " + msgId + " 的消息内容...");
-                                            getMessageAllById(msgId, function (err, message) {
-                                                if (err) return callback(err);
-                                                log("已获取到 ID 为 " + msgId + " 的消息内容");
-                                                message.applicationName = applicationName;
-                                                message.receiver = receiver;
-                                                message.attachmentCount = (message.attachments ? message.attachments.length : 0);
-                                                messages.push(message);
-                                                callback();
-                                            });
-                                        }, function (err) {
-                                            callback(err);
-                                        });
-                                    });
-                                }
-                            ], function (err) {
-                                callback(err);
-                            });
-                        }, function (err) {
-                            callback(err);
+        async.forEachSeries(messageIds, function (messageId, callback) {
+            log("获取 ID 为 " + messageId + " 的消息内容...");
+            getMessageAllById(messageId, function (err, message) {
+                if (err) return callback(err);
+                log("已获取到 ID 为 " + messageId + " 的消息内容");
+                var applicationId, receiverIds;
+                async.series([
+                    function (callback) {
+                        log("获取 ID 为 " + messageId + " 消息的应用ID和接收者ID...");
+                        redis.hgetall("message:" + messageId + ":meta", function (err, meta) {
+                            if (err) return callback(err);
+                            log("已获取到 ID 为 " + messageId + " 的消息的应用ID和接收者ID");
+                            applicationId = meta.application_id;
+                            receiverIds = meta.receiver_ids;
+                            callback();
                         });
-                    });
-                },
-                function (callback) {
-                    log("获取 ID 为 " + applicationId + " 的应用已有的消息...");
-                    redis.zrange("application:" + applicationId + ":messages", 0, -1, function (err, messageIds) {
-                        if (err) return callback(err);
-                        log("总共获取到 " + messageIds.length + " 条消息");
-                        async.forEachSeries(messageIds, function (messageId, callback) {
-                            log("获取 ID 为 " + messageId + " 的消息内容...");
-                            getMessageAllById(messageId, function (err, message) {
+                    },
+                    function (callback) {
+                        log("获取 ID 为 " + message.application_id + " 应用的名称...");
+                        redis.get("application:" + applicationId + ":name", function (err, applicationName) {
+                            if (err) return callback(err);
+                            log("已获取到 ID 为 " + applicationId + " 应用的名称");
+                            message.applicationName = applicationName;
+                            callback();
+                        });
+                    },
+                    function (callback) {
+                        if (message.sender_id==null) return callback();
+                        log("获取 ID 为 " + message.sender_id + " 账号的名称...");
+                        redis.get("account:" + message.sender_id + ":name", function (err, sender) {
+                            if (err) return callback(err);
+                            log("已获取到 ID 为 " + message.sender_id + " 账号的名称");
+                            message.sender = sender;
+                            delete message.sender_id;
+                            callback();
+                        });
+                    },
+                    function (callback) {
+                        if (receiverIds==null) return callback();
+                        var receivers = [];
+                        redis.forEachSeries(receiverIds.split(","), function (receiverId, callback) {
+                            log("获取 ID 为 " + receiverId + " 账号的名称...");
+                            redis.get("account:" + receiverId + ":name", function (err, receiver) {
                                 if (err) return callback(err);
-                                log("已获取到 ID 为 " + messageId + " 的消息内容");
-                                message.applicationName = applicationName;
-                                message.attachmentCount = (message.attachments ? message.attachments.length : 0);
-                                messages.push(message);
+                                log("已获取到 ID 为 " + receiverId + " 账号的名称");
+                                receivers.push(receiver);
                                 callback();
                             });
                         }, function (err) {
-                            callback(err);
+                            if (err) return callback(err);
+                            message.receivers = receivers.join(",");
+                            delete message.receiver_ids;
+                            callback();
                         });
-                    });
-                }
-            ], function (err) {
-                callback(err);
+                    }
+                ], function (err) {
+                    if (err) return callback(err);
+                    message.attachmentCount = (message.attachments ? message.attachments.length : 0);
+                    messages.push(message);
+                    callback();
+                });
             });
         }, function (err) {
             handleResult(err, messages);
@@ -1784,205 +1757,96 @@ function getAllMessages(handleResult) {
  * 清理临时数据
  */
 function cleanData(callback) {
-    async.series([
+    async.parallel([
         function (callback) {
-            log("Searching all applications...");
-            redis.smembers("application:set", function (err, appIds) {
+            redis.keys("application:*:connections", function (err, keys) {
                 if (err) return callback(err);
-                async.forEachSeries(appIds, function (appId, callback) {
-                    log("Deleting connection for application " + appId + "...");
-                    redis.del("application:" + appId + ":connections");
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
                     callback();
                 }, function (err) {
                     callback(err);
                 });
-            });
+            })
         },
         function (callback) {
-            log("Searching all accounts...");
-            redis.smembers("account:set", function (err, accountIds) {
+            redis.keys("account:*:connections", function (err, keys) {
                 if (err) return callback(err);
-                async.forEachSeries(accountIds, function (accountId, callback) {
-                    log("Deleting connection for account " + accountId + "...");
-                    redis.del("account:" + accountId + ":connections");
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
                     callback();
                 }, function (err) {
                     callback(err);
                 });
-            });
+            })
         },
         function (callback) {
-            async.series([
-                function (callback) {
-                    log("Searching all connections...");
-                    redis.smembers("connection:set", function (err, connIds) {
-                        if (err) return callback(err);
-                        async.forEachSeries(connIds, function (connId, callback) {
-                            log("Deleting info for connection " + connId + "...");
-                            redis.del("connection:" + connId);
-                            callback();
-                        }, function (err) {
-                            callback(err);
-                        });
-                    });
-                },
-                function (callback) {
-                    log("Deleting connection set...");
-                    redis.del("connection:set");
+            redis.keys("connection:*", function (err, keys) {
+                if (err) return callback(err);
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
                     callback();
-                }
-            ], function (err) {
-                callback(err);
-            });
+                }, function (err) {
+                    callback(err);
+                });
+            })
         }
     ], callback);
 }
 
 /**
- * 清理消息
+ * 清除消息
  */
 function clearMessages(callback) {
-    async.series([
+    async.parallel([
         function (callback) {
-            log("Searching all applications...");
-            redis.smembers("application:set", function (err, appIds) {
+            redis.keys("application:*:messages", function (err, keys) {
                 if (err) return callback(err);
-                async.forEachSeries(appIds, function (appId, callback) {
-                    var msgCount = 0;
-                    async.series([
-                        function (callback) {
-                            log("Getting message count for application " + appId + "...");
-                            redis.zcard("application:" + appId + ":messages", function (err, count) {
-                                if (err) return callback(err);
-                                msgCount = count;
-                                callback();
-                            });
-                        },
-                        function (callback) {
-                            log("Getting all messages for application " + appId + "...");
-                            redis.zrange("application:" + appId + ":messages", 0, msgCount - 1, function (err, msgIds) {
-                                if (err) return callback(err);
-                                log("Deleteing all messages for application " + appId + "...");
-                                async.forEachSeries(msgIds, function (msgId, callback) {
-                                    redis.del("message:" + msgId + ":title");
-                                    redis.del("message:" + msgId + ":body");
-                                    redis.del("message:" + msgId + ":body:type");
-                                    redis.del("message:" + msgId + ":url");
-                                    redis.del("message:" + msgId + ":attachments ");
-                                    redis.del("message:" + msgId + ":callback");
-                                    redis.del("message:" + msgId + ":generate_time");
-                                    redis.del("message:" + msgId + ":send_time");
-                                    redis.del("message:" + msgId + ":expiration");
-                                    callback();
-                                }, function (err) {
-                                    callback(err);
-                                });
-                            });
-                        },
-                        function (callback) {
-                            log("Deleting message set for application " + appId + "...");
-                            redis.del("application:" + appId + ":messages");
-                            callback();
-                        }
-                    ], function (err) {
-                        callback(err);
-                    });
-                }, function (err) {
-                    callback(err);
-                });
-            });
-        },
-        function (callback) {
-            log("Searching all accounts...");
-            redis.smembers("account:set", function (err, accountIds) {
-                if (err) return callback(err);
-                async.forEachSeries(accountIds, function (accountId, callback) {
-                    log("Searching all applications...");
-                    redis.smembers("application:set", function (err, appIds) {
-                        if (err) return callback(err);
-                        async.forEachSeries(appIds, function (appId, callback) {
-                            var msgCount = 0;
-                            async.series([
-                                function (callback) {
-                                    log("Getting message count for account/application " + accountId + "/" + appId + "...");
-                                    redis.zcard("account:" + accountId + ":application:" + appId + ":messages", function (err, count) {
-                                        if (err) return callback(err);
-                                        msgCount = count;
-                                        callback();
-                                    });
-                                },
-                                function (callback) {
-                                    log("Getting all messages for account/application " + accountId + "/" + appId + "...");
-                                    redis.zrange("account:" + accountId + ":application:" + appId + ":messages", 0, msgCount - 1, function (err, msgIds) {
-                                        if (err) return callback(err);
-                                        log("Deleteing all messages for account/application " + accountId + "/" + appId + "...");
-                                        async.forEachSeries(msgIds, function (msgId, callback) {
-                                            redis.del("account:" + accountId + ":application:" + appId + ":message:" + msgId);
-                                            redis.del("message:" + msgId + ":title");
-                                            redis.del("message:" + msgId + ":body");
-                                            redis.del("message:" + msgId + ":body:type");
-                                            redis.del("message:" + msgId + ":url");
-                                            redis.del("message:" + msgId + ":attachments");
-                                            redis.del("message:" + msgId + ":callback");
-                                            redis.del("message:" + msgId + ":generate_time");
-                                            redis.del("message:" + msgId + ":send_time");
-                                            redis.del("message:" + msgId + ":expiration");
-                                            redis.del("message:" + msgId + ":need_receipt");
-                                            callback();
-                                        }, function (err) {
-                                            callback(err);
-                                        });
-                                    });
-                                },
-                                function (callback) {
-                                    log("Deleting all sent messages for account/application " + accountId + "/" + appId + "...");
-                                    redis.del("account:" + accountId + ":application:" + appId + ":sent_messages");
-                                    callback();
-                                },
-                                function (callback) {
-                                    log("Deleting all messages for account/application " + accountId + "/" + appId + "...");
-                                    redis.del("account:" + accountId + ":application:" + appId + ":messages");
-                                    callback();
-                                }
-                            ], function (err) {
-                                callback(err);
-                            });
-                        }, function (err) {
-                            callback(err);
-                        });
-                    });
-                }, function (err) {
-                    callback(err);
-                });
-            });
-        },
-        function (callback) {
-            async.series([
-                function (callback) {
-                    log("Searching all attachments...");
-                    redis.smembers("attachment:set", function (err, attachmentIds) {
-                        if (err) return callback(err);
-                        async.forEachSeries(attachmentIds, function (attachmentId, callback) {
-                            log("Deleting info for attachment " + attachmentId + "...");
-                            redis.del("attachment:" + attachmentId);
-                            callback();
-                        }, function (err) {
-                            callback(err);
-                        });
-                    });
-                },
-                function (callback) {
-                    log("Deleting attachment set...");
-                    redis.del("attachment:set");
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
                     callback();
-                }], function (err) {
-                callback(err);
-            });
+                }, function (err) {
+                    callback(err);
+                });
+            })
+        },
+        function (callback) {
+            redis.keys("account:*:application:*:messages", function (err, keys) {
+                if (err) return callback(err);
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
+                    callback();
+                }, function (err) {
+                    callback(err);
+                });
+            })
+        },
+        function (callback) {
+            redis.keys("account:*:application:*:message", function (err, keys) {
+                if (err) return callback(err);
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
+                    callback();
+                }, function (err) {
+                    callback(err);
+                });
+            })
+        },
+        function (callback) {
+            redis.keys("account:*:application:*:sent_messages", function (err, keys) {
+                if (err) return callback(err);
+                async.forEach(keys, function(key, callback) {
+                    redis.del(key);
+                    callback();
+                }, function (err) {
+                    callback(err);
+                });
+            })
         },
         function (callback) {
             redis.keys("message:*", function (err, keys) {
                 if (err) return callback(err);
-                async.forEachSeries(keys, function(key, callback) {
+                async.forEach(keys, function(key, callback) {
                     redis.del(key);
                     callback();
                 }, function (err) {
@@ -1993,7 +1857,7 @@ function clearMessages(callback) {
         function (callback) {
             redis.keys("attachment:*", function (err, keys) {
                 if (err) return callback(err);
-                async.forEachSeries(keys, function(key, callback) {
+                async.forEach(keys, function(key, callback) {
                     redis.del(key);
                     callback();
                 }, function (err) {

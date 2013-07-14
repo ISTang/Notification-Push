@@ -85,6 +85,11 @@ function log(msg) {
     console.log(buffer);
 }
 
+function stripsTags(text)
+{
+  return $.trim($('<div>').html(text).text());
+}
+
 function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
 
     var bodyText = JSON.stringify({title: msgTitle, body: msgBody,
@@ -145,7 +150,7 @@ function getArticles(url, since, handleResult) {
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
 
-                    article.description = $(article.description).text();
+                    article.description = stripsTags(article.description);
                     article.logo = logo;
                     result.push(article);
                     callback();
