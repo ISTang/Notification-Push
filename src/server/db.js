@@ -423,15 +423,21 @@ function saveMessage(appId, message, accountIds) {
     var now = new Date();
     var msgId = uuid.v4().toUpperCase();
 
-    if (message.title != null) redis.set("message:" + msgId + ":title", message.title);
-    redis.set("message:" + msgId + ":body", message.body);
-    if (message.type != null) redis.set("message:" + msgId + ":body:type", message.type);
-    if (message.url != null) redis.set("message:" + msgId + ":url", message.url);
-    if (message.send_time != null) redis.set("message:" + msgId + ":send_time", message.send_time);
-    if (message.expiration != null) redis.set("message:" + msgId + ":expiration", message.expiration);
-    if (message.callback != null) redis.set("message:" + msgId + ":callback", message.callback);
-    //
-    if (message.attachments != null) {
+	redis.hmset("message:" + msgId, 
+		"title", message.title || "",
+		"body", message.body,
+		"body:type", message.type || "text",
+		"url", message.url || "",
+		"send_time", message.send_time || "",
+		"expiration", message.expiration || "",
+		"callback", message.callback || "",
+		"generate_time", now.Format("yyyyMMddHHmmss"),
+		"need_receipt", message.need_receipt ? 1 : 0,
+		"sender_id", message.sender_id, function (err, result) {
+			// TODO 处理消息保存失败情形
+		});
+
+	if (message.attachments != null) {
         message.attachments.forEach(function (attachment) {
             var attId = uuid.v4();
             //
@@ -444,10 +450,6 @@ function saveMessage(appId, message, accountIds) {
             redis.sadd("message:" + msgId + ":attachments", attId);
         });
     }
-    redis.set("message:" + msgId + ":generate_time", (now.Format("yyyyMMddHHmmss")));
-    if (message.need_receipt != null) redis.set("message:" + msgId + ":need_receipt", message.need_receipt ? 1 : 0);
-    //
-    if (message.sender_id != null) redis.hset("message:"+msgId+":sender_id", message.sender_id);
 
     //
     redis.zadd("message:set", now.getTime(), msgId);
@@ -602,32 +604,20 @@ function getMessageById(msgId, handleResult) {
     var message = {};
     var needReceipt;
 
-    async.parallel([
+    async.series([
         function (callback) {
-            redis.get("message:" + msgId + ":title", function (err, title) {
+            redis.hmget("message:" + msgId, "title", "body", "body_type", "url", "callback", 
+				"generate_time", "send_time", "expiration", "need_receipt", function (err, arr) {
                 if (err) return callback(err);
-                if (title) message.title = title;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":body", function (err, body) {
-                if (err) return callback(err);
-                message.body = body;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":body:type", function (err, type) {
-                if (err) return callback(err);
-                message.type = (type ? type : "text");
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":url", function (err, url) {
-                if (err) return callback(err);
-                if (url) message.url = url;
+                if (arr[0]) message.title = arr[0];
+                message.body = arr[1];
+                if (arr[2]) message.type = arr[2] ? arr[2] : "text";
+                if (arr[3]) message.url = arr[3];
+                if (arr[4]) message.callback = arr[4];
+                if (arr[5]) message.generateTime = arr[5];
+                if (arr[6]) message.sendTime = arr[6];
+                if (arr[7]) message.expiration = arr[7];
+                needReceipt = (arr[8] == 1);;
                 callback();
             });
         },
@@ -649,41 +639,6 @@ function getMessageById(msgId, handleResult) {
                 } else {
                     callback();
                 }
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":callback", function (err, callbackUrl) {
-                if (err) return callback(err);
-                if (callbackUrl) message.callback = callbackUrl;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":generate_time", function (err, generateTime) {
-                if (err) return callback(err);
-                if (generateTime) message.generate_time = generateTime;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":send_time", function (err, sendTime) {
-                if (err) return callback(err);
-                if (sendTime) message.send_time = sendTime;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":expiration", function (err, expiration) {
-                if (err) return callback(err);
-                if (expiration) message.expiration = expiration;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":need_receipt", function (err, need_receipt) {
-                if (err) return callback(err);
-                needReceipt = (need_receipt == 1);
-                callback();
             });
         }
     ], function (err) {
@@ -702,30 +657,18 @@ function getMessageAllById(msgId, handleResult) {
 
     async.series([
         function (callback) {
-            redis.get("message:" + msgId + ":title", function (err, title) {
+            redis.hmget("message:" + msgId, "title", "body", "body_type", "url", "callback", 
+				"generate_time", "send_time", "expiration", "need_receipt", function (err, arr) {
                 if (err) return callback(err);
-                if (title) message.title = title;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":body", function (err, body) {
-                if (err) return callback(err);
-                message.body = body;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":body:type", function (err, type) {
-                if (err) return callback(err);
-                message.type = (type ? type : "text");
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":url", function (err, url) {
-                if (err) return callback(err);
-                message.url = url;
+                if (arr[0]) message.title = arr[0];
+                message.body = arr[1];
+                if (arr[2]) message.type = arr[2] ? arr[2] : "text";
+                if (arr[3]) message.url = arr[3];
+                if (arr[4]) message.callback = arr[4];
+                if (arr[5]) message.generateTime = arr[5];
+                if (arr[6]) message.sendTime = arr[6];
+                if (arr[7]) message.expiration = arr[7];
+                needReceipt = (arr[8] == 1);;
                 callback();
             });
         },
@@ -749,41 +692,6 @@ function getMessageAllById(msgId, handleResult) {
                 }
             });
         },
-        function (callback) {
-            redis.get("message:" + msgId + ":callback", function (err, callbackUrl) {
-                if (err) return callback(err);
-                if (callbackUrl) message.callback = callbackUrl;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":need_receipt", function (err, need_receipt) {
-                if (err) return callback(err);
-                message.needReceipt = (need_receipt == 1);
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":generate_time", function (err, generateTime) {
-                if (err) return callback(err);
-                if (generateTime) message.generateTime = generateTime;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":expiration", function (err, expiration) {
-                if (err) return callback(err);
-                if (expiration) message.expiration = expiration;
-                callback();
-            });
-        },
-        function (callback) {
-            redis.get("message:" + msgId + ":send_time", function (err, sendTime) {
-                if (err) return callback(err);
-                if (sendTime) message.sendTime = sendTime;
-                callback();
-            });
-        }
     ], function (err) {
         if (err) handleResult(err);
         else handleResult(null, message);
@@ -1611,7 +1519,7 @@ function getAllAccounts(handleResult) {
     redis.smembers("account:set", function (err, accountIds) {
         if (err) return handleResult(err);
         var accounts = [];
-        async.forEachSeries(accountIds, function (accountId, callback) {
+        async.forEach(accountIds, function (accountId, callback) {
             var account = {};
             account.accountId = accountId;
             async.parallel([
@@ -1685,7 +1593,7 @@ function getAllMessages(handleResult) {
         if (err) return handleResult(err);
         log("总共获取到 " + messageIds.length + " 条消息");
         var messages = [];
-        async.forEachSeries(messageIds, function (messageId, callback) {
+        async.forEach(messageIds, function (messageId, callback) {
             log("获取 ID 为 " + messageId + " 的消息内容...");
             getMessageAllById(messageId, function (err, message) {
                 if (err) return callback(err);

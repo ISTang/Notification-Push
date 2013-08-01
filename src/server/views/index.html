@@ -1,74 +1,41 @@
 <% include header.html %>
 
 <div id="body">
-    <%if (err) {%>
-    <p class="message-error">Error: <%=err%></p>
-    <%} else {%>
-    <p class="message-info">连接总数: <strong><%=count%></strong></p>
+    <p class="message-info">所有连接: </p>
     <table id="connections">
         <thead>
         <tr>
             <th>连接标识</th>
-            <th>
-                客户地址
-            </th>
-            <th>
-                账号信息
-            </th>
-            <th>
-                应用名称
-            </th>
-            <th>
-                开始时间
-            </th>
-            <th>
-                连接时长
-            </th>
-            <!--<th>
-                消息通道
-            </th>-->
-            <th>
-                最近活动
-            </th>
+            <th>客户地址</th>
+            <th>账号信息</th>
+            <th>应用名称</th>
+            <th>开始时间</th>
+            <th>连接时长</th>
+            <th>最近活动</th>
         </tr>
         </thead>
 
         <tbody>
-        <%connections.forEach(function(connection){%>
-        <tr>
-            <td><%=connection.connId%></td>
-            <td>
-                <%=(connection.clientAddress?connection.clientAddress:"")%>
-            </td>
-            <td>
-                <%=connection.accountInfo%>
-            </td>
-            <td>
-                <%=connection.applicationName%>
-            </td>
-            <td>
-                <%=connection.beginTime%>
-            </td>
-            <td>
-                <%=connection.duration%>
-            </td>
-            <!--<td>
-                <%=connection.msgChannel%>
-            </td>-->
-            <td>
-                <%=connection.latestActivity%>
-            </td>
-        </tr>
-        <%})%>
         </tbody>
-
     </table>
-    <%}%>
 </div>
 
 <script type="text/javascript">
     $(function () {
         $('#connections').dataTable({
+            "bServerSide": true,
+            "bProcessing": true,
+            "sAjaxSource": "/connections/AjaxHandler",
+			"sAjaxDataProp": "aaData",
+			"aoColumns": [
+				{ "sName": "connId", "sDefaultContent": "" },
+				{ "sName": "clientAddress", "sDefaultContent": "", "sWidth": "128px" },
+				{ "sName": "accountInfo", "sDefaultContent": "", "sWidth": "128px" },
+				{ "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
+				{ "sName": "beginTime", "sDefaultContent": "", "sWidth": "80px" },
+				{ "sName": "duration", "sDefaultContent": "", "sWidth": "52px" },
+				{ "sName": "latestActivity", "sDefaultContent": "" }
+			],
             "oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,

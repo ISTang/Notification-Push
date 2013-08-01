@@ -1,12 +1,9 @@
 <% include header.html %>
 
 <div id="body">
-    <%if (err) {%>
-    <p class="message-error">Error: <%=err%></p>
-    <%} else {%>
-    <p class="message-info">消息总数: <strong><%=count%></strong>&nbsp;&nbsp;
-        <button id="clear-messages">清除消息</button>
+    <p class="message-info">所有消息:&nbsp;&nbsp;
         <button id="push-message">立即推送</button>
+        <button id="clear-messages">全部清除</button>
     </p>
     <table id="messages">
         <thead>
@@ -18,41 +15,14 @@
             <th>消息标题</th>
             <th>消息正文</th>
             <th>消息类型</th>
-            <th>相关链接</th>
+            <th>消息详情</th>
             <th>附件数量</th>
-            <!--<th>需要确认</th>-->
-            <!--<th>回调URL</th>-->
             <th>生成时间</th>
-            <!--<th>过期时间</th>-->
-            <!--<th>希望发送时间</th>-->
-            <!--<th>实际发送时间</th>-->
-            <!--<th>确认时间</th>-->
         </tr>
         </thead>
         <tbody>
-        <%messages.forEach(function(message){%>
-        <tr>
-            <td><%=message.messageId%></td>
-            <td><%=message.applicationName%></td>
-            <td><%=message.sender?message.sender:""%></td>
-            <td><%=message.receivers?message.receivers:""%></td>
-            <td><%=message.title?message.title:""%></td>
-            <td><%=message.body%></td>
-            <td><%=message.type%></td>
-            <td><%=message.url?message.url:""%></td>
-            <td><%=message.attachmentCount%></td>
-            <!--<td><%=message.needReceipt?"是":"否"%></td>-->
-            <!--<td><%=message.callback?message.callback:""%></td>-->
-            <td><%=message.generateTime%></td>
-            <!--<td><%=message.expiration?message.expiration:""%></td>-->
-            <!--<td><%=message.sendTime?message.sendTime:""%></td>-->
-            <!--<td><%=message.sentTime?message.sentTime:""%></td>-->
-            <!--<td><%=message.receiptTime?message.receiptTime:""%></td>-->
-        </tr>
-        <%})%>
         </tbody>
     </table>
-    <%}%>
 </div>
 
 <div id="msgpush-form" title="推送消息">
@@ -82,7 +52,7 @@
             </select>
             <div id="receiver-container" style="display:none">
                 <label for="receiver">接收者</label>
-                <ol id="receiver" class="text ui-widget-content ui-corner-all">
+                <ol id="receiver" class="text ui-widget-content ui-corner-all" style="height:72px;overflow:scroll">
                     <!--<li class="ui-widget-content">Item 1</li>-->
                 </ol>
                 <input type="hidden" id="receivers" name="receivers"/>
@@ -94,7 +64,27 @@
 <script type="text/javascript">
     $(function () {
         $('#messages').dataTable({
-            "oLanguage": dataTablesLanguage,
+            "bServerSide": true,
+            "bProcessing": true,
+            "sAjaxSource": "/messages/AjaxHandler",
+			"sAjaxDataProp": "aaData",
+			"aoColumns": [
+				{ "sName": "messageId", "sDefaultContent": "", "sWidth": "80px" },
+				{ "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
+				{ "sName": "sender", "sDefaultContent": "", "sWidth": "47px" },
+				{ "sName": "receivers", "sDefaultContent": "", "sWidth": "48px" },
+				{ "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
+				{ "sName": "body", "sDefaultContent": "", "fnRender": function(obj) {
+                    var body = obj.aData[ obj.iDataColumn ];
+                    return (obj.aData[7]?"<a href='"+obj.aData[7]+"' target='blank'>"+body+"</a>":body);
+					} 
+				},
+				{ "sName": "type", "sDefaultContent": "文字", "sWidth": "56px" },
+				{ "sName": "url", "sDefaultContent": "", "bVisible": false },
+				{ "sName": "attachmentCount", "sDefaultContent": "", "sWidth": "56px" },
+				{ "sName": "generateTime", "sDefaultContent": "", "sWidth": "56px" }
+			],
+			"oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,
             "bLengthChange": true,
@@ -121,7 +111,7 @@
 
         $("#msgpush-form").dialog({
             autoOpen: false,
-            height: 480,
+            height: 560,
             width: 640,
             modal: true,
             buttons: {
@@ -132,7 +122,7 @@
                         $("#msgpush").submit();
                     }
                 },
-                Cancel: function() {
+                "取消": function() {
                     $(this).dialog( "close" );
                 }
             },

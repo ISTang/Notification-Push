@@ -29,6 +29,8 @@ exports.checkName = checkAccountName;
 //
 exports.checkNewAccountInfo = checkNewAccountInfo;
 exports.checkAccountUpdateInfo = checkAccountUpdateInfo;
+//
+exports.getAccounts = getAccounts;
 
 const LOG_ENABLED = config.LOG_ENABLED;
 const DEFAULT_LOGINPASWORD = "666666";
@@ -271,4 +273,90 @@ function checkAccountUpdateInfo(req, res, next) {
         if (reason) return res.json({success:false,errcode:1,errmsg:reason});
         next();
     });
+}
+
+function getAccounts(req, res) {
+    log('Get accounts: ' +
+        'sEcho=' + req.query.sEcho +
+        ', sSearch=' + req.query.sSearch +
+        ', iDisplayLength=' + req.query.iDisplayLength +
+        ', iDisplayStart=' + req.query.iDisplayStart +
+        ', iColumns=' + req.query.iSortingCols +
+        ', sColumns=' + req.query.sColumns +
+        ''
+    );
+	
+	var iSortCol_0 = req.query.iSortCol_0;
+	var sSortDir_0 = req.query.sSortDir_0;
+
+	db.getAllAccounts(function (err, accounts) {
+		
+		if (err) return res.json({success: false, errcode: 1, errmsg: err});
+		
+		var filtered = [];
+		if (req.query.sSearch!="") {
+			// 过滤
+			for (var i in accounts) {
+				var account = accounts[i];
+				if (account.accountId.indexOf(req.query.sSearch)!=-1 ||
+					account.name.indexOf(req.query.sSearch)!=-1 ||
+					account.phoneNumber && account.phoneNumber.indexOf(req.query.sSearch)!=-1 ||
+					account.emailAddress && account.emailAddress.indexOf(req.query.sSearch)!=-1 ||
+					(account.disabled?"禁用":"启用").indexOf(req.query.sSearch)!=-1 ||
+					account.createTime.indexOf(req.query.sSearch)!=-1) {
+					account.updateTime && account.updateTime.indexOf(req.query.sSearch)!=-1 ||
+					filtered.push(account);
+				}
+			}
+		} else {
+			// 不需要过滤
+			filtered = accounts;
+		}
+		
+		// 排序
+		filtered.sort(function(x, y) {
+			switch (parseInt(iSortCol_0, 10)) {
+			case 0: // accountId
+				return compareString(x.accountId, y.accountId);
+			case 1: // name
+				return compareString(x.name, y.name);
+			case 2: // phoneNumber
+				return compareString(x.phoneNumber, y.phoneNumber);
+			case 3: // emailAddress
+				return compareString(x.emailAddress, y.emailAddress);
+			case 4: // disabled
+				return compareBoolean(x.disabled, y.disabled);
+			case 5: // createTime
+				return compareString(x.createTime, y.createTime);
+			case 6: // updateTime
+				return compareString(x.updateTime, y.updateTime);
+			}
+		});
+		
+		// 分页
+		var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
+		var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
+		var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart+iDisplayLength, filtered.length));
+		var result = [];
+		for (var i in paged) {
+			var account = paged[i];
+			result.push([account.accountId,account.name,account.phoneNumber,account.emailAddress,
+				account.disabled?"禁用":"启用", account.createTime, account.updateTime]);
+		}
+		
+		return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: accounts.length, 
+			iTotalDisplayRecords: filtered.length, aaData: result,
+			sColumns: "accountId,name,phoneNumber,emailAddress,disabled,createTime,updateTime"}); 
+	});
+
+	function compareString(s1, s2) {
+		if (s1==null && s2==null) return 0;
+		if (s1==null) return (sSortDir_0=='asc'?0:1); 
+		if (s2==null) return (sSortDir_0=='asc'?1:0); 
+		
+		return (sSortDir_0=='asc'?s1.localeCompare(s2):s2.localeCompare(s1));
+	}
+	function compareBoolean(b1, b2) {
+		return compareString(b1?"禁用":"启用", b2?"禁用":"启用");
+	}
 }

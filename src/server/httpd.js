@@ -14,6 +14,7 @@ var db = require(__dirname + '/db');
 var appman = require(__dirname + "/manage/application");
 var accman = require(__dirname + "/manage/account");
 var msgpush = require(__dirname + "/manage/message");
+var connman = require(__dirname + "/manage/connection");
 
 // 定义常量
 const HTTPD_PORT = config.HTTPD_PORT;
@@ -125,6 +126,8 @@ void main(function () {
     // 6)检查应用名称
     //  curl http://localhost:4567/application/name/appname
     webapp.get('/application/name/:name', appman.existsName);
+	// 7)获取应用消息(适合web提交)
+    webapp.get('/applications/AjaxHandler', appman.getApplications);
 
     // 2.用户账号
     //
@@ -171,6 +174,8 @@ void main(function () {
     // 11)检查邮箱地址
     // curl http://localhost:4567/account/email/test@tets.com
     webapp.get('/account/email/:email', accman.existsEmailAddress);
+	// 12)获取账号(适合web提交)
+    webapp.get('/accounts/AjaxHandler', accman.getAccounts);
 
     // 3.消息推送
     //
@@ -187,7 +192,6 @@ void main(function () {
     // 4)推送消息(适合web提交)
     webapp.post('/pushmsg', msgpush.pushMessage);
     // 5)清除所有消息(适合web提交)
-    // curl -X DELETE http://localhost:4567/allMessages
     webapp.delete('/allMessages', function (req, res) {
         db.clearMessages(function (err) {
             if (err) {
@@ -203,57 +207,42 @@ void main(function () {
             }
         });
     });
+	// 6)获取消息(适合web提交)
+    webapp.get('/messages/AjaxHandler', msgpush.getMessages);
+
+	// 获取连接消息(适合web提交)
+    webapp.get('/connections/AjaxHandler', connman.getConnections);
 
     webapp.get('/', function (req, res) {
         log("打开首页...");
-        db.getAllConnections(function (err, connections) {
-            res.setHeader("Content-Type", "text/html");
-            res.render('index', {
-                pageTitle: '消息推送中心 - 首页',
-                err: err,
-                count: (err ? 0 : connections.length),
-                connections: connections
-            });
-        });
+		res.setHeader("Content-Type", "text/html");
+		res.render('index', {
+			pageTitle: '消息推送中心 - 首页'
+		});
     });
 
     webapp.get('/appman', function (req, res) {
         log("打开应用管理页面...");
-        db.getAllApplications(function (err, applications) {
-            res.setHeader("Content-Type", "text/html");
-            res.render('appman', {
-                pageTitle: '消息推送中心 - 应用管理',
-                err: err,
-                count: (err ? 0 : applications.length),
-                applications: applications
-            });
-        });
+		res.setHeader("Content-Type", "text/html");
+		res.render('appman', {
+			pageTitle: '消息推送中心 - 应用管理'
+		});
     });
 
     webapp.get('/accman', function (req, res) {
         log("打开账号管理页面...");
-        db.getAllAccounts(function (err, accounts) {
-            res.setHeader("Content-Type", "text/html");
-            res.render('accman', {
-                pageTitle: '消息推送中心 - 账号管理',
-                err: err,
-                count: (err ? 0 : accounts.length),
-                accounts: accounts
-            });
-        });
+		res.setHeader("Content-Type", "text/html");
+		res.render('accman', {
+			pageTitle: '消息推送中心 - 账号管理'
+		});
     });
 
     webapp.get('/msgman', function (req, res) {
         log("打开消息管理页面...");
-        db.getAllMessages(function (err, messages) {
-            res.setHeader("Content-Type", "text/html");
-            res.render('msgman', {
-                pageTitle: '消息推送中心 - 消息管理',
-                err: err,
-                count: (err ? 0 : messages.length),
-                messages: messages
-            });
-        });
+		res.setHeader("Content-Type", "text/html");
+		res.render('msgman', {
+			pageTitle: '消息推送中心 - 消息管理'
+		});
     });
 
     webapp.get('/appInfos', function (req, res) {

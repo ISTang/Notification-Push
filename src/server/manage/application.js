@@ -25,6 +25,8 @@ exports.checkId = checkApplicationId;
 exports.checkIdAndName = checkApplicationIdAndName;
 exports.checkNewApplicationInfo = checkNewApplicationInfo;
 exports.checkApplicationUpdateInfo = checkApplicationUpdateInfo;
+//
+exports.getApplications = getApplications;
 
 const LOG_ENABLED = config.LOG_ENABLED;
 
@@ -228,4 +230,95 @@ function checkApplicationUpdateInfo(req, res, next) {
         if (reason) return res.json({success:false,errcode:1,errmsg:reason});
         next();
     });
+}
+
+function getApplications(req, res) {
+    log('Get applications: ' +
+        'sEcho=' + req.query.sEcho +
+        ', sSearch=' + req.query.sSearch +
+        ', iDisplayLength=' + req.query.iDisplayLength +
+        ', iDisplayStart=' + req.query.iDisplayStart +
+        ', iColumns=' + req.query.iSortingCols +
+        ', sColumns=' + req.query.sColumns +
+        ''
+    );
+	
+	var iSortCol_0 = req.query.iSortCol_0;
+	var sSortDir_0 = req.query.sSortDir_0;
+
+	db.getAllApplications(function (err, applications) {
+		
+		if (err) return res.json({success: false, errcode: 1, errmsg: err});
+		
+		var filtered = [];
+		if (req.query.sSearch!="") {
+			// 过滤
+			for (var i in applications) {
+				var application = applications[i];
+				if (application.appId.indexOf(req.query.sSearch)!=-1 ||
+					application.name.indexOf(req.query.sSearch)!=-1 ||
+					(application.needLogin==true?"是":"否").indexOf(req.query.sSearch)!=-1 ||
+					(application.needLoginPassword==true?"是":"否").indexOf(req.query.sSearch)!=-1 ||
+					(application.autoCreateAccount!=false?"是":"否").indexOf(req.query.sSearch)!=-1 ||
+					(application.protectLogin==true?"是":"否").indexOf(req.query.sSearch)!=-1 ||
+					(application.secureMessage==true?"是":"否").indexOf(req.query.sSearch)!=-1 ||
+					application.createTime.indexOf(req.query.sSearch)!=-1) {
+					filtered.push(application);
+				}
+			}
+		} else {
+			// 不需要过滤
+			filtered = applications;
+		}
+
+		
+		// 排序
+		filtered.sort(function(x, y) {
+			switch (parseInt(iSortCol_0, 10)) {
+			case 0: // appId
+				return compareString(x.appId, y.appId);
+			case 1: // name
+				return compareBoolean(x.name, y.name);
+			case 2: // needLogin
+				return compareBoolean(x.needLogin, y.needLogin);
+			case 3: // needLoginPassword
+				return compareBoolean(x.needLoginPassword, y.needLoginPassword);
+			case 4: // autoCreateAccount
+				return compareBoolean(x.autoCreateAccount, y.autoCreateAccount);
+			case 5: // secureMessage
+				return compareBoolean(x.secureMessage, y.secureMessage);
+			case 6: // protectLogin
+				return compareBoolean(x.protectLogin, y.protectLogin);
+			case 7: // createTime
+				return compareString(x.createTime, y.createTime);
+			}
+		});
+		
+		// 分页
+		var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
+		var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
+		var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart+iDisplayLength, filtered.length));
+		var result = [];
+		for (var i in paged) {
+			var application = paged[i];
+			result.push([application.appId,application.name,application.needLogin==true?"是":"否", application.needLoginPassword==true?"是":"否",
+				application.autoCreateAccount==false?"否":"是", application.protectLogin==true?"是":"否", 
+				application.secureMessage==true?"是":"否", application.createTime]);
+		}
+		
+		return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: applications.length, 
+			iTotalDisplayRecords: filtered.length, aaData: result,
+			sColumns: "appId,name,needLogin,needLoginPassword,autoCreateAccount,protectLogin,secureMessage,createTime"}); 
+	});
+
+	function compareString(s1, s2) {
+		if (s1==null && s2==null) return 0;
+		if (s1==null) return (sSortDir_0=='asc'?0:1); 
+		if (s2==null) return (sSortDir_0=='asc'?1:0); 
+		
+		return (sSortDir_0=='asc'?s1.localeCompare(s2):s2.localeCompare(s1));
+	}
+	function compareBoolean(b1, b2) {
+		return compareString(b1?"是":"否", b2?"是":"否");
+	}
 }

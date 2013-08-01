@@ -18,6 +18,7 @@ exports.broadcast = broadcastMessage;
 exports.multicast = multicastMessage;
 exports.send = sendMessage;
 exports.pushMessage = pushMessage;
+exports.getMessages = getMessages;
 
 // 定义常量
 const UPLOAD_DIR = config.UPLOAD_DIR;
@@ -285,6 +286,101 @@ function pushMessage(req, res) {
                 break;
         }
     }
+}
+
+function getMessages(req, res) {
+    log('Get messages: ' +
+        'sEcho=' + req.query.sEcho +
+        ', sSearch=' + req.query.sSearch +
+        ', iDisplayLength=' + req.query.iDisplayLength +
+        ', iDisplayStart=' + req.query.iDisplayStart +
+        ', iColumns=' + req.query.iSortingCols +
+        ', sColumns=' + req.query.sColumns +
+        ''
+    );
+	
+	var iSortCol_0 = req.query.iSortCol_0;
+	var sSortDir_0 = req.query.sSortDir_0;
+
+	db.getAllMessages(function (err, messages) {
+		
+		if (err) return res.json({success: false, errcode: 1, errmsg: err});
+		
+		var filtered = [];
+		if (req.query.sSearch!="") {
+			// 过滤
+			for (var i in messages) {
+				var message = messages[i];
+				if (message.messageId.indexOf(req.query.sSearch)!=-1 ||
+					message.applicationName.indexOf(req.query.sSearch)!=-1 ||
+					message.sender && message.sender.indexOf(req.query.sSearch)!=-1 ||
+					message.receivers && message.receivers.indexOf(req.query.sSearch)!=-1 ||
+					message.title && message.title.indexOf(req.query.sSearch)!=-1 ||
+					message.body.indexOf(req.query.sSearch)!=-1 ||
+					(message.type||"text").indexOf(req.query.sSearch)!=-1 ||
+					message.attachmentCount.toString().indexOf(req.query.sSearch)!=-1 ||
+					message.generateTime.indexOf(req.query.sSearch)!=-1) {
+					filtered.push(message);
+				}
+			}
+		} else {
+			// 不需要过滤
+			filtered = messages;
+		}
+		
+		// 排序
+		filtered.sort(function(x, y) {
+			switch (parseInt(iSortCol_0, 10)) {
+			case 0: // messageId
+				return compareString(x.messageId, y.mesageId);
+			case 1: // applicationName
+				return compareString(x.applicationName, y.applicationName);
+			case 2: // sender
+				return compareString(x.sender, y.sender);
+			case 3: // receivers
+				return compareString(x.receivers, y.receivers);
+			case 4: // title
+				return compareString(x.title, y.title);
+			case 5: // body
+				return compareString(x.body, y.body);
+			case 6: // type
+				return compareString(x.type, y.type);
+			case 7: // url
+				return compareString(x.url, y.url);
+			case 8: // attachmentCount
+				return compareInteger(x.attachmentCount, y.attachmentCount);
+			case 9: // generateTime
+				return compareString(x.generateTime, y.generateTime);
+			}
+		});
+		
+		// 分页
+		var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
+		var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
+		var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart+iDisplayLength, filtered.length));
+		var result = [];
+		for (var i in paged) {
+			var message = paged[i];
+			result.push([message.messageId,message.applicationName,message.sender,message.receivers,
+				message.title, message.body, message.type, message.url, message.attachmentCount,message.generateTime]);
+		}
+		
+		return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: messages.length, 
+			iTotalDisplayRecords: filtered.length, aaData: result,
+			sColumns: "messageId,applicationName,sender,receivers,title,body,type,url,attachmentCount,generateTime"}); 
+	});
+
+	function compareString(s1, s2) {
+		if (s1==null && s2==null) return 0;
+		if (s1==null) return (sSortDir_0=='asc'?0:1); 
+		if (s2==null) return (sSortDir_0=='asc'?1:0); 
+		
+		return (sSortDir_0=='asc'?s1.localeCompare(s2):s2.localeCompare(s1));
+	}
+	function compareInteger(i1, i2) {
+		if (sSortDir_0=='asc') return (i1<i2?0:1);
+		else return (i1>i2?0:1);
+	}
 }
 
 function pushMessageByBroadcast(message, appId, res) {

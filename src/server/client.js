@@ -183,21 +183,21 @@ function main(fn) {
 // 设置最大允许打开的文件数
 void main(function () {
 
-	var clientId = require('os').hostname(); // (process.argv.length >= 4 ? process.argv[2] : "testacc"); // 客户ID
-	var clientPassword = clientId; //(process.argv.length >= 4 ? process.argv[3] : "testpass"); // 客户密码
+	var clientId = (process.argv.length >= 4 ? process.argv[2] : "testacc"); // 客户ID
+	var clientPassword = (process.argv.length >= 4 ? process.argv[3] : "testpass"); // 客户密码
 
-	var workerCount = (process.argv.length >= 3 ? parseInt(process.argv[2]) : 1);
+	var workerCount = (process.argv.length >= 5 ? parseInt(process.argv[4]) : 1);
 	log("Total "+workerCount+" worker to start...");
 	
 	var clientIds = [];
 	for (var i=0;i<workerCount;i++) {
-		clientIds.push(clientId);
+		clientIds.push(clientId+(i+1));
 	}
 	
-	async.forEachSeries(clientIds, function (clientId, callback) {
+	async.forEach(clientIds, function (clientId, callback) {
 			startWorker(clientId, clientPassword, callback);
 	}, function (err) {
 		if (err) return log(err);
-		log("All clients logon");
+		log("All clientts logon");
 	});
 });

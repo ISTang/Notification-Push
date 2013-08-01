@@ -72,7 +72,7 @@ function desEncrypt(str, key, callback) {
 	
     try {
         var cipher = crypto.createCipheriv(ALGORITHM_DES, key, '12345678');
-        cipher.setAutoPadding(true);
+        cipher.setAutoPadding(false);
         var cryptedData = cipher.update(buffer.toString('binary'), /*IN*/'binary', /*OUT*/ENCODING);
         cryptedData+= cipher.final(ENCODING);
 		//console.log("cryptedData:"+cryptedData);
@@ -100,7 +100,7 @@ function desDecrypt(str, key, callback) {
 
     try {
         var decipher = crypto.createDecipheriv(ALGORITHM_DES, key, '12345678');
-		decipher.setAutoPadding(true);
+		decipher.setAutoPadding(false);
         var decryptedData = decipher.update(str, /*IN*/ENCODING, /*OUT*/'binary');
         decryptedData += decipher.final('binary');
 		//console.log("decryptedData:"+decryptedData);

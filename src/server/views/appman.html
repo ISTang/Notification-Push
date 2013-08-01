@@ -1,10 +1,7 @@
 <% include header.html %>
 
 <div id="body">
-    <%if (err) {%>
-    <p class="message-error">Error: <%=err%></p>
-    <%} else {%>
-    <p class="message-info">应用总数: <strong><%=count%></strong>&nbsp;&nbsp;
+    <p class="message-info">所有应用: &nbsp;&nbsp;
         <!--<button id="add-app">添加应用</button>-->
     </p>
     <table id="applications">
@@ -12,41 +9,18 @@
         <tr>
             <th>应用标识</th>
             <th>应用名称</th>
-            <th>应用密码</th>
             <th>必须登录</th>
             <th>登录需要密码</th>
             <th>自动创建账号</th>
             <th>安全登录</th>
-            <th>公开密钥</th>
-            <th>私有密钥</th>
             <th>消息加密</th>
             <th>接入时间</th>
-            <!--<th>修改时间</th>-->
-            <!--<th>下线时间</th>-->
         </tr>
         </thead>
         <tbody>
-        <%applications.forEach(function(application){%>
-        <tr>
-            <td><%=application.appId%></td>
-            <td><%=application.name%></td>
-            <td><%=application.appPassword%></td>
-            <td><%=application.needLogin?"是":"否"%></td>
-            <td><%=application.needLoginPassword?"是":"否"%></td>
-            <td><%=application.autoCreateAccount?"是":"否"%></td>
-            <td><%=application.protectLogin?"是":"否"%></td>
-            <td><%=application.protectKey.public%></td>
-            <td><%=application.protectKey.private%></td>
-            <td><%=application.secureMessage?"是":"否"%></td>
-            <td><%=application.createTime%></td>
-            <!--<td><%=application.updateTime%></td>-->
-            <!--<td><%=application.deleteTime%></td>-->
-        </tr>
-        <%})%>
         </tbody>
     </table>
     <!--<button id="btnDeleteApplication">删除应用</button>-->
-    <%}%>
 </div>
 
 <div id="addapp-form" title="添加应用">
@@ -70,6 +44,20 @@
 <script type="text/javascript">
     $(function () {
         $('#applications').dataTable({
+            "bServerSide": true,
+            "bProcessing": true,
+            "sAjaxSource": "/applications/AjaxHandler",
+			"sAjaxDataProp": "aaData",
+			"aoColumns": [
+				{ "sName": "appId", "sDefaultContent": "" },
+				{ "sName": "name", "sDefaultContent": "", "sWidth": "64px" },
+				{ "sName": "needLogin", "sDefaultContent": "否", "sWidth": "48px" },
+				{ "sName": "needLoginPassword", "sDefaultContent": "否", "sWidth": "72px" },
+				{ "sName": "autoCreateAccount", "sDefaultContent": "是", "sWidth": "72px" },
+				{ "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
+				{ "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
+				{ "sName": "createTime", "sDefaultContent": "" }
+			],
             "oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,
