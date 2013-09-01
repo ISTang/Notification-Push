@@ -12,11 +12,11 @@
             <th>应用名称</th>
             <th>发送者</th>
             <th>接收者</th>
+            <th>消息类型</th>
             <th>消息标题</th>
             <th>消息正文</th>
-            <th>消息类型</th>
-            <th>消息详情</th>
-            <th>附件数量</th>
+            <th>网页链接</th>
+            <th>附件</th>
             <th>生成时间</th>
         </tr>
         </thead>
@@ -73,15 +73,25 @@
 				{ "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
 				{ "sName": "sender", "sDefaultContent": "", "sWidth": "47px" },
 				{ "sName": "receivers", "sDefaultContent": "", "sWidth": "48px" },
+				{ "sName": "type", "sDefaultContent": "文字", "sWidth": "56px" },
 				{ "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
 				{ "sName": "body", "sDefaultContent": "", "fnRender": function(obj) {
                     var body = obj.aData[ obj.iDataColumn ];
                     return (obj.aData[7]?"<a href='"+obj.aData[7]+"' target='blank'>"+body+"</a>":body);
 					} 
 				},
-				{ "sName": "type", "sDefaultContent": "文字", "sWidth": "56px" },
 				{ "sName": "url", "sDefaultContent": "", "bVisible": false },
-				{ "sName": "attachmentCount", "sDefaultContent": "", "sWidth": "56px" },
+				{ "sName": "attachments", "sDefaultContent": "", "sWidth": "56px", "fnRender": function(obj) {
+                    var attachments = obj.aData[ obj.iDataColumn ];
+					var linksString = "";
+					for (var i in attachments) {
+						var attachment = attachments[i];
+						if (linksString!="") linksString += "<br/>";
+						linksString += "<a href='"+attachment.url+"' target='blank'>"+attachment.title+"</a>";
+					}
+                    return linksString;
+					}
+				},
 				{ "sName": "generateTime", "sDefaultContent": "", "sWidth": "56px" }
 			],
 			"oLanguage": dataTablesLanguage,
@@ -203,7 +213,7 @@
 
         // bind to the form's submit event
         $('#msgpush').submit(function() {
-            $(this).ajaxSubmit({dataType:"json",success:showResponse});
+            $(this).ajaxSubmit({dataType:"json",success:showResponse,error:showError});
             return false;
         });
 
@@ -215,6 +225,9 @@
             } else {
                 alert("消息推送失败："+data.errmsg+"(#"+data.errcode+")");
             }
+        }
+        function showError(XMLHttpRequest, textStatus)  {
+            alert("消息推送失败：#"+XMLHttpRequest.status+"("+textStatus+")");
         }
     });
 </script>

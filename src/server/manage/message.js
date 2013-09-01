@@ -7,7 +7,6 @@
 var fs = require('fs');
 var path = require('path');
 var async = require('async');
-var _redis = require('redis');
 //
 var config = require(__dirname + '/../config');
 var utils = require(__dirname + '/../utils');
@@ -19,6 +18,7 @@ exports.multicast = multicastMessage;
 exports.send = sendMessage;
 exports.pushMessage = pushMessage;
 exports.getMessages = getMessages;
+exports.clearMessages = clearMessages;
 
 // 定义常量
 const UPLOAD_DIR = config.UPLOAD_DIR;
@@ -27,14 +27,9 @@ const MAX_ATTACHMENT_COUNT = config.MAX_ATTACHMENT_COUNT;
 const IMAGE_MIME_REGEX = config.IMAGE_MIME_REGEX;
 const MIN_EXPIRATION_TIME = config.MIN_EXPIRATION_TIME;
 //
-const REDIS_SERVER = config.REDIS_SERVER;
-const REDIS_PORT = config.REDIS_PORT;
-//
 const LOG_ENABLED = config.LOG_ENABLED;
 
 var logStream = LOG_ENABLED ? fs.createWriteStream("logs/message.log", {"flags": "a"}) : null;
-
-var msgPub;
 
 Date.prototype.Format = utils.DateFormat;
 
@@ -46,7 +41,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[message]";
     if (logStream != null) logStream.write(buffer + "\r\n");
-    console.log(buffer);
+    if ( LOG_ENABLED) console.log(buffer);
 }
 
 // 广播消息
@@ -302,72 +297,87 @@ function getMessages(req, res) {
 	var iSortCol_0 = req.query.iSortCol_0;
 	var sSortDir_0 = req.query.sSortDir_0;
 
-	db.getAllMessages(function (err, messages) {
-		
-		if (err) return res.json({success: false, errcode: 1, errmsg: err});
-		
-		var filtered = [];
-		if (req.query.sSearch!="") {
-			// 过滤
-			for (var i in messages) {
-				var message = messages[i];
-				if (message.messageId.indexOf(req.query.sSearch)!=-1 ||
-					message.applicationName.indexOf(req.query.sSearch)!=-1 ||
-					message.sender && message.sender.indexOf(req.query.sSearch)!=-1 ||
-					message.receivers && message.receivers.indexOf(req.query.sSearch)!=-1 ||
-					message.title && message.title.indexOf(req.query.sSearch)!=-1 ||
-					message.body.indexOf(req.query.sSearch)!=-1 ||
-					(message.type||"text").indexOf(req.query.sSearch)!=-1 ||
-					message.attachmentCount.toString().indexOf(req.query.sSearch)!=-1 ||
-					message.generateTime.indexOf(req.query.sSearch)!=-1) {
-					filtered.push(message);
-				}
-			}
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1, 
+					iTotalDisplayRecords: 1, aaData: [['无法访问数据库: '+err]],
+					sColumns: "messageId"});
 		} else {
-			// 不需要过滤
-			filtered = messages;
+			db.getAllMessages(redis, function (err, messages) {
+				
+				db.redisPool.release(redis);
+				
+				if (err) {
+					return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1, 
+						iTotalDisplayRecords: 1, aaData: [['数据库操作失败: '+err]],
+						sColumns: "messageId"});
+				}
+				
+				var filtered = [];
+				if (req.query.sSearch!="") {
+					// 过滤
+					for (var i in messages) {
+						var message = messages[i];
+						if (message.messageId.indexOf(req.query.sSearch)!=-1 ||
+							message.applicationName.indexOf(req.query.sSearch)!=-1 ||
+							message.sender && message.sender.indexOf(req.query.sSearch)!=-1 ||
+							message.receivers && message.receivers.indexOf(req.query.sSearch)!=-1 ||
+							(message.type||"text").indexOf(req.query.sSearch)!=-1 ||
+							message.title && message.title.indexOf(req.query.sSearch)!=-1 ||
+							message.body.indexOf(req.query.sSearch)!=-1 ||
+							//message.attachmentCount.toString().indexOf(req.query.sSearch)!=-1 ||
+							message.generateTime.indexOf(req.query.sSearch)!=-1) {
+							filtered.push(message);
+						}
+					}
+				} else {
+					// 不需要过滤
+					filtered = messages;
+				}
+				
+				// 排序
+				filtered.sort(function(x, y) {
+					switch (parseInt(iSortCol_0, 10)) {
+					case 0: // messageId
+						return compareString(x.messageId, y.mesageId);
+					case 1: // applicationName
+						return compareString(x.applicationName, y.applicationName);
+					case 2: // sender
+						return compareString(x.sender, y.sender);
+					case 3: // receivers
+						return compareString(x.receivers, y.receivers);
+					case 4: // type
+						return compareString(x.type, y.type);
+					case 5: // title
+						return compareString(x.title, y.title);
+					case 6: // body
+						return compareString(x.body, y.body);
+					case 7: // url
+						return compareString(x.url, y.url);
+					case 8: // attachments
+						return compareInteger(x.attachmentCount, y.attachmentCount);
+					case 9: // generateTime
+						return compareString(x.generateTime, y.generateTime);
+					}
+				});
+				
+				// 分页
+				var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
+				var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
+				var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart+iDisplayLength, filtered.length));
+				var result = [];
+				for (var i in paged) {
+					var message = paged[i];
+					var attachments = message.attachments;
+					result.push([message.messageId, message.applicationName, message.sender, message.receivers,
+						message.type, message.title, message.body, message.url, attachments, message.generateTime]);
+				}
+				
+				return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: messages.length, 
+					iTotalDisplayRecords: filtered.length, aaData: result,
+					sColumns: "messageId,applicationName,sender,receivers,type,title,body,url,attachments,generateTime"}); 
+			});
 		}
-		
-		// 排序
-		filtered.sort(function(x, y) {
-			switch (parseInt(iSortCol_0, 10)) {
-			case 0: // messageId
-				return compareString(x.messageId, y.mesageId);
-			case 1: // applicationName
-				return compareString(x.applicationName, y.applicationName);
-			case 2: // sender
-				return compareString(x.sender, y.sender);
-			case 3: // receivers
-				return compareString(x.receivers, y.receivers);
-			case 4: // title
-				return compareString(x.title, y.title);
-			case 5: // body
-				return compareString(x.body, y.body);
-			case 6: // type
-				return compareString(x.type, y.type);
-			case 7: // url
-				return compareString(x.url, y.url);
-			case 8: // attachmentCount
-				return compareInteger(x.attachmentCount, y.attachmentCount);
-			case 9: // generateTime
-				return compareString(x.generateTime, y.generateTime);
-			}
-		});
-		
-		// 分页
-		var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
-		var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
-		var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart+iDisplayLength, filtered.length));
-		var result = [];
-		for (var i in paged) {
-			var message = paged[i];
-			result.push([message.messageId,message.applicationName,message.sender,message.receivers,
-				message.title, message.body, message.type, message.url, message.attachmentCount,message.generateTime]);
-		}
-		
-		return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: messages.length, 
-			iTotalDisplayRecords: filtered.length, aaData: result,
-			sColumns: "messageId,applicationName,sender,receivers,title,body,type,url,attachmentCount,generateTime"}); 
 	});
 
 	function compareString(s1, s2) {
@@ -388,34 +398,48 @@ function pushMessageByBroadcast(message, appId, res) {
     var needReceipt = message.need_receipt;
 
     log("Saving message for application " + appId);
-    var msgId = db.saveMessage(appId, message);
-    log("Message id: " + msgId);
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			res.json({success: false, errcode:1, errmsg: err});
+		} else {
+			db.saveMessage(redis, appId, message, [], function(err, msgId) {
+				if (err) {
+					db.redisPool.release(redis);
+					return res.json({success: false, errcode: 2, errmsg: err});
+				}
+				
+				log("Message id: " + msgId);
 
-    delete message.need_receipt;
+				delete message.need_receipt;
 
-    db.getActiveConnections(appId, null, function (err, connectionInfos) {
+				db.getActiveConnections(redis, appId, null, function (err, connectionInfos) {
 
-        if (err) return res.json({success: false, errcode: 1, errmsg: err});
+					db.redisPool.release(redis);
+					
+					if (err) return res.json({success: false, errcode: 3, errmsg: err});
 
-        connectionInfos.forEach(function (connectionInfo) {
-            if (!message.send_time) {
-                // 立即发送
-                log("Publishing message " + msgId + " on connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                publishMessage(connectionInfo, msgId, message, needReceipt);
-            } else {
-                // 延迟发送
-                var sendTime = utils.DateParse(message.send_time);
-                var timeout = sendTime.getTime() - new Date();
-                log("Will publish message " + msgId + " on connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
-                setTimeout(function () {
-                    log("Publishing message " + msgId + " on connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                    publishMessage(connectionInfo, msgId, message, needReceipt);
-                }, timeout);
-            }
-        });
+					connectionInfos.forEach(function (connectionInfo) {
+						if (!message.send_time) {
+							// 立即发送
+							log("Publishing message " + msgId + " on connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+							publishMessage(connectionInfo, msgId, message, needReceipt);
+						} else {
+							// 延迟发送
+							var sendTime = utils.DateParse(message.send_time);
+							var timeout = sendTime.getTime() - new Date();
+							log("Will publish message " + msgId + " on connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
+							setTimeout(function () {
+								log("Publishing message " + msgId + " on connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+								publishMessage(connectionInfo, msgId, message, needReceipt);
+							}, timeout);
+						}
+					});
 
-        res.json({success: true});
-    });
+					res.json({success: true});
+				});
+			});
+		}
+	});
 }
 
 function pushMessageByMulticast(message, appId, accountNames, res) {
@@ -424,46 +448,60 @@ function pushMessageByMulticast(message, appId, accountNames, res) {
     var needReceipt = message.need_receipt;
 
     log("Saving message for application " + appId);
-    var msgId = db.saveMessage(appId, message, []);
-    log("Message id: " + msgId);
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			res.json({success: false, errcode: 1, errmsg: err});
+		} else {
+			db.saveMessage(redis, appId, message, [], function(err, msgId) {
+				if (err) {
+					db.redisPool.release(redis);
+					return res.json({success: false, errcode: 2, errmsg: err});
+				}
+				log("Message id: " + msgId);
 
-    delete message.need_receipt;
+				delete message.need_receipt;
 
-    async.forEachSeries(accountNames, function(accountName, callback) {
-        db.getAccountIdByName(accountName, function (err, accountId) {
+				async.forEachSeries(accountNames, function(accountName, callback) {
+					db.getAccountIdByName(redis, accountName, function (err, accountId) {
 
-            if (err) return callback(err);
-            if (!accountId) return callback("Account "+accountName+" not exists");
+						if (err) return callback(err);
+						if (!accountId) return callback("Account "+accountName+" not exists");
 
-            db.addMessageToAccounts(msgId, [accountId], appId, now);
+						db.addMessageToAccounts(redis, msgId, [accountId], appId, now, function(err) {
+							if (err) return callback(err);
 
-            db.getActiveConnections(appId, accountId, function (err, connectionInfos) {
+							db.getActiveConnections(redis, appId, accountId, function (err, connectionInfos) {
 
-                if (err) return callback(err);
+								if (err) return callback(err);
 
-                connectionInfos.forEach(function(connectionInfo) {
-                    if (!message.send_time) {
-                        // 立即发送
-                        log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                        publishMessage(connectionInfo, msgId, message, needReceipt);
-                    } else {
-                        // 延迟发送
-                        var sendTime = utils.DateParse(message.send_time);
-                        var timeout = sendTime.getTime() - new Date();
-                        log("Will publish message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
-                        setTimeout(function () {
-                            log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                            publishMessage(connectionInfo, msgId, message, needReceipt);
-                        }, timeout);
-                    }
-                });
-                callback();
-            });
-        });
-    }, function (err) {
-        if (err) res.json({success: false, errcode: 1, errmsg: err});
-        else res.json({success: true});
-    });
+								connectionInfos.forEach(function(connectionInfo) {
+									if (!message.send_time) {
+										// 立即发送
+										log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+										publishMessage(connectionInfo, msgId, message, needReceipt);
+									} else {
+										// 延迟发送
+										var sendTime = utils.DateParse(message.send_time);
+										var timeout = sendTime.getTime() - new Date();
+										log("Will publish message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
+										setTimeout(function () {
+											log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+											publishMessage(connectionInfo, msgId, message, needReceipt);
+										}, timeout);
+									}
+								});
+								callback();
+							});
+						});
+					});
+				}, function (err) {
+					db.redisPool.release(redis);
+					if (err) res.json({success: false, errcode: 2, errmsg: err});
+					else res.json({success: true});
+				});
+			});
+		}
+	});
 }
 
 function pushMessageBySend(message, appId, accountName, res) {
@@ -472,42 +510,61 @@ function pushMessageBySend(message, appId, accountName, res) {
     var needReceipt = message.need_receipt;
 
     log("Saving message for application " + appId);
-    var msgId = db.saveMessage(appId, message, []);
-    log("Message id: " + msgId);
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			res.json({success: false, errcode: 1, errmsg: err});
+		} else {
+			db.saveMessage(redis, appId, message, [], function(err, msgId) {
+				if (err) {
+					db.redisPool.release(redis);
+					return res.json({success: false, errcode: 2, errmsg: err});
+				}
+				log("Message id: " + msgId);
 
-    delete message.need_receipt;
+				delete message.need_receipt;
 
-    db.getAccountIdByName(accountName, function (err, accountId) {
+				db.getAccountIdByName(redis, accountName, function (err, accountId) {
 
-        if (err) return res.json({success: false, errcode: 1, errmsg: err});
-        if (!accountId) return res.json({success: false, errcode: 2, errmsg: "Account " + accountName + " not exists"});
+					if (err) {
+						db.redisPool.release(redis);
+						return res.json({success: false, errcode: 3, errmsg: err});
+					}
+					if (!accountId) {
+						db.redisPool.release(redis);
+						return res.json({success: false, errcode: 4, errmsg: "Account " + accountName + " not exists"});
+					}
 
-        db.addMessageToAccounts(msgId, [accountId], appId, now);
+					db.addMessageToAccounts(redis, msgId, [accountId], appId, now);
 
-        db.getActiveConnections(appId, accountId, function (err, connectionInfos) {
+					db.getActiveConnections(redis, appId, accountId, function (err, connectionInfos) {
 
-            if (err) return res.json({success: false, errcode: 3, errmsg: err});;
+						db.redisPool.release(redis);
 
-            connectionInfos.forEach(function(connectionInfo) {
-                if (!message.send_time) {
-                    // 立即发送
-                    log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                    publishMessage(connectionInfo, msgId, message, needReceipt);
-                } else {
-                    // 延迟发送
-                    var sendTime = utils.DateParse(message.send_time);
-                    var timeout = sendTime.getTime() - new Date();
-                    log("Will publish message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
-                    setTimeout(function () {
-                        log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                        publishMessage(connectionInfo, msgId, message, needReceipt);
-                    }, timeout);
-                }
-            });
+						if (err) return res.json({success: false, errcode: 4, errmsg: err});;
 
-            res.json({success: true});
-        });
-    });
+						connectionInfos.forEach(function(connectionInfo) {
+							if (!message.send_time) {
+								// 立即发送
+								log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+								publishMessage(connectionInfo, msgId, message, needReceipt);
+							} else {
+								// 延迟发送
+								var sendTime = utils.DateParse(message.send_time);
+								var timeout = sendTime.getTime() - new Date();
+								log("Will publish message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
+								setTimeout(function () {
+									log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+									publishMessage(connectionInfo, msgId, message, needReceipt);
+								}, timeout);
+							}
+						});
+
+						res.json({success: true});
+					});
+				});
+			});
+		}
+	});
 }
 
 function publishMessage(connectionInfo, msgId, message, needReceipt) {
@@ -517,17 +574,26 @@ function publishMessage(connectionInfo, msgId, message, needReceipt) {
         message: message,
         msgKey: connectionInfo.msgKey,
         needReceipt: needReceipt};
-    msgPub.publish(connectionInfo.channelId, JSON.stringify(o));
+	db.redisPool.acquire(function(err, msgPub) {
+		if (err) {
+			log(err);
+			process.exit(1);
+		} else {
+			msgPub.publish(connectionInfo.channelId, JSON.stringify(o));
+			db.redisPool.release(msgPub);
+		}
+	});
 }
 
-function main(fn) {
-    fn();
+function clearMessages(callback) {
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			calback(err);
+		} else {
+			db.clearMessages(redis, function(err) {
+				db.redisPool.release(redis);
+				callback(err);
+			});
+		}
+	});
 }
-
-void main(function () {
-
-    msgPub = _redis.createClient(REDIS_PORT, REDIS_SERVER);
-    msgPub.on("error", function (err) {
-        log("Error " + err);
-    });
-});

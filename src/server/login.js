@@ -22,7 +22,7 @@ var myIndex;
 
 var loginingSockets = []; // clientAddress->(socket, connectTime, accountName)
 
-var logStream = LOG_ENABLED ? fs.createWriteStream("logs/login.log", {"flags": "a"}) : null;
+var logStream = fs.createWriteStream(__dirname+"/logs/login.log", {"flags": "a"}) ;
 
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
@@ -37,7 +37,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[login]";
     if (logStream != null) logStream.write(buffer + "\r\n");
-    console.log(buffer);
+    if ( LOG_ENABLED) console.log(buffer);
 }
 
 /**
@@ -49,34 +49,37 @@ function log(msg) {
  */
 function checkAppId(appId, password, handleResult) {
 
-    db.checkAppId(appId, password, function (checkResult) {
-        if (checkResult.passed) {
-
-            if (checkResult.needProtect) {
-
-                handleResult({ passed: true,
-                    secureLogin: true,
-                    protectKey: checkResult.protectKey,
-					needLogin: checkResult.needLogin, 
-                    needPassword: checkResult.needPassword,
-                    autoCreateAccount: checkResult.autoCreateAccount,
-                    secureMessage: checkResult.secureMessage
-                });
-            } else {
-
-                handleResult({ passed: true,
-                    secureLogin: false,
-					needLogin: checkResult.needLogin, 
-                    needPassword: checkResult.needPassword,
-                    autoCreateAccount: checkResult.autoCreateAccount,
-                    secureMessage: checkResult.secureMessage
-                });
-            }
-        } else {
-
-            handleResult({passed: false, reason: checkResult.reason});
-        }
-    });
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			handleResult({passed: false, reason: err});
+		} else {
+			db.checkAppId(redis, appId, password, function (checkResult) {
+				db.redisPool.release(redis);
+				if (checkResult.passed) {
+					if (checkResult.needProtect) {
+						handleResult({ passed: true,
+							secureLogin: true,
+							protectKey: checkResult.protectKey,
+							needLogin: checkResult.needLogin, 
+							needPassword: checkResult.needPassword,
+							autoCreateAccount: checkResult.autoCreateAccount,
+							secureMessage: checkResult.secureMessage
+						});
+					} else {
+						handleResult({ passed: true,
+							secureLogin: false,
+							needLogin: checkResult.needLogin, 
+							needPassword: checkResult.needPassword,
+							autoCreateAccount: checkResult.autoCreateAccount,
+							secureMessage: checkResult.secureMessage
+						});
+					}
+				} else {
+					handleResult({passed: false, reason: checkResult.reason});
+				}
+			});
+		}
+	});
 }
 
 /**
@@ -89,16 +92,20 @@ function checkAppId(appId, password, handleResult) {
  */
 function checkUsername(username, password, autoCreateAccount, handleResult) {
 
-    db.checkUsername(username, password, autoCreateAccount, function (checkResult) {
-
-        if (!checkResult.passed) {
-
-            handleResult({passed: false, reason: checkResult.reason});
-        } else {
-
-            handleResult({passed: true, accountId: checkResult.accountId, accountName: checkResult.accountName});
-        }
-    });
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			handleResult({passed: false, reason: err});
+		} else {
+			db.checkUsername(redis, username, password, autoCreateAccount, function (checkResult) {
+				db.redisPool.release(redis);
+				if (!checkResult.passed) {
+					handleResult({passed: false, reason: checkResult.reason});
+				} else {
+					handleResult({passed: true, accountId: checkResult.accountId, accountName: checkResult.accountName});
+				}
+			});
+		}
+	});
 }
 
 var notifyProcessPool = [];
@@ -156,6 +163,7 @@ process.on('message', function (m, handle) {
             if (err) {
 
                 log('Login process listen error');
+				process.exit(1);
             } else {
 
                 log('Login process '+myIndex+' listen ok');
@@ -191,40 +199,40 @@ void main(function () {
     process.on('SIGTERM', aboutExit)
 
     server = net.createServer(function (socket) {
-
-        //noinspection JSUnresolvedVariable
+		
+       //noinspection JSUnresolvedVariable
         var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
         //log("One new login started from " + clientAddress);
 
         loginingSockets[clientAddress] = {"socket": socket, "connectTime": new Date(), "accountName": null};
 
-        function clientLogon(socket, accountId, accountName, appId, msgKey, handleResult) {
-            log("[" + accountName + "] logon");
-
-            var connId = uuid.v4().toUpperCase();
-            var channelId = "notify-"+myIndex+"-"+nextNotifyProcessIndex;
-            db.saveLoginInfo(connId, accountId, appId, msgKey, channelId,clientAddress, handleResult);
-
-            var notifyProcess = notifyProcessPool[nextNotifyProcessIndex++];
-            nextNotifyProcessIndex = nextNotifyProcessIndex % NOTIFY_NUMBER;
-
-            process.nextTick(function () {
-
-                try {
-                    notifyProcess.send({"type": "client", "appId": appId, "accountId": accountId,
-                        "accountName": accountName, connId: connId, msgKey: msgKey}, socket);
-                } catch (e) {
-                    log("Failed to send socket of client " + accountName + "(" + clientAddress + ")");
-                    try {
-                        socket.end(protocol.CLOSE_CONN_RES.format(protocol.SERVER_ERROR_MSG.length, protocol.SERVER_ERROR_MSG));
-                    } catch (ee) {
-                        log(ee);
-                    }
-                }
-            });
-            delete loginingSockets[clientAddress];
-
-            handleResult(null);
+        function clientLogon(socket, accountId, accountName, appId, msgKey, callback) {
+		log("[" + accountName + "] logon");
+            	var connId = uuid.v4().toUpperCase();
+            	var channelId = "notify-"+myIndex+"-"+nextNotifyProcessIndex;
+		db.redisPool.acquire(function(err, redis) {
+			if (err) return callback(err);
+			db.saveLoginInfo(redis, connId, accountId, appId, msgKey, channelId,clientAddress, function(err) {
+				db.redisPool.release(redis);
+				if (err) return callback(err);
+				
+				var notifyProcess = notifyProcessPool[nextNotifyProcessIndex++];
+				nextNotifyProcessIndex = nextNotifyProcessIndex % NOTIFY_NUMBER;
+			
+				//process.nextTick(function () {
+			
+					try {
+						notifyProcess.send({"type": "client", "appId": appId, "accountId": accountId,
+							"accountName": accountName, connId: connId, msgKey: msgKey}, socket);
+						callback();
+					} catch (e) {
+						callback("Failed to send socket of client " + accountName + "(" + clientAddress + ")");
+					} finally {
+						delete loginingSockets[clientAddress];
+					}
+				//});
+			});
+		});
         }
 
         function handleError(e) {

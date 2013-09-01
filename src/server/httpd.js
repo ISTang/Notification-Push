@@ -7,6 +7,11 @@
 var fs = require('fs');
 var express = require('express');
 //
+var passport = require('passport')
+  , LocalStrategy = require('passport-local').Strategy
+  , ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn;
+var user = require('connect-roles');
+//
 var config = require(__dirname + '/config');
 var utils = require(__dirname + '/utils');
 var db = require(__dirname + '/db');
@@ -29,40 +34,146 @@ webapp.configure(function () {
     webapp.set('views', __dirname + '/views');
     webapp.set('view engine', 'html');
 
-    webapp.use(express.logger());
-    webapp.use(function (req, res, next) {
-        /*var data = '';
-         req.setEncoding('utf-8');
-         req.on('data', function (chunk) {
-         data += chunk;
-         });
-         req.on('end', function () {
-         req.rawBody = data;
-         next();
-         });*/
-        //res.setHeader("Content-Type", "application/json;charset=utf-8");
-        next();
-    });
-    webapp.use(express.bodyParser()); // can't coexists with req.on(...)!
+    /*webapp.use(function (req, res, next) {
+        req.setEncoding('utf-8');
+        var data = '';
+        req.on('data', function (chunk) {
+        	data += chunk;
+        });
+        req.on('end', function () {
+        	req.rawBody = data;
+        	next();
+        });
+    });*/
+    webapp.use(express.cookieParser());
+    webapp.use(express.bodyParser());
     webapp.use(express.methodOverride());
+    //
+    webapp.use(express.session({ secret: 'keyboard cat' }));
+    webapp.use(passport.initialize());
+    webapp.use(passport.session());
+    //
     webapp.use(webapp.router);
 });
 // 定义开发环境
 webapp.configure('development', function () {
+    webapp.use(express.logger('dev'));
     webapp.use(express.static(__dirname + '/public'));
     webapp.use(express.errorHandler({dumpExceptions: true, showStack: true}));
-    webapp.use(express.logger('dev'));
 });
 // 定义生产环境
 webapp.configure('production', function () {
     var oneYear = 31557600000;
+    webapp.use(express.logger());
     webapp.use(express.static(__dirname + '/public', { maxAge: oneYear }));
     webapp.use(express.errorHandler());
 });
 
 webapp.set('env', 'development');
 
-var logStream = LOG_ENABLED ? fs.createWriteStream("logs/httpd.log", {"flags": "a"}) : null;
+passport.use(new LocalStrategy(
+	function(username, password, done) {
+		db.redisPool.acquire(function(err, redis) {
+			if (err) {
+				log(err);
+				return done(err);
+			}
+			db.checkUsername(redis, username, utils.md5(password), false, function(result) {
+				db.redisPool.release(redis);
+				if (!result.passed) {
+					log("Login check failed: "+result.reason );
+					return done(null, false, { message: result.reason }); 
+				}
+				log("Login check passed.");
+				done(null, {id:result.accountId,name:result.accountName,phone:result.phoneNumber,email:result.emailAddress});
+			});
+		});
+	}
+));
+
+passport.serializeUser(function(user, done) {
+	done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			log(err);
+			return done(err);
+		}
+		db.getAccountInfo(redis, id, function(err, result) {
+			db.redisPool.release(redis);
+			done(err, result);
+		});
+	});
+});
+
+webapp.use(user);
+
+user.use('view connection infos', function(req) {
+    return true;
+});
+
+user.use('get connection infos', function(req) {
+    return true;
+});
+
+user.use('view application infos', function(req) {
+    return true;
+});
+
+user.use('get application infos', function(req) {
+    return true;
+});
+
+user.use('get application list', function(req) {
+    return true;
+});
+
+user.use('view account infos', function(req) {
+    return true;
+});
+
+user.use('get account infos', function(req) {
+    return true;
+});
+
+user.use('get account list', function(req) {
+    return true;
+});
+
+user.use('view messages', function(req) {
+    return true;
+});
+
+user.use('get messages', function(req) {
+    return true;
+});
+
+
+/*user.use(function(req) {
+  if (req.user.role === 'admin') {
+    return true;
+  }
+});*/
+
+//optionally controll the access denid page displayed
+user.setFailureHandler(function (req, res, action){
+	var accept = req.headers.accept || '';
+	res.status(403);
+	if (~accept.indexOf('html')) {
+		res.render('access-denied', {action: action});
+	} else {
+		res.json({
+			success: false,
+			errcode: -1,
+			errmsg: 'Access Denied - You don\'t have permission to: ' + action
+		});
+	}
+});
+
+
+var logStream =   fs.createWriteStream(__dirname+"/logs/httpd.log", {"flags": "a"}) ;
 
 Date.prototype.Format = utils.DateFormat;
 
@@ -75,7 +186,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[httpd]";
     if (logStream != null) logStream.write(buffer + "\r\n");
-    console.log(buffer);
+    if ( LOG_ENABLED) console.log(buffer);
 }
 
 function main(fn) {
@@ -101,6 +212,16 @@ void main(function () {
     process.on('SIGINT', aboutExit);
     process.on('SIGTERM', aboutExit);
 
+    webapp.get('/login', function (req, res) {
+		res.setHeader("Content-Type", "text/html");
+		res.render('login', {
+			pageTitle: '消息推送中心 - 登录'
+		});
+    });
+    webapp.post('/login',  passport.authenticate('local', { successRedirect: '/',
+									   failureRedirect: '/login',
+									   failureFlash: false }));
+    
     // 1.应用接入
     //
     // 1)注册新应用
@@ -126,8 +247,8 @@ void main(function () {
     // 6)检查应用名称
     //  curl http://localhost:4567/application/name/appname
     webapp.get('/application/name/:name', appman.existsName);
-	// 7)获取应用消息(适合web提交)
-    webapp.get('/applications/AjaxHandler', appman.getApplications);
+	// 7)获取应用信息(适合web提交)
+    webapp.get('/applications/AjaxHandler', ensureLoggedIn('/login'), user.can('get application infos'), appman.getApplications);
 
     // 2.用户账号
     //
@@ -175,7 +296,7 @@ void main(function () {
     // curl http://localhost:4567/account/email/test@tets.com
     webapp.get('/account/email/:email', accman.existsEmailAddress);
 	// 12)获取账号(适合web提交)
-    webapp.get('/accounts/AjaxHandler', accman.getAccounts);
+    webapp.get('/accounts/AjaxHandler', user.can('get account list'), accman.getAccounts);
 
     // 3.消息推送
     //
@@ -190,10 +311,10 @@ void main(function () {
     // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"body\":\"hello\",\"attachments\":[{\"title\":\"at1\",\"type\":\"application/oct-stream\",\"filename\":\"at1.bin\",\"url\":\"http://test.com/att1\"}]}" http://localhost:4567/application/123/account/accname/message
     webapp.post('/application/:id/account/:name/message', appman.checkId, accman.checkName, msgpush.send);
     // 4)推送消息(适合web提交)
-    webapp.post('/pushmsg', msgpush.pushMessage);
+    webapp.post('/pushmsg', ensureLoggedIn('/login'), user.can('push message'), msgpush.pushMessage);
     // 5)清除所有消息(适合web提交)
-    webapp.delete('/allMessages', function (req, res) {
-        db.clearMessages(function (err) {
+    webapp.delete('/allMessages', ensureLoggedIn('/login'), user.can('clear messages'), function (req, res) {
+        msgpush.clearMessages(function (err) {
             if (err) {
                 res.json({
                     success: false,
@@ -208,12 +329,12 @@ void main(function () {
         });
     });
 	// 6)获取消息(适合web提交)
-    webapp.get('/messages/AjaxHandler', msgpush.getMessages);
+    webapp.get('/messages/AjaxHandler', ensureLoggedIn('/login'), user.can('get messages'), msgpush.getMessages);
 
 	// 获取连接消息(适合web提交)
-    webapp.get('/connections/AjaxHandler', connman.getConnections);
+    webapp.get('/connections/AjaxHandler', ensureLoggedIn('/login'), user.can('get connection infos'), connman.getConnections);
 
-    webapp.get('/', function (req, res) {
+    webapp.get('/', ensureLoggedIn('/login'), user.can('view connection infos'), function (req, res) {
         log("打开首页...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('index', {
@@ -221,7 +342,7 @@ void main(function () {
 		});
     });
 
-    webapp.get('/appman', function (req, res) {
+    webapp.get('/appman', ensureLoggedIn('/login'), user.can('view application infos'), function (req, res) {
         log("打开应用管理页面...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('appman', {
@@ -229,7 +350,7 @@ void main(function () {
 		});
     });
 
-    webapp.get('/accman', function (req, res) {
+    webapp.get('/accman', ensureLoggedIn('/login'), user.can('view account infos'), function (req, res) {
         log("打开账号管理页面...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('accman', {
@@ -237,7 +358,7 @@ void main(function () {
 		});
     });
 
-    webapp.get('/msgman', function (req, res) {
+    webapp.get('/msgman', ensureLoggedIn('/login'), user.can('view messages'), function (req, res) {
         log("打开消息管理页面...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('msgman', {
@@ -245,9 +366,9 @@ void main(function () {
 		});
     });
 
-    webapp.get('/appInfos', function (req, res) {
+    webapp.get('/appInfos', ensureLoggedIn('/login'), user.can('get application list'), function (req, res) {
         log("获取应用信息...");
-        db.getApplicationInfos(function (err, appInfos) {
+        appman.getApplicationInfos(function (err, appInfos) {
             if (!err) {
                 res.json({
                     success: true,

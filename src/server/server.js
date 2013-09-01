@@ -17,7 +17,7 @@ const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 const LOG_ENABLED = config.LOG_ENABLED;
 const AUTO_START_HTTPD = config.AUTO_START_HTTPD;
 
-var logStream = LOG_ENABLED?fs.createWriteStream("logs/server.log", {"flags":"a"}):null;
+var logStream = fs.createWriteStream(__dirname+"/logs/server.log", {"flags":"a"});
 
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
@@ -31,7 +31,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[server]";
     if (logStream!=null) logStream.write(buffer + "\r\n");
-    console.log(buffer);
+    if ( LOG_ENABLED) console.log(buffer);
 }
 
 function main(fn) {
@@ -141,11 +141,22 @@ void main(function () {
 
     process.setMaxListeners(0);
 
-
-	db.cleanData(function (err) {
-		if (err) return log(err);
-		
-		startListenServer();
-		if (AUTO_START_HTTPD) startHttpServer();
+	db.redisPool.acquire(function(err, redis) {
+		if (err) {
+			log(err);
+			process.exit(1);
+		} else {
+			log('Cleaning data...');
+			db.cleanData(redis, function(err) {
+				db.redisPool.release(redis);
+				if (err) {
+					log(err);
+					process.exit(2);
+				} else {
+					startListenServer();
+					if (AUTO_START_HTTPD) startHttpServer();
+				}
+			});
+		}
 	});
 });
