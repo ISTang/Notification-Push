@@ -17,12 +17,13 @@ const LOGIN_TIMEOUT = config.LOGIN_TIMEOUT;
 const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 //
 const LOG_ENABLED = config.LOG_ENABLED;
+const TRACK_SOCKET = config.TRACK_SOCKET;
 
 var myIndex;
 
 var loginingSockets = []; // clientAddress->(socket, connectTime, accountName)
 
-var logStream = fs.createWriteStream(__dirname+"/logs/login.log", {"flags": "a"}) ;
+var logStream = fs.createWriteStream(__dirname + "/logs/login.log", {"flags": "a"});
 
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
@@ -37,7 +38,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[login]";
     if (logStream != null) logStream.write(buffer + "\r\n");
-    if ( LOG_ENABLED) console.log(buffer);
+    if (LOG_ENABLED) console.log(buffer);
 }
 
 /**
@@ -49,37 +50,37 @@ function log(msg) {
  */
 function checkAppId(appId, password, handleResult) {
 
-	db.redisPool.acquire(function(err, redis) {
-		if (err) {
-			handleResult({passed: false, reason: err});
-		} else {
-			db.checkAppId(redis, appId, password, function (checkResult) {
-				db.redisPool.release(redis);
-				if (checkResult.passed) {
-					if (checkResult.needProtect) {
-						handleResult({ passed: true,
-							secureLogin: true,
-							protectKey: checkResult.protectKey,
-							needLogin: checkResult.needLogin, 
-							needPassword: checkResult.needPassword,
-							autoCreateAccount: checkResult.autoCreateAccount,
-							secureMessage: checkResult.secureMessage
-						});
-					} else {
-						handleResult({ passed: true,
-							secureLogin: false,
-							needLogin: checkResult.needLogin, 
-							needPassword: checkResult.needPassword,
-							autoCreateAccount: checkResult.autoCreateAccount,
-							secureMessage: checkResult.secureMessage
-						});
-					}
-				} else {
-					handleResult({passed: false, reason: checkResult.reason});
-				}
-			});
-		}
-	});
+    db.redisPool.acquire(function (err, redis) {
+        if (err) {
+            handleResult({passed: false, reason: err});
+        } else {
+            db.checkAppId(redis, appId, password, function (checkResult) {
+                db.redisPool.release(redis);
+                if (checkResult.passed) {
+                    if (checkResult.needProtect) {
+                        handleResult({ passed: true,
+                            secureLogin: true,
+                            protectKey: checkResult.protectKey,
+                            needLogin: checkResult.needLogin,
+                            needPassword: checkResult.needPassword,
+                            autoCreateAccount: checkResult.autoCreateAccount,
+                            secureMessage: checkResult.secureMessage
+                        });
+                    } else {
+                        handleResult({ passed: true,
+                            secureLogin: false,
+                            needLogin: checkResult.needLogin,
+                            needPassword: checkResult.needPassword,
+                            autoCreateAccount: checkResult.autoCreateAccount,
+                            secureMessage: checkResult.secureMessage
+                        });
+                    }
+                } else {
+                    handleResult({passed: false, reason: checkResult.reason});
+                }
+            });
+        }
+    });
 }
 
 /**
@@ -92,20 +93,20 @@ function checkAppId(appId, password, handleResult) {
  */
 function checkUsername(username, password, autoCreateAccount, handleResult) {
 
-	db.redisPool.acquire(function(err, redis) {
-		if (err) {
-			handleResult({passed: false, reason: err});
-		} else {
-			db.checkUsername(redis, username, password, autoCreateAccount, function (checkResult) {
-				db.redisPool.release(redis);
-				if (!checkResult.passed) {
-					handleResult({passed: false, reason: checkResult.reason});
-				} else {
-					handleResult({passed: true, accountId: checkResult.accountId, accountName: checkResult.accountName});
-				}
-			});
-		}
-	});
+    db.redisPool.acquire(function (err, redis) {
+        if (err) {
+            handleResult({passed: false, reason: err});
+        } else {
+            db.checkUsername(redis, username, password, autoCreateAccount, function (checkResult) {
+                db.redisPool.release(redis);
+                if (!checkResult.passed) {
+                    handleResult({passed: false, reason: checkResult.reason});
+                } else {
+                    handleResult({passed: true, accountId: checkResult.accountId, accountName: checkResult.accountName});
+                }
+            });
+        }
+    });
 }
 
 var notifyProcessPool = [];
@@ -119,7 +120,7 @@ function startNotifyPool() {
         notifyProcess.on("error", onError);
         notifyProcess.on("exit", onExit);
 
-        notifyProcess.send({type:"index",loginIndex:myIndex,notifyIndex:i});
+        notifyProcess.send({type: "index", loginIndex: myIndex, notifyIndex: i});
 
         notifyProcessPool.push(notifyProcess);
     }
@@ -141,7 +142,7 @@ function startNotifyPool() {
                 notifyProcess.on("error", onError);
                 notifyProcess.on("exit", onExit);
 
-                notifyProcess.send({type:"index",loginIndex:myIndex,notifyIndex:index});
+                notifyProcess.send({type: "index", loginIndex: myIndex, notifyIndex: index});
 
                 notifyProcessPool[index] = notifyProcess;
 
@@ -162,11 +163,11 @@ process.on('message', function (m, handle) {
 
             if (err) {
 
-                log('Login process listen error');
-				process.exit(1);
+                log('"Process will exit: login process listen error');
+                process.exit(1);
             } else {
 
-                log('Login process '+myIndex+' listen ok');
+                log('Login process ' + myIndex + ' listen ok');
 
                 startNotifyPool();
             }
@@ -199,54 +200,55 @@ void main(function () {
     process.on('SIGTERM', aboutExit)
 
     server = net.createServer(function (socket) {
-		
-       //noinspection JSUnresolvedVariable
+
+        //noinspection JSUnresolvedVariable
         var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
-        //log("One new login started from " + clientAddress);
+        if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + " connected");
 
         loginingSockets[clientAddress] = {"socket": socket, "connectTime": new Date(), "accountName": null};
 
         function clientLogon(socket, accountId, accountName, appId, msgKey, callback) {
-		log("[" + accountName + "] logon");
-            	var connId = uuid.v4().toUpperCase();
-            	var channelId = "notify-"+myIndex+"-"+nextNotifyProcessIndex;
-		db.redisPool.acquire(function(err, redis) {
-			if (err) return callback(err);
-			db.saveLoginInfo(redis, connId, accountId, appId, msgKey, channelId,clientAddress, function(err) {
-				db.redisPool.release(redis);
-				if (err) return callback(err);
-				
-				var notifyProcess = notifyProcessPool[nextNotifyProcessIndex++];
-				nextNotifyProcessIndex = nextNotifyProcessIndex % NOTIFY_NUMBER;
-			
-				//process.nextTick(function () {
-			
-					try {
-						notifyProcess.send({"type": "client", "appId": appId, "accountId": accountId,
-							"accountName": accountName, connId: connId, msgKey: msgKey}, socket);
-						callback();
-					} catch (e) {
-						callback("Failed to send socket of client " + accountName + "(" + clientAddress + ")");
-					} finally {
-						delete loginingSockets[clientAddress];
-					}
-				//});
-			});
-		});
+            log("[" + accountName + "] logon");
+            var connId = uuid.v4().toUpperCase();
+            var channelId = "notify-" + myIndex + "-" + nextNotifyProcessIndex;
+            db.redisPool.acquire(function (err, redis) {
+                if (err) return callback(err);
+                db.saveLoginInfo(redis, connId, accountId, appId, msgKey, channelId, clientAddress, function (err) {
+                    db.redisPool.release(redis);
+                    if (err) return callback(err);
+
+                    var notifyProcess = notifyProcessPool[nextNotifyProcessIndex++];
+                    nextNotifyProcessIndex = nextNotifyProcessIndex % NOTIFY_NUMBER;
+
+                    //process.nextTick(function () {
+
+                    try {
+                        notifyProcess.send({"type": "client", "appId": appId, "accountId": accountId,
+                            "accountName": accountName, connId: connId, msgKey: msgKey}, socket);
+                        callback();
+                    } catch (e) {
+                        callback("Failed to send socket of client " + accountName + "(" + clientAddress + ")");
+                    } finally {
+                        delete loginingSockets[clientAddress];
+                    }
+                    //});
+                });
+            });
         }
 
         function handleError(e) {
 
-            log(">>>[" + (this.accountName != null ? this.accountName : clientAddress) + "]" + e.toString() + "<<<");
+            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + ": " + e.toString());
         }
 
         function handleClose(hadError) {
 
-            log("Client " + (this.accountName != null ? this.accountName : clientAddress) + " " + (hadError ? "network error" : "disconnected"));
+            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress)+ ": " + (hadError ? "network error" : "disconnected");
             delete loginingSockets[clientAddress];
         }
 
         // 发送应用认证请求
+        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " +  protocol.GET_APPID_REQ);
         socket.write(/*protocol.PNTP_FLAG+*/protocol.GET_APPID_REQ);
 
         // 处理连接
@@ -270,7 +272,10 @@ void main(function () {
                 //var accountName = socketInfo.accountName;
 
                 //log("Client " + (accountName != null ? accountName : clientAddress) + " login timeout");
+                if (TRACK_SOCKET) log("[SOCKET] end client " + clientAddress + ": " +  protocol.LOGIN_TIMEOUT_MSG);
                 socket.end(protocol.CLOSE_CONN_RES.format(protocol.LOGIN_TIMEOUT_MSG.length, protocol.LOGIN_TIMEOUT_MSG));
+
+                delete loginingSockets[clientAddress];
             }
         }
     }, LOGIN_TIMEOUT / 2);

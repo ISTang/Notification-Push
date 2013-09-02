@@ -23,6 +23,7 @@ exports.BROARDCAST_MSG = "You have a new message.";
 exports.SERVER_ERROR_MSG = "Server error!";
 
 exports.LOG_ENABLED = true;
+exports.TRACK_SOCKET = true;
 
 exports.REDIS_SERVER = "localhost";
 exports.REDIS_PORT = 6379;
@@ -35,8 +36,8 @@ exports.RANDOM_ACCOUNTNAME_SIZE = 8;
 
 exports.MAX_OFFLINE_DAYS = 1;
 
-exports.UPLOAD_DIR = path.join(__dirname,"public", "files");
-exports.DOWNLOAD_URL_BASE = "http://"+exports.SERVER_HOST+":"+exports.HTTPD_PORT+"/files/";
+exports.UPLOAD_DIR = path.join(__dirname, "public", "files");
+exports.DOWNLOAD_URL_BASE = "http://" + exports.SERVER_HOST + ":" + exports.HTTPD_PORT + "/files/";
 exports.MAX_ATTACHMENT_COUNT = 4;
 
 exports.EMAIL_ADDRESS_FORMAT = /^(\w+\.)?\w+@(\w+\.)+[A-Za-z]+$/;

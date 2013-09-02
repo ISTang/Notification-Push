@@ -59,6 +59,9 @@ const KEEP_ALIVE_INTERVAL = config.MAX_INACTIVE_TIME;
 // 是否显示报文
 const SHOW_PACKET = config.SHOW_PACKET;
 
+// 是否跟踪socket
+const TRACK_SOCKET = config.TRACK_SOCKET;
+
 // 体部长度是否采用字节单位
 const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
 
@@ -67,7 +70,7 @@ const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
 // 协议头部标志
 //const PNTP_FLAG = "P\0N\0T\0P\0";
 // 关闭连接
-const CLOSE_CONN_RES = "CLOSE CONN\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {0}\r\n\r\n{1}"; // 体部: 错误内容(已包含)
+const CLOSE_CONN_RES = "CLOSE CONN\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {0}\r\n\r\n{1}"; // 体部: 错误内容(已包含)
 //
 // : 应用认证
 //
@@ -75,11 +78,11 @@ const CLOSE_CONN_RES = "CLOSE CONN\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH
 const GET_APPID_REQ = "GET APPID\r\n\r\n"; // 无体部
 // (2)响应(C-->P): group(1)--体部长度
 const GET_APPID_RES_HEAD = /SET APPID\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: (\d+)\r\n\r\n/m; // 体部: 应用ID及密码
-const GET_APPID_RES = "SET APPID\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {0}\r\n\r\n{1},{2}"; // {0}-体部长度, {1}-应用ID, {2}-应用密码
+const GET_APPID_RES = "SET APPID\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {0}\r\n\r\n{1},{2}"; // {0}-体部长度, {1}-应用ID, {2}-应用密码
 // (3)成功回复(P-->C)
 const GET_APPID_SUCCESS_REP = "SET APPID\r\nSuccess: true\r\n\r\n"; // 无体部
 // (4)失败回复({0}-{1}和{2}的长度和加1,{1}-错误代码,{2}-错误原因)(P-->C)
-const GET_APPID_FAILED_REP = "SET APPID\r\nSuccess: false\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {0}\r\n\r\n{1},{2}"; // 体部: 错误代码及解释(已包含)
+const GET_APPID_FAILED_REP = "SET APPID\r\nSuccess: false\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {0}\r\n\r\n{1},{2}"; // 体部: 错误代码及解释(已包含)
 //
 // :用户认证
 //
@@ -87,23 +90,23 @@ const GET_APPID_FAILED_REP = "SET APPID\r\nSuccess: false\r\n"+(BODY_BYTE_LENGTH
 const GET_USERNAME_REQ = "GET USERNAME\r\nSecure: {0}\r\nPassword: {1}\r\n\r\n"; // 无体部
 // (2)响应(C-->P): group(1)--是否需要解密, group(2)--是否包含密码, group(3)--体部长度
 const GET_USERNAME_RES_HEAD = /SET USERNAME\r\nSecure: (true|false)\r\nPassword: (true|false)\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: (\d+)\r\n\r\n/m; // 体部: 用户名(及密码)
-const GET_USERNAME_RES = "SET USERNAME\r\nSecure: {0}\r\nPassword: {1}\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {2}\r\n\r\n{3}"; // {0}-体部是否加密, {1}-体部是否包含密码, {2}-体部长度, {3}-用户名(和密码)
+const GET_USERNAME_RES = "SET USERNAME\r\nSecure: {0}\r\nPassword: {1}\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {2}\r\n\r\n{3}"; // {0}-体部是否加密, {1}-体部是否包含密码, {2}-体部长度, {3}-用户名(和密码)
 // (3)成功回复(P-->C)
 const GET_USERNAME_SUCCESS_REP = "SET USERNAME\r\nSuccess: true\r\n\r\n"; // 无体部
 // (4)失败回复({0}-{1}和{2}的长度和加1,{1}-错误代码,{2}-错误原因)(P-->C)
-const GET_USERNAME_FAILED_REP = "SET USERNAME\r\nSuccess: false\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {0}\r\n\r\n{1},{2}"; // 体部: 错误代码及原因(已包含)
+const GET_USERNAME_FAILED_REP = "SET USERNAME\r\nSuccess: false\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {0}\r\n\r\n{1},{2}"; // 体部: 错误代码及原因(已包含)
 //
 // :消息密钥
 //
 // (1)命令 ({0}-是否安全消息, {1}-{2}的长度, {2}-密钥内容)(P-->C)
-const SET_MSGKEY_CMD = "SET MSGKEY\r\nSecure: {0}\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {1}\r\n\r\n{2}"; // 体部: 消息密钥(已包含)
+const SET_MSGKEY_CMD = "SET MSGKEY\r\nSecure: {0}\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {1}\r\n\r\n{2}"; // 体部: 消息密钥(已包含)
 // (2)确认(C-->P)
 const SET_MSGKEY_ACK = "SET MSGKEY\r\n\r\n"; // 不需要体部
 //
 // :设置心跳周期
 //
 // (1)命令 ({0}-{1}的长度, {1}-心跳周期(s)(P-->C)
-const SET_ALIVEINT_CMD = "SET ALIVEINT\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {0}\r\n\r\n{1}"; // 体部: 心跳周期(已包含)
+const SET_ALIVEINT_CMD = "SET ALIVEINT\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {0}\r\n\r\n{1}"; // 体部: 心跳周期(已包含)
 // (2)确认 (C-->P)
 const SET_ALIVEINT_ACK = "SET ALIVEINT\r\n\r\n"; // 不需要体部
 //
@@ -118,21 +121,23 @@ const SET_ALIVE_ACK = "SET ALIVE\r\n\r\n"; // 不需要体部
 // :消息推送(平台发起)
 //
 // (1)命令 ({0}-消息是否加密, {1}-消息是否需要确认, {2}-{3}的长度, {3}-消息JSON对象)(P-->C)
-const PUSH_MSG_CMD = "PUSH MSG\r\nSecure: {0}\r\nReceipt: {1}\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {2}\r\n\r\n{3}"; // 体部: 消息JSON对象(已包含)
+const PUSH_MSG_CMD = "PUSH MSG\r\nSecure: {0}\r\nReceipt: {1}\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {2}\r\n\r\n{3}"; // 体部: 消息JSON对象(已包含)
 // (2)确认(C-->P)
 const PUSH_MSG_ACK = "PUSH MSG\r\n\r\n"; // 不需要体部
 //
 // :发消息(客户端发起)
 //
 // (1)请求 ({0}-接收者账号 {1}-发送标识[回传用] {2}-消息是否加密, {3}-{4}的长度, {4}-消息JSON对象)(C-->P)
-const SEND_MSG_REQ = "SEND MSG\r\nAccount: {0}\r\nId: {1}\r\nSecure: {2}\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {3}\r\n\r\n{4}"; // 体部: 消息JSON对象(已包含)
+const SEND_MSG_REQ = "SEND MSG\r\nAccount: {0}\r\nId: {1}\r\nSecure: {2}\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {3}\r\n\r\n{4}"; // 体部: 消息JSON对象(已包含)
 // (2)成功响应({0}-发送标识 P-->C)
 const SEND_MSG_SUCCESS_RES = "SEND MSG\r\nId: {0}\r\nSuccess: true\r\n\r\n"; // 无体部
 // (3)失败响应({0}-发送标识 {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
-const SEND_MSG_FAILED_RES = "SEND MSG\r\nId: {0}\r\nSuccess: false\r\n"+(BODY_BYTE_LENGTH?FIELD_BODY_BYTE_LENGTH+":true\r\n":"")+"Length: {1}\r\n\r\n{2},{3}"; // 体部: 错误代码及解释(已包含)
+const SEND_MSG_FAILED_RES = "SEND MSG\r\nId: {0}\r\nSuccess: false\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {1}\r\n\r\n{2},{3}"; // 体部: 错误代码及解释(已包含)
 
 // 处理连接(适合服务器端和客户端)
 function handleConnection(socket, handlePacket, handleError, handleClose, log) {
+
+    var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
 
     var waitForHead = true; // 等待头部(false表示等待体部或不需要再等待)
     var headInput = ""; // 头部输入
@@ -149,7 +154,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
     socket.on("data", function (data) {
 
         var newInput = data.toString();
-        //log(newInput);
+        if (TRACK_SOCKET) log("[SOCKET] read from client " + clientAddress + ": " + newInput);
 
         var starr = [];
 
@@ -185,7 +190,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
 
                      // 标志不对
                      log(INVALID_PROTOCOL_FLAG_MSG);
-                     socket.end(INVALID_PROTOCOL_FLAG_MSG);
+                     socket.end("[SOCKET] write to client " + clientAddress + ": " + INVALID_PROTOCOL_FLAG_MSG);
                      return;
                      }
 
@@ -197,8 +202,8 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
                     if (starr.length != 2) {
 
                         // 格式不对
-                        log("Invalid action line: " + line);
-                        socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(INVALID_ACTION_LINE_MSG):INVALID_ACTION_LINE_MSG.length, INVALID_ACTION_LINE_MSG));
+                        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Invalid action line(" + line + ")");
+                        socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_ACTION_LINE_MSG) : INVALID_ACTION_LINE_MSG.length, INVALID_ACTION_LINE_MSG));
                         return;
                     }
 
@@ -215,8 +220,8 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
                     if (starr.length != 2) {
 
                         // 格式不对
-                        log("Invalid field line: " + line);
-                        socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(INVALID_FIELD_LINE_MSG):INVALID_FIELD_LINE_MSG.length, INVALID_FIELD_LINE_MSG));
+                        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Invalid field line(" + line + ")");
+                        socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_FIELD_LINE_MSG) : INVALID_FIELD_LINE_MSG.length, INVALID_FIELD_LINE_MSG));
                         return;
                     }
 
@@ -250,7 +255,8 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
                 if (isNaN(bodyLength) || bodyLength < 0) {
 
                     // 体部长度字段值无效
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(INVALID_LENGTH_VALUE_MSG):INVALID_LENGTH_VALUE_MSG.length, INVALID_LENGTH_VALUE_MSG));
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + INVALID_LENGTH_VALUE_MSG);
+                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_LENGTH_VALUE_MSG) : INVALID_LENGTH_VALUE_MSG.length, INVALID_LENGTH_VALUE_MSG));
                     return;
                 }
             }
@@ -281,23 +287,23 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
 
         //log("body: "+body);
 
-        if (SHOW_PACKET) log(head+body);
+        if (SHOW_PACKET) log(head + body);
 
         // 处理新的报文
-        handlePacket(socket, action, target, fields, body, log, function(err) {
-        	if (err) log(err);
+        handlePacket(socket, action, target, fields, body, log, function (err) {
+            if (err) log(err);
 
-		// 准备处理下一个报文
-		waitForHead = true;
-		actionLineFound = false;
-		//
-		head = "";
-		body = "";
-		//
-		action = "";
-		target = "";
-		fields = [];
-		bodyLength = 0;
+            // 准备处理下一个报文
+            waitForHead = true;
+            actionLineFound = false;
+            //
+            head = "";
+            body = "";
+            //
+            action = "";
+            target = "";
+            fields = [];
+            bodyLength = 0;
         });
     });
 
@@ -306,8 +312,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
 }
 
 // 处理同客户端的连接
-function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
-                                handleError, handleClose, log) {
+function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, handleError, handleClose, log) {
 
     var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
     var clientStatus = CLIENT_STATUS_JUST_CONNECTED;
@@ -337,13 +342,13 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "APPID") {
 
-                    if (action=="CLOSE" && target=="CONN") {
+                    if (action == "CLOSE" && target == "CONN") {
                         return callback(clientAddress + " closed connection");
                     }
 
                     // 错误的响应
-                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
-                    return callback(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
                 log("Received application certificate response");
@@ -353,59 +358,59 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 if (starr.length != 2) {
 
                     // 格式不对
-                    socket.write(/*PNTP_FLAG+*/GET_APPID_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH?IBuffer.byteLength(NVALID_SET_APPID_RES_BODY_MSG):INVALID_SET_APPID_RES_BODY_MSG.length),
+                    socket.write(/*PNTP_FLAG+*/GET_APPID_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH ? IBuffer.byteLength(NVALID_SET_APPID_RES_BODY_MSG) : INVALID_SET_APPID_RES_BODY_MSG.length),
                         1, INVALID_SET_APPID_RES_BODY_MSG));
-                    return callback(clientAddress + " " + INVALID_SET_APPID_RES_BODY_MSG + ":" + body);
+                    return callback("[SOCKET] write to client " + clientAddress + ": " + INVALID_SET_APPID_RES_BODY_MSG + "(" + body + ")");
                 }
 
-		// 检查应用 ID和密码
-		checkAppId(starr[0], starr[1], function(checkResult) {
-			if (!checkResult.passed) {
+                // 检查应用 ID和密码
+                checkAppId(starr[0], starr[1], function (checkResult) {
+                    if (!checkResult.passed) {
 
-				// ID或密码不对
-				var ss = INVALID_APPID_MSG + ": " + checkResult.reason;
-				socket.write(/*PNTP_FLAG+*/GET_APPID_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length), 2, ss));
-				return callback(clientAddress + " " + INVALID_APPID_MSG + ": " + starr[0] + "," + starr[1]);
-			}
+                        // ID或密码不对
+                        var ss = INVALID_APPID_MSG + ": " + checkResult.reason;
+                        socket.write(/*PNTP_FLAG+*/GET_APPID_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length), 2, ss));
+                        return callback("[SOCKET] write to client " + clientAddress + ": " + INVALID_APPID_MSG + ": " + starr[0] + "," + starr[1]);
+                    }
 
-			// 回复客户端
-			log(clientAddress + " " + "Sending application certificate OK reply...");
-			socket.write(/*PNTP_FLAG+*/GET_APPID_SUCCESS_REP);
+                    // 回复客户端
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + GET_APPID_SUCCESS_REP);
+                    socket.write(/*PNTP_FLAG+*/GET_APPID_SUCCESS_REP);
 
-			// 记录应用信息
-			appId = starr[0];
-			secureLogin = checkResult.secureLogin;
-			protectKey = checkResult.protectKey;
-			needLogin = checkResult.needLogin;
-			needPassword = checkResult.needPassword;
-			autoCreateAccount = checkResult.autoCreateAccount;
-			secureMessage = checkResult.secureMessage;
+                    // 记录应用信息
+                    appId = starr[0];
+                    secureLogin = checkResult.secureLogin;
+                    protectKey = checkResult.protectKey;
+                    needLogin = checkResult.needLogin;
+                    needPassword = checkResult.needPassword;
+                    autoCreateAccount = checkResult.autoCreateAccount;
+                    secureMessage = checkResult.secureMessage;
 
-			if (needLogin) { // 需要登录
+                    if (needLogin) { // 需要登录
 
-				// 更新客户状态
-				clientStatus = CLIENT_STATUS_APPID_GOT;
+                        // 更新客户状态
+                        clientStatus = CLIENT_STATUS_APPID_GOT;
 
-				// 发送用户认证请求
-				log(clientAddress + " " + "Sending user certificate request...");
-				socket.write(/*PNTP_FLAG+*/GET_USERNAME_REQ.format(secureLogin ? "true" : "false",
-					needPassword ? "true" : "false"));
-			} else { // 不需要登录
+                        // 发送用户认证请求
+                        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Sending user certificate request...");
+                        socket.write(/*PNTP_FLAG+*/GET_USERNAME_REQ.format(secureLogin ? "true" : "false",
+                            needPassword ? "true" : "false"));
+                    } else { // 不需要登录
 
-				// 设置用户信息
-				accountId = '<nologin>';
-				accountName = '<nologin>';
+                        // 设置用户信息
+                        accountId = '<nologin>';
+                        accountName = '<nologin>';
 
-				// 更新客户状态
-				clientStatus = CLIENT_STATUS_USERNAME_GOT;
-				
-				// 发送消息密钥或心跳周期
-				nextStep();
-			}
-			
-			callback();
-		}); 
-		
+                        // 更新客户状态
+                        clientStatus = CLIENT_STATUS_USERNAME_GOT;
+
+                        // 发送消息密钥或心跳周期
+                        nextStep();
+                    }
+
+                    callback();
+                });
+
                 break;
 
             case CLIENT_STATUS_APPID_GOT:
@@ -413,13 +418,13 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "USERNAME") {
 
-                    if (action=="CLOSE" && target=="CONN") {
+                    if (action == "CLOSE" && target == "CONN") {
                         return callback(clientAddress + " closed connection");
                     }
 
                     // 错误的响应
-                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
-                    return callback(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    return callback("[SOCKET] write to client " + clientAddress + ": " +  WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
                 log(clientAddress + " " + "Received user certificate response");
@@ -427,7 +432,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 最好先确认secure和password字段取值正确
 
                 // 解密体部内容(如果需要)
-                if (fields[FIELD_LOGIN_SECURE.toUpperCase()].toUpperCase()=="TRUE") {
+                if (fields[FIELD_LOGIN_SECURE.toUpperCase()].toUpperCase() == "TRUE") {
 
                     body = crypt.rsaDecrypt(body, protectKey.private);
                 }
@@ -435,15 +440,15 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 解析体部内容
                 var uname;// 用户名
                 var pwd; // 密码
-                if (fields[FIELD_LOGIN_PASSWORD.toUpperCase()].toUpperCase()=="TRUE") {
+                if (fields[FIELD_LOGIN_PASSWORD.toUpperCase()].toUpperCase() == "TRUE") {
 
                     var sarr = body.split(",");
                     if (sarr.length != 2) {
 
-                       // 格式不对
-                        socket.write(/*PNTP_FLAG+*/GET_USERNAME_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH?Buffer.byteLength(INVALID_SET_USERNAME_RES_BODY_MSG):INVALID_SET_USERNAME_RES_BODY_MSG.length),
+                        // 格式不对
+                        socket.write(/*PNTP_FLAG+*/GET_USERNAME_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_SET_USERNAME_RES_BODY_MSG) : INVALID_SET_USERNAME_RES_BODY_MSG.length),
                             1, INVALID_SET_USERNAME_RES_BODY_MSG));
-                        return callback(clientAddress + " " + INVALID_SET_USERNAME_RES_BODY_MSG + ": " + body);
+                        return callback("[SOCKET] write to client " + clientAddress + ": " + INVALID_SET_USERNAME_RES_BODY_MSG + "(" + body + ")");
                     }
 
                     uname = sarr[0];
@@ -454,31 +459,31 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                     pwd = null;
                 }
 
-		// 检查用户名(和密码)
-		checkUsername(uname, pwd, autoCreateAccount, function(checkResult) {
-			if (!checkResult.passed) {
+                // 检查用户名(和密码)
+                checkUsername(uname, pwd, autoCreateAccount, function (checkResult) {
+                    if (!checkResult.passed) {
 
-				// 用户名(或密码)不对
-				var ss = INVALID_USERNAME_MSG + ": " + checkResult.reason;
-				socket.write(/*PNTP_FLAG+*/GET_USERNAME_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length), 2, ss));
-				return callback(clientAddress + " " + ss);
-			}
+                        // 用户名(或密码)不对
+                        var ss = INVALID_USERNAME_MSG + ": " + checkResult.reason;
+                        socket.write(/*PNTP_FLAG+*/GET_USERNAME_FAILED_REP.format(1 + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length), 2, ss));
+                        return callback("[SOCKET] write to client " + clientAddress + ": " + ss);
+                    }
 
-			// 回复客户端
-			log(clientAddress + " " + "Sending user certificate OK response");
-			socket.write(/*PNTP_FLAG+*/GET_USERNAME_SUCCESS_REP);
+                    // 回复客户端
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Sending user certificate OK response");
+                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_SUCCESS_REP);
 
-			// 记录用户信息
-			accountId = checkResult.accountId;
-			accountName = checkResult.accountName;
-			//log("User "+accountId+"("+accountName+") logon");
+                    // 记录用户信息
+                    accountId = checkResult.accountId;
+                    accountName = checkResult.accountName;
+                    //log("User "+accountId+"("+accountName+") logon");
 
-			// 发送消息密钥或心跳周期
-			nextStep();
-			
-			callback();
-		});
-                
+                    // 发送消息密钥或心跳周期
+                    nextStep();
+
+                    callback();
+                });
+
                 break;
 
             case CLIENT_STATUS_USERNAME_GOT:
@@ -486,22 +491,22 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "MSGKEY") {
 
-                    if (action=="CLOSE" && target=="CONN") {
+                    if (action == "CLOSE" && target == "CONN") {
                         return callback(clientAddress + " closed connection");
                     }
 
                     // 错误的响应
-                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH?Buffer.byteLength(WRONG_RESPONSE_MSG):WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
-                    return callback(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
                 // 更新客户状态
                 clientStatus = CLIENT_STATUS_MSGKEY_ACK;
 
                 // 发送心跳周期
-                log(clientAddress + " " + "Message key sent, sending keep alive interval...");
                 var ss = KEEP_ALIVE_INTERVAL.toString();
-                socket.write(/*PNTP_FLAG+*/SET_ALIVEINT_CMD.format(BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length, ss));
+                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Message key sent, sending keep alive interval...");
+                socket.write(/*PNTP_FLAG+*/SET_ALIVEINT_CMD.format(BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss));
                 callback();
 
                 break;
@@ -511,28 +516,28 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 检查动作和目标
                 if (action != "SET" || target != "ALIVEINT") {
 
-                    if (action=="CLOSE" && target=="CONN") {
+                    if (action == "CLOSE" && target == "CONN") {
                         return callback(clientAddress + " closed connection");
                     }
 
                     // 错误的响应
                     socket.end(/*PNTP_FLAG+*/WRONG_RESPONSE_MSG);
-                    return callback(clientAddress + " " + WRONG_RESPONSE_MSG + ": " + action + " " + target);
+                    return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
                 // 等待应用推送消息和客户端发送心跳信号
                 log(clientAddress + " " + "Keep alive interval sent, waiting for notify and/or keep alive...");
-                clientLogon(socket, accountId, accountName, appId, msgKey, function(err) {
+                clientLogon(socket, accountId, accountName, appId, msgKey, function (err) {
 
                     if (err) {
-                    	socket.end(/*PNTP_FLAG+*/SERVER_ERROR_MSG);
-                    	return callback(err);
+                        socket.end(/*PNTP_FLAG+*/SERVER_ERROR_MSG);
+                        return callback("[SOCKET] write to client " + clientAddress + ": " + err);
                     }
-		    // 更新客户状态
-	            clientStatus = CLIENT_STATUS_ALIVEINT_ACK;
+                    // 更新客户状态
+                    clientStatus = CLIENT_STATUS_ALIVEINT_ACK;
                     callback();
                 });
-                
+
                 break;
 
             default:
@@ -549,9 +554,9 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 clientStatus = CLIENT_STATUS_MSGKEY_ACK;
 
                 // 发送心跳周期
-                log(clientAddress + " " + "Sending keep alive interval...");
                 var ss = KEEP_ALIVE_INTERVAL.toString();
-                socket.write(/*PNTP_FLAG+*/SET_ALIVEINT_CMD.format(BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length, ss));
+                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Sending keep alive interval...");
+                socket.write(/*PNTP_FLAG+*/SET_ALIVEINT_CMD.format(BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss));
             } else { // 需要发送消息密钥
 
                 // 更新客户状态
@@ -560,17 +565,18 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
                 // 发送消息密钥
                 msgKey = crypt.makeMsgKey();
                 if (secureLogin) ss = crypt.rsaEncrypt(msgKey, protectKey.public);
-                log(clientAddress + " " + "Sending message key...");
-                socket.write(/*PNTP_FLAG+*/SET_MSGKEY_CMD.format(secureLogin?"true": "false",
-                    BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length, ss));
+                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Sending message key...");
+                socket.write(/*PNTP_FLAG+*/SET_MSGKEY_CMD.format(secureLogin ? "true" : "false",
+                    BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss));
             }
         }
     }
 }
 
 // 处理同客户端的连接#2
-function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive,
-                                 msgConfirmed, forwardMsg, handleError, handleClose, log) {
+function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive, msgConfirmed, forwardMsg, handleError, handleClose, log) {
+
+    var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
 
     handleConnection(socket, handlePacket, handleError, handleClose, log);
 
@@ -581,6 +587,7 @@ function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive,
 
             // 收到心跳信号, 回复
             keepAlive();
+            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + SET_ALIVE_ACK);
             socket.write(/*PNTP_FLAG+*/SET_ALIVE_ACK);
             callback();
         } else if (action == "PUSH" && target == "MSG") {
@@ -588,12 +595,12 @@ function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive,
             // 收到消息确认信号
             msgConfirmed();
             callback();
-        }  else if (action == "SEND" && target == "MSG") {
+        } else if (action == "SEND" && target == "MSG") {
 
             // 收到发送消息请求
             var receiver = fields[FIELD_MSG_ACCOUNT.toUpperCase()];
             var sendId = fields[FIELD_MSG_ID.toUpperCase()];
-            var msgSecure = (fields[FIELD_MSG_SECURE.toUpperCase()].toUpperCase()=="TRUE");
+            var msgSecure = (fields[FIELD_MSG_SECURE.toUpperCase()].toUpperCase() == "TRUE");
             var msgText = body;
             if (msgSecure) {
 
@@ -602,27 +609,28 @@ function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive,
             }
             forwardMsg(appId, accountName, receiver, msgText, sendId, function (err) {
 
-                var ss = (err?"0,"+err:"");
-                socket.write(/*PNTP_FLAG+*/err?SEND_MSG_FAILED_RES.format(sendId, 0, BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length, ss):
+                var ss = (err ? "0," + err : "");
+                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Send message OK");
+                socket.write(/*PNTP_FLAG+*/err ? SEND_MSG_FAILED_RES.format(sendId, 0, BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss) :
                     SEND_MSG_SUCCESS_RES.format(sendId));
                 callback();
             });
         } else if (action == "CLOSE" && target == "CONN") {
 
             // 客户端主动断开连接
-            log("["+accountName+"] Close connection: " + body);
+            log("[" + accountName + "] Close connection: " + body);
             callback();
         } else {
 
             // 无法理解的动作
-            callback("["+accountName+"] Unknown action: " + action + " " + target);
+            callback("[" + accountName + "] Unknown action: " + action + " " + target);
         }
     }
 }
 
 // 处理同服务器端的连接
-function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMsgKey, setLogon, setKeepAliveInterval,
-                                keepAlive, msgReceived, handleError, handleClose, log) {
+function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMsgKey, setLogon, setKeepAliveInterval, keepAlive, msgReceived, handleError, handleClose, log) {
+    var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
     var appInfo;
 
     handleConnection(socket, handlePacket, handleError, handleClose, log);
@@ -632,10 +640,10 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
         if (action == "GET" && target == "APPID") {
 
             // 应用认证请求, 发送当前应用ID及密码
-            log("["+clientId+"] Received application certificate request, sending...");
             appInfo = getAppInfo();
             var password = utils.md5(appInfo.password);
-            socket.write(/*PNTP_FLAG+*/GET_APPID_RES.format((BODY_BYTE_LENGTH?Buffer.byteLength(appInfo.id):appInfo.id.length) + 1 + (BODY_BYTE_LENGTH?Buffer.byteLength(password):password.length),
+            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Received application certificate request, sending...");
+            socket.write(/*PNTP_FLAG+*/GET_APPID_RES.format((BODY_BYTE_LENGTH ? Buffer.byteLength(appInfo.id) : appInfo.id.length) + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(password) : password.length),
                 appInfo.id, password));
             callback();
         } else if (action == "SET" && target == "APPID") {
@@ -644,16 +652,16 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             var appOk = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
             if (appOk) {
 
-                log("["+clientId+"] Application certificate passed");
+                log("[" + clientId + "] Application certificate passed");
                 callback();
             } else {
 
-                callback("["+clientId+"] Application certificate failed: " + body);
+                callback("[" + clientId + "] Application certificate failed: " + body);
             }
         } else if (action == "GET" && target == "USERNAME") {
 
             // 用户认证请求, 发送用户名及密码
-            log("["+clientId+"] Received user certificate request, sending...");
+            log("[" + clientId + "] Received user certificate request, sending...");
             var userInfo = getUserInfo();
             if (fields[FIELD_LOGIN_SECURE.toUpperCase()].toUpperCase() == "TRUE") {
 
@@ -663,13 +671,15 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
 
                     // 需要登录密码
                     var password = utils.md5(userInfo.password);
-                    var ss = crypt.rsaEncrypt(userInfo.name+","+password, protectKey.public);
-                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("true", "true", BODY_BYTE_LENGTH?Buffer.byteLength(ss):ss.length, ss));
+                    var ss = crypt.rsaEncrypt(userInfo.name + "," + password, protectKey.public);
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("true", "true", BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss));
                 } else {
 
                     // 不需要登录密码
                     var username = crypt.rsaEncrypt(userInfo.name, protectKey.public);
-                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("true", "false", BODY_BYTE_LENGTH?Buffer.byteLength(username):username.length,
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("true", "false", BODY_BYTE_LENGTH ? Buffer.byteLength(username) : username.length,
                         username));
                 }
             } else {
@@ -679,12 +689,14 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
 
                     // 需要登录密码
                     var password = utils.md5(userInfo.password);
-                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("false", "true", (BODY_BYTE_LENGTH?Buffer.byteLength(userInfo.name):userInfo.name.length) + 1 + (BODY_BYTE_LENGTH?Buffer.byteLength(password):password.length),
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("false", "true", (BODY_BYTE_LENGTH ? Buffer.byteLength(userInfo.name) : userInfo.name.length) + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(password) : password.length),
                         userInfo.name + "," + password));
                 } else {
 
                     // 不需要登录密码
-                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("false", "false", BODY_BYTE_LENGTH?Buffer.byteLength(userInfo.name):userInfo.name.length,
+                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("false", "false", BODY_BYTE_LENGTH ? Buffer.byteLength(userInfo.name) : userInfo.name.length,
                         userInfo.name));
                 }
             }
@@ -695,11 +707,11 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             var usernameOk = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
             if (usernameOk) {
 
-                log("["+clientId+"] User certificate passed");
+                log("[" + clientId + "] User certificate passed");
                 callback();
             } else {
 
-                callback("["+clientId+"] User certificate failed: " + body);
+                callback("[" + clientId + "] User certificate failed: " + body);
             }
         } else if (action == "SET" && target == "MSGKEY") {
 
@@ -710,21 +722,23 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
                 var protectKey = appInfo.protectKey;
                 msgKey = crypt.rsaDecrypt(msgKey, protectKey.private);
             }
+            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + SET_MSGKEY_ACK);
             socket.write(/*PNTP_FLAG+*/SET_MSGKEY_ACK);
 
             setMsgKey(msgKey);
-            log("["+clientId+"] Received message key: " + msgKey);
+            log("[" + clientId + "] Received message key: " + msgKey);
             callback();
         } else if (action == "SET" && target == "ALIVEINT") {
 
             // 设置心跳周期
             var keepAliveInterval = parseInt(body);
+            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + SET_ALIVEINT_ACK);
             socket.write(/*PNTP_FLAG+*/SET_ALIVEINT_ACK);
 
             setLogon();
 
             setKeepAliveInterval(keepAliveInterval);
-            log("["+clientId+"] Keep alive interval(ms): " + keepAliveInterval);
+            log("[" + clientId + "] Keep alive interval(ms): " + keepAliveInterval);
             callback();
         } else if (action == "SET" && target == "ALIVE") {
 
@@ -743,17 +757,18 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             if (receipt) {
 
                 // 确认已收到消息
+                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + PUSH_MSG_ACK);
                 socket.write(/*PNTP_FLAG+*/PUSH_MSG_ACK);
             }
             callback();
         } else if (action == "CLOSE" && target == "CONN") {
 
             // 服务器主动断开连接
-            callback("["+clientId+"] Server kickoff me: " + body);        
+            callback("[" + clientId + "] Server kickoff me: " + body);
         } else {
 
             // 无法理解的动作
-            callback("["+clientId+"] Unknown action: " + action + " " + target);
+            callback("[" + clientId + "] Unknown action: " + action + " " + target);
         }
     }
 }
