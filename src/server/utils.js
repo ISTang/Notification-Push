@@ -95,13 +95,12 @@ function makeFileChecksum(file, algo, handleResult) {
 function timeDiff(oneMoment, anotherMoment) {
 
     var past = (oneMoment < anotherMoment) ? 1 : 0; //输入的时间过去了就是1，否则为0
-    var difference = 0; //差值
     //下面的差值减去八个小时，是因为new Date(0)是"Thu Jan 1 08:00:00 UTC+0800 1970"，从八点开始算的
-    if (past) difference = new Date(anotherMoment.getTime() - oneMoment.getTime() - 8 * 3600 * 1000);
-    else difference = new Date(oneMoment.getTime() - anotherMoment.getTime() - 8 * 3600 * 1000);
+    var millDiff = (past?anotherMoment.getTime() - oneMoment.getTime():oneMoment.getTime() - anotherMoment.getTime());
+    var difference = new Date(millDiff - 8 * 3600 * 1000);
 
     //计算过去的天数、小时、分钟和秒。天数要自己算，其它的get就行了
-    var dDays = parseInt(difference.getTime() / 3600 / 24 / 1000);
+    var dDays = parseInt(millDiff / 3600 / 24 / 1000);
     var dHours = difference.getHours();
     var dMinutes = difference.getMinutes();
     var dSeconds = difference.getSeconds();
