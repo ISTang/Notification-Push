@@ -110,35 +110,15 @@ passport.deserializeUser(function(id, done) {
 
 webapp.use(user);
 
-user.use('view connection infos', function(req) {
+user.use('view connections', function(req) {
     return true;
 });
 
-user.use('get connection infos', function(req) {
+user.use('view applications', function(req) {
     return true;
 });
 
-user.use('view application infos', function(req) {
-    return true;
-});
-
-user.use('get application infos', function(req) {
-    return true;
-});
-
-user.use('get application list', function(req) {
-    return true;
-});
-
-user.use('view account infos', function(req) {
-    return true;
-});
-
-user.use('get account infos', function(req) {
-    return true;
-});
-
-user.use('get account list', function(req) {
+user.use('view accounts', function(req) {
     return true;
 });
 
@@ -146,10 +126,21 @@ user.use('view messages', function(req) {
     return true;
 });
 
-user.use('get messages', function(req) {
+user.use('list applications', function(req) {
     return true;
 });
 
+user.use('list accounts', function(req) {
+    return true;
+});
+
+user.use('push message', function(req) {
+    return true;
+});
+
+user.use('clear messages', function(req) {
+    return true;
+});
 
 /*user.use(function(req) {
   if (req.user.role === 'admin') {
@@ -248,7 +239,7 @@ void main(function () {
     //  curl http://localhost:4567/application/name/appname
     webapp.get('/application/name/:name', appman.existsName);
 	// 7)获取应用信息(适合web提交)
-    webapp.get('/applications/AjaxHandler', ensureLoggedIn('/login'), user.can('get application infos'), appman.getApplications);
+    webapp.get('/applications/AjaxHandler', ensureLoggedIn('/login'), user.can('view applications'), appman.getApplications);
 
     // 2.用户账号
     //
@@ -296,7 +287,7 @@ void main(function () {
     // curl http://localhost:4567/account/email/test@tets.com
     webapp.get('/account/email/:email', accman.existsEmailAddress);
 	// 12)获取账号(适合web提交)
-    webapp.get('/accounts/AjaxHandler', user.can('get account list'), accman.getAccounts);
+    webapp.get('/accounts/AjaxHandler', user.can('list accounts'), accman.getAccounts);
 
     // 3.消息推送
     //
@@ -329,12 +320,12 @@ void main(function () {
         });
     });
 	// 6)获取消息(适合web提交)
-    webapp.get('/messages/AjaxHandler', ensureLoggedIn('/login'), user.can('get messages'), msgpush.getMessages);
+    webapp.get('/messages/AjaxHandler', ensureLoggedIn('/login'), user.can('view messages'), msgpush.getMessages);
 
 	// 获取连接消息(适合web提交)
-    webapp.get('/connections/AjaxHandler', ensureLoggedIn('/login'), user.can('get connection infos'), connman.getConnections);
+    webapp.get('/connections/AjaxHandler', ensureLoggedIn('/login'), user.can('view connections'), connman.getConnections);
 
-    webapp.get('/', ensureLoggedIn('/login'), user.can('view connection infos'), function (req, res) {
+    webapp.get('/', ensureLoggedIn('/login'), user.can('view connections'), function (req, res) {
         log("打开首页...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('index', {
@@ -342,7 +333,7 @@ void main(function () {
 		});
     });
 
-    webapp.get('/appman', ensureLoggedIn('/login'), user.can('view application infos'), function (req, res) {
+    webapp.get('/appman', ensureLoggedIn('/login'), user.can('view applications'), function (req, res) {
         log("打开应用管理页面...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('appman', {
@@ -350,7 +341,7 @@ void main(function () {
 		});
     });
 
-    webapp.get('/accman', ensureLoggedIn('/login'), user.can('view account infos'), function (req, res) {
+    webapp.get('/accman', ensureLoggedIn('/login'), user.can('view accounts'), function (req, res) {
         log("打开账号管理页面...");
 		res.setHeader("Content-Type", "text/html");
 		res.render('accman', {
@@ -366,7 +357,7 @@ void main(function () {
 		});
     });
 
-    webapp.get('/appInfos', ensureLoggedIn('/login'), user.can('get application list'), function (req, res) {
+    webapp.get('/appInfos', ensureLoggedIn('/login'), user.can('list applications'), function (req, res) {
         log("获取应用信息...");
         appman.getApplicationInfos(function (err, appInfos) {
             if (!err) {
