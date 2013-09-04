@@ -1,11 +1,15 @@
 package com.tpsoft.pushnotification.model;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.os.Bundle;
 
 public class MyMessage {
 	public static SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -80,15 +84,47 @@ public class MyMessage {
 		this.attachments = attachments;
 	}
 
+	public MyMessage() {
+	}
+
 	public MyMessage(String body, Date generateTime) {
 		this.body = body;
 		this.generateTime = generateTime;
 	}
 
-	public MyMessage() {
+	public MyMessage(Bundle bundle) throws ParseException {
+		title = bundle.getString("title");
+		body = bundle.getString("body");
+		type = bundle.getString("type");
+		if (type == null) {
+			type = "text";
+		}
+		url = bundle.getString("url");
+		if (bundle.containsKey("generateTime")) {
+			generateTime = dateFormat.parse(bundle.getString("generateTime"));
+		}
+		if (bundle.containsKey("expiration")) {
+			expiration = dateFormat.parse(bundle.getString("expiration"));
+		}
+		int attachmentCount = bundle.getInt("attachmentCount");
+		if (attachmentCount != 0) {
+			attachments = new Attachment[attachmentCount];
+			for (int i = 0; i < attachmentCount; i++) {
+				Attachment attachment = new Attachment();
+				attachment.setTitle(bundle.getString("attachment" + i)
+						+ "_title");
+				attachment
+						.setType(bundle.getString("attachment" + i) + "_type");
+				attachment.setFilename(bundle.getString("attachment" + i)
+						+ "_filename");
+				attachment.setUrl(bundle.getString("attachment" + i) + "_url");
+				attachments[i] = attachment;
+			}
+		}
 	}
 
-	public static MyMessage extractMessage(String msgText) throws Exception {
+	public static MyMessage extractMessage(String msgText)
+			throws JSONException, ParseException {
 		MyMessage message = new MyMessage();
 		try {
 			JSONObject jsonObject = new JSONObject(msgText);
@@ -136,10 +172,44 @@ public class MyMessage {
 				message.setAttachments(attachments);
 			}
 
-		} catch (Exception e) {
+		} catch (JSONException e) {
 			throw e;
 		}
 		return message;
+	}
+
+	public static String makeText(MyMessage message) throws JSONException {
+		JSONObject object = new JSONObject();
+		try {
+			if (message.title != null)
+				object.put("title", message.title);
+			object.put("body", message.body);
+			if (message.type != null)
+				object.put("type", message.type);
+			if (message.url != null)
+				object.put("url", message.url);
+			if (message.generateTime != null)
+				object.put("generate_time",
+						dateFormat.format(message.generateTime));
+			if (message.expiration != null)
+				object.put("expiration", dateFormat.format(message.expiration));
+			if (message.getAttachmentCount() != 0) {
+				JSONArray array = new JSONArray();
+				for (int i = 0; i < message.getAttachmentCount(); i++) {
+					MyMessage.Attachment attachment = message.getAttachment(i);
+					JSONObject object2 = new JSONObject();
+					object2.put("title", attachment.title);
+					object2.put("type", attachment.type);
+					object2.put("filename", attachment.filename);
+					object2.put("url", attachment.url);
+					array.put(object2);
+				}
+				object.put("attachments", array);
+			}
+		} catch (JSONException e) {
+			throw e;
+		}
+		return object.toString();
 	}
 
 	public String getTitle() {

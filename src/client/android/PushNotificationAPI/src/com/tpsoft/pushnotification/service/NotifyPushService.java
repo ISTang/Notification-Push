@@ -7,9 +7,13 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.json.JSONException;
+
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -26,15 +30,67 @@ import android.util.Log;
 import com.tpsoft.pushnotification.R;
 import com.tpsoft.pushnotification.model.AppParams;
 import com.tpsoft.pushnotification.model.LoginParams;
+import com.tpsoft.pushnotification.model.MyMessage;
 import com.tpsoft.pushnotification.model.NetworkParams;
 import com.tpsoft.pushnotification.utils.Crypt;
 
 @SuppressLint("DefaultLocale")
 public class NotifyPushService extends Service {
 
+	// 错误代码
+	public static final int ACTION_OK = 200; // 操作成功
+	public static final int ACTION_REPLIED = 300; // 收到消息确认
+	//
+	public static final int ERROR_INVALID_APPINFO = 101; // 应用信息无效
+	public static final int ERROR_INVALID_CLIENT_INFO = 102; // 用户信息无效
+	public static final int ERROR_CLIENT_NOT_LOGON = 201; // 尚未登录成功
+	public static final int ERROR_PARSE_MESSAGE = 202; // 解析消息失败
+	public static final int ERROR_MAKE_MESSAGE = 203; // 生成消息失败
+	public static final int ERROR_SUBMIT_MESSAGE = 204; // 提交消息失败
+	public static final int ERROR_SEND_MESSAGE = 205; // 发送消息失败
+
+	// 行结束标志
 	private static final String INPUT_RETURN = "\r\n";
 
-	private static final int ONGOING_NOTIFICATION = 10086;
+	// 头部字段名定义
+	private static final String FIELD_BODY_BYTE_LENGTH = "ByteLength";
+	private static final String FIELD_BODY_LENGTH = "Length";
+	private static final String FIELD_ACTION_SUCCESS = "Success";
+	private static final String FIELD_LOGIN_SECURE = "Secure";
+	private static final String FIELD_LOGIN_PASSWORD = "Password";
+	private static final String FIELD_MSG_RECEIPT = "Receipt";
+	private static final String FIELD_MSG_ID = "Id";
+
+	private static final String CLOSE_CONN_RES = "CLOSE CONN\r\nLength: %d\r\n\r\n%s"; // 体部:
+																						// 错误内容(已包含)
+	private static final String GET_APPID_RES = "SET APPID\r\nLength: %d\r\n\r\n%s,%s"; // 0-体部长度,
+																						// 1-应用ID,
+																						// 2-应用密码
+	private static final String GET_USERNAME_RES = "SET USERNAME\r\nSecure: %s\r\nPassword: %s\r\nLength: %d\r\n\r\n%s"; // 0-体部是否加密,
+																															// 1-体部是否包含密码,
+																															// 2-体部长度,
+																															// 3-用户名(和密码)
+	private static final String SET_MSGKEY_ACK = "SET MSGKEY\r\n\r\n"; // 不需要体部
+	private static final String SET_ALIVEINT_ACK = "SET ALIVEINT\r\n\r\n"; // 不需要体部
+	private static final String PUSH_MSG_ACK = "PUSH MSG\r\n\r\n"; // 不需要体部
+	private static final String SET_ALIVE_REQ = "SET ALIVE\r\n\r\n"; // 不需要体部
+
+	private static final String SEND_MSG_REQ = "SEND MSG\r\nAccount: %s\r\nId: %s\r\nSecure: %s\r\nLength:%d\r\n\r\n%s"; // 0-接收者账号,
+																															// 1-发送标识[回传用],
+																															// 2-消息是否加密,
+																															// 3-体部长度,
+																															// 4-消息JSON对象
+
+	// 错误消息
+	private static final String INVALID_ACTION_LINE = "Invalid aciton line";
+	private static final String INVALID_FIELD_LINE = "Invalid field line";
+	private static final String INVALID_LENGTH_VALUE_MSG = "Invalid length value";
+
+	// 套接字缓冲区大小
+	private static final int MAX_SOCKET_BUF = 8192;
+
+	// 通知栏ID
+	public static final int ONGOING_NOTIFICATION = 10086;
 
 	private MyBroadcastReceiver myBroadcastReceiver;
 	private Thread mServiceThread = null;
@@ -45,6 +101,8 @@ public class NotifyPushService extends Service {
 	private NetworkParams networkParams;
 
 	private boolean receiverStarted = false;
+	private boolean clientLogon = false;
+	private Socket socket = null;
 
 	@Override
 	public void onCreate() {
@@ -107,6 +165,28 @@ public class NotifyPushService extends Service {
 		startForeground(ONGOING_NOTIFICATION, notification);
 
 		return Service.START_STICKY;
+	}
+
+	private void showResult(int code, String msg) {
+		// 广播结果通知
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "result");
+		activityIntent.putExtra("code", code);
+		activityIntent.putExtra("msg", msg);
+		sendBroadcast(activityIntent);
+	}
+
+	private void showError(int errcode, String errmsg) {
+		// 广播错误通知
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "error");
+		activityIntent.putExtra("errcode", errcode);
+		activityIntent.putExtra("errmsg", errmsg);
+		sendBroadcast(activityIntent);
 	}
 
 	private void showNotification(String msgText) {
@@ -185,41 +265,46 @@ public class NotifyPushService extends Service {
 
 				// 设置已停止标志
 				receiverStarted = false;
+			} else if (command.equals("send")) {
+				// 发送消息
+				String msgId = intent.getStringExtra("msgId"); // 发送标识[回传用]
+				String receiver = intent.getStringExtra("receiver"); // 接收者账号
+				boolean secure = intent.getBooleanExtra("secure", false); // 消息是否加密
+				String msgText;
+				try {
+					MyMessage message = new MyMessage(
+							intent.getBundleExtra("com.tpsoft.pushnotification.MyMessage"));
+					msgText = MyMessage.makeText(message);
+				} catch (ParseException e) {
+					showError(ERROR_PARSE_MESSAGE, msgId + ":解析消息失败");
+					return;
+				} catch (JSONException e) {
+					showError(ERROR_MAKE_MESSAGE, msgId + ":生成消息失败");
+					return;
+				}
+				if (!clientLogon) {
+					showError(ERROR_CLIENT_NOT_LOGON, msgId + ":尚未登录成功");
+					return;
+				}
+				showLog("发送消息...");
+				try {
+					socket.getOutputStream().write(
+							(String.format(SEND_MSG_REQ, receiver, msgId,
+									Boolean.toString(secure), msgText.length(),
+									msgText)).getBytes("UTF-8"));
+					showResult(ACTION_OK, msgId + ":已发送");
+				} catch (UnsupportedEncodingException ee) {
+					// impossible!
+					ee.printStackTrace();
+				} catch (IOException ee) {
+					showError(ERROR_SUBMIT_MESSAGE,
+							msgId + ":" + ee.getMessage());
+				}
 			}
 		}
-
 	}
 
 	private class SocketClientThread extends Thread {
-
-		public static final int MAX_SOCKET_BUF = 8192;
-
-		// 头部字段名定义
-		public static final String FIELD_BODY_BYTE_LENGTH = "ByteLength";
-		public static final String FIELD_BODY_LENGTH = "Length";
-		public static final String FIELD_ACTION_SUCCESS = "Success";
-		public static final String FIELD_LOGIN_SECURE = "Secure";
-		public static final String FIELD_LOGIN_PASSWORD = "Password";
-		public static final String FIELD_MSG_RECEIPT = "Receipt";
-
-		public static final String CLOSE_CONN_RES = "CLOSE CONN\r\nLength: %d\r\n\r\n%s"; // 体部:
-																							// 错误内容(已包含)
-		public static final String GET_APPID_RES = "SET APPID\r\nLength: %d\r\n\r\n%s,%s"; // 0-体部长度,
-																							// 1-应用ID,
-																							// 2-应用密码
-		public static final String GET_USERNAME_RES = "SET USERNAME\r\nSecure: %s\r\nPassword: %s\r\nLength: %d\r\n\r\n%s"; // 0-体部是否加密,
-																															// 1-体部是否包含密码,
-																															// 2-体部长度,
-																															// 3-用户名(和密码)
-		public static final String SET_MSGKEY_ACK = "SET MSGKEY\r\n\r\n"; // 不需要体部
-		public static final String SET_ALIVEINT_ACK = "SET ALIVEINT\r\n\r\n"; // 不需要体部
-		public static final String PUSH_MSG_ACK = "PUSH MSG\r\n\r\n"; // 不需要体部
-		public static final String SET_ALIVE_REQ = "SET ALIVE\r\n\r\n"; // 不需要体部
-
-		// 错误消息
-		public static final String INVALID_ACTION_LINE = "Invalid aciton line";
-		public static final String INVALID_FIELD_LINE = "Invalid field line";
-		public static final String INVALID_LENGTH_VALUE_MSG = "Invalid length value";
 
 		private boolean waitForHead = true; // 等待头部(false表示等待体部或不需要再等待)
 		private String headInput = ""; // 头部输入
@@ -236,7 +321,6 @@ public class NotifyPushService extends Service {
 		private String msgKey;
 		private int keepAliveInterval;
 
-		private boolean clientLogon = false;
 		private boolean invalidAppInfo = false;
 		private boolean invalidClientInfo = false;
 
@@ -250,7 +334,6 @@ public class NotifyPushService extends Service {
 
 		@Override
 		public void run() {
-			Socket socket = null;
 			byte buffer[] = new byte[MAX_SOCKET_BUF];
 
 			boolean networkOk = true;
@@ -292,7 +375,7 @@ public class NotifyPushService extends Service {
 										.getServerPort()), networkParams
 										.getConnectTimeout());
 						socket.setSoTimeout(networkParams.getReadTimeout()); // 设置读超时(ms)
-						//socket.setKeepAlive(true);
+						// socket.setKeepAlive(true);
 						//
 						in = socket.getInputStream();
 						out = socket.getOutputStream();
@@ -381,7 +464,7 @@ public class NotifyPushService extends Service {
 						waitForReconnect();
 						continue reconnect;
 					}
-					
+
 					// 处理来自服务器的数据
 					byte[] data = new byte[byteCount];
 					for (int i = 0; i < byteCount; i++) {
@@ -401,6 +484,9 @@ public class NotifyPushService extends Service {
 						// 正登录
 						if (invalidAppInfo || invalidClientInfo) {
 							// 应用或客户信息无效
+							showError(invalidAppInfo ? ERROR_INVALID_APPINFO
+									: ERROR_INVALID_CLIENT_INFO,
+									invalidAppInfo ? "应用认证失败" : "用户认证失败");
 							break reconnect;
 						}
 					}
@@ -681,6 +767,18 @@ public class NotifyPushService extends Service {
 					msg = Crypt.desDecrypt(msgKey, msg);
 				}
 				showNotification(msg);
+			} else if (action.equals("SEND") && target.equals("MSG")) {
+				// 收到消息回复
+				String msgId = fields.get(FIELD_MSG_ID.toUpperCase());
+				boolean success = fields
+						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
+						.equals("TRUE");
+				if (success) {
+					showResult(ACTION_REPLIED, msgId + ":消息已确认");
+				} else {
+					String err = body;
+					showError(ERROR_SUBMIT_MESSAGE, msgId + ":" + err);
+				}
 			} else if (action.equals("CLOSE") && target.equals("CONN")) {
 				// 服务器主动断开连接
 				throw new Exception("服务器主动断开连接: " + body);

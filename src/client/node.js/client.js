@@ -1,6 +1,6 @@
 ﻿var net = require("net");
 
-const SERVER_HOST = "117.139.74.28"; //118.244.9.191
+const SERVER_HOST = "218.200.212.120"; //118.244.9.191
 const SERVER_PORT = 3456;
 const NEWLINE = "\r\n";
 const MAX_INACTIVE_TIME = 1000 * 60; // ms

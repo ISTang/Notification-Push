@@ -10,9 +10,10 @@
     <string name="receiver_stopped">消息接收器已停止</string>
     
     <string name="settings">设置</string>
-    <string name="menu_settings">设置</string>
     <string name="menu_start">启动</string>
     <string name="menu_stop">停止</string>
+    <string name="menu_sendmsg">发送消息</string>
+    <string name="menu_settings">设置</string>
     
     <string name="service_started">服务已启动</string>
     <string name="service_stopped">服务已停止</string>

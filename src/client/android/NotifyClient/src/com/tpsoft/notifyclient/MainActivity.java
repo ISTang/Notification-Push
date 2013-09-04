@@ -188,9 +188,11 @@ public class MainActivity extends TabActivity {
 		if (MyApplicationClass.clientStarted) {
 			menu.findItem(R.id.menu_start).setEnabled(false);
 			menu.findItem(R.id.menu_stop).setEnabled(true);
+			menu.findItem(R.id.menu_sendmsg).setEnabled(true);
 		} else {
 			menu.findItem(R.id.menu_start).setEnabled(true);
 			menu.findItem(R.id.menu_stop).setEnabled(false);
+			menu.findItem(R.id.menu_sendmsg).setEnabled(false);
 		}
 		menu.findItem(R.id.menu_settings).setEnabled(true);
 		return true;
@@ -207,6 +209,10 @@ public class MainActivity extends TabActivity {
 		case R.id.menu_stop:
 			// 停止消息接收器
 			stopMessageReceiver();
+			break;
+		case R.id.menu_sendmsg:
+			// 发送消息
+			sendMessage();
 			break;
 		case R.id.menu_settings:
 			// 打开设置界面
@@ -320,6 +326,11 @@ public class MainActivity extends TabActivity {
 				.setAction("com.tpsoft.pushnotification.ServiceController");
 		serviceIntent.putExtra("command", "stop");
 		sendBroadcast(serviceIntent);
+	}
+	
+	private void sendMessage() {
+		if (!MyApplicationClass.clientStarted)
+			return;
 	}
 
 	private void showNotification(String msgText) {

@@ -3,7 +3,7 @@ var utils = require(__dirname + '/utils');
 var db = require(__dirname + '/db');
 var channel = require(__dirname + '/channel');
 
-var $ = require('jquery');
+//var $ = require('jquery');
 var fs = require('fs');
 var url = require("url");
 var http = require("http");
@@ -11,6 +11,7 @@ var express = require('express');
 var request = require('request');
 var feedparser = require('feedparser');
 var async = require('async');
+var htmlparser = require("htmlparser");
 //
 var BufferHelper = require('bufferhelper');//用于拼接BUffer，防止中文单词断裂
 var iconv = require('iconv-lite');  //用于转码
@@ -150,10 +151,24 @@ function getArticles(url, since, handleResult) {
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
 
-                    article.description = stripsTags(article.description);
+					article.description = stripsTags(article.description);
                     article.logo = logo;
                     result.push(article);
-                    callback();
+
+					var handler = new htmlparser.DefaultHandler(function (error, dom) {
+						if (!error) {
+
+							article.description = "";
+							for (var i in dom) {
+								if (dom[i].type=="text") {
+									article.description += dom[i].data;
+								}
+							}
+							callback();
+						}
+					});
+					var parser = new htmlparser.Parser(handler);
+					parser.parseComplete(article.description);
                 }, function (err) {
 
                     handleResult(err, result);

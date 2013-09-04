@@ -5,7 +5,7 @@
         android:key="server"
         android:title="@string/settings_server" >
         <EditTextPreference
-            android:defaultValue="118.244.9.191"
+            android:defaultValue="192.168.35.99"
             android:key="serverHost"
             android:persistent="true"
             android:summary="@string/server_host_summary"
