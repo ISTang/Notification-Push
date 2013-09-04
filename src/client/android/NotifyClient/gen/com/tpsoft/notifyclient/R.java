@@ -53,32 +53,40 @@ public final class R {
     public static final class id {
         public static final int app_notification_id=0x7f0a0000;
         public static final int closeButton=0x7f0a000c;
-        public static final int icon=0x7f0a000e;
+        public static final int icon=0x7f0a0015;
         public static final int log=0x7f0a0005;
         public static final int logContainer=0x7f0a0004;
-        public static final int menu_sendmsg=0x7f0a0012;
-        public static final int menu_settings=0x7f0a0013;
-        public static final int menu_start=0x7f0a0010;
-        public static final int menu_stop=0x7f0a0011;
+        public static final int menu_sendmsg=0x7f0a0019;
+        public static final int menu_settings=0x7f0a001a;
+        public static final int menu_start=0x7f0a0017;
+        public static final int menu_stop=0x7f0a0018;
         public static final int message=0x7f0a000a;
         public static final int msg=0x7f0a0003;
         public static final int msgAttachment=0x7f0a0006;
         public static final int msgBody=0x7f0a0008;
+        public static final int msgBody2=0x7f0a0013;
         public static final int msgContainer=0x7f0a0002;
         public static final int msgIndex=0x7f0a000b;
+        public static final int msgReceiver=0x7f0a000f;
         public static final int msgTime=0x7f0a0009;
         public static final int msgTitle=0x7f0a0007;
+        public static final int msgTitle2=0x7f0a0011;
         public static final int msgUrl=0x7f0a000d;
+        public static final int sendMsg=0x7f0a0014;
         public static final int tab_relative_layout=0x7f0a0001;
-        public static final int title=0x7f0a000f;
+        public static final int textView1=0x7f0a000e;
+        public static final int textView2=0x7f0a0010;
+        public static final int textView3=0x7f0a0012;
+        public static final int title=0x7f0a0016;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
         public static final int message_list_item=0x7f030001;
         public static final int notification_popup=0x7f030002;
         public static final int roundborder=0x7f030003;
-        public static final int tab_indicator=0x7f030004;
-        public static final int transparent=0x7f030005;
+        public static final int send_message=0x7f030004;
+        public static final int tab_indicator=0x7f030005;
+        public static final int transparent=0x7f030006;
     }
     public static final class menu {
         public static final int activity_main=0x7f0b0000;
@@ -108,6 +116,8 @@ public final class R {
         public static final int msg_index=0x7f09001a;
         public static final int msg_last=0x7f090021;
         public static final int msg_received=0x7f090019;
+        public static final int msg_receiver=0x7f09002b;
+        public static final int msg_send=0x7f09002c;
         public static final int msg_time=0x7f09001f;
         public static final int msg_title=0x7f09001b;
         public static final int msg_url=0x7f09001e;

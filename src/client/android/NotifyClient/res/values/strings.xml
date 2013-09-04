@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">推信</string>
+    <string name="app_name">消息推送测试</string>
     <string name="app_exit">长按返回键可退出程序……</string>
 
     <string name="receiver_starting">启动消息接收器……</string>
@@ -54,5 +54,7 @@
     <string name="ticker_text">正在启动推信……</string>
     <string name="notification_title">推信</string>
     <string name="notification_message">推信正在后台运行</string>
+    <string name="msg_receiver">接收者</string>
+    <string name="msg_send">发送消息</string>
 
 </resources>

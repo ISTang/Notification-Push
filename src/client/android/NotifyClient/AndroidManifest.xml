@@ -40,6 +40,9 @@
             android:theme="@style/Transparent" >
         </activity>
         <activity
+            android:name="com.tpsoft.notifyclient.SendMessageActivity">
+        </activity>
+        <activity
             android:name="com.tpsoft.notifyclient.SettingsActivity"
             android:label="@string/settings"
             android:parentActivityName="android.preference.PreferenceActivity" >

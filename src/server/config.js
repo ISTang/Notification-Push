@@ -1,6 +1,6 @@
-﻿var path = require("path");
+var path = require("path");
 
-exports.SERVER_HOST = 'locahost'; // 118.244.9.191, 218.200.212.120
+exports.SERVER_HOST = '192.168.1.102'; // 118.244.9.191, 218.200.212.120
 exports.SERVER_PORT = 3456;
 exports.HTTPD_PORT = 4567;
 

@@ -111,13 +111,13 @@ public class MyMessage {
 			attachments = new Attachment[attachmentCount];
 			for (int i = 0; i < attachmentCount; i++) {
 				Attachment attachment = new Attachment();
-				attachment.setTitle(bundle.getString("attachment" + i)
-						+ "_title");
+				attachment.setTitle(bundle.getString("attachment" + i
+						+ "_title"));
 				attachment
-						.setType(bundle.getString("attachment" + i) + "_type");
-				attachment.setFilename(bundle.getString("attachment" + i)
-						+ "_filename");
-				attachment.setUrl(bundle.getString("attachment" + i) + "_url");
+						.setType(bundle.getString("attachment" + i + "_type"));
+				attachment.setFilename(bundle.getString("attachment" + i
+						+ "_filename"));
+				attachment.setUrl(bundle.getString("attachment" + i + "_url"));
 				attachments[i] = attachment;
 			}
 		}
@@ -210,6 +210,34 @@ public class MyMessage {
 			throw e;
 		}
 		return object.toString();
+	}
+
+	public Bundle getBundle() {
+		Bundle bundle = new Bundle();
+		bundle.putString("title", title);
+		bundle.putString("body", body);
+		bundle.putString("type", type);
+		bundle.putString("url", url);
+		if (generateTime != null) {
+			bundle.putString("generateTime", dateFormat.format(generateTime));
+		}
+		if (expiration != null) {
+			bundle.putString("expiration", dateFormat.format(expiration));
+		}
+		if (attachments != null) {
+			bundle.putInt("attachmentCount", attachments.length);
+			for (int i = 0; i < attachments.length; i++) {
+				Attachment attachment = attachments[i];
+				bundle.putString("attachment" + i + "_title",
+						attachment.getTitle());
+				bundle.putString("attachment" + i + "_type",
+						attachment.getType());
+				bundle.putString("attachment" + i + "_filename",
+						attachment.getFilename());
+				bundle.putString("attachment" + i + "_url", attachment.getUrl());
+			}
+		}
+		return bundle;
 	}
 
 	public String getTitle() {

@@ -67,6 +67,14 @@ public class MainActivity extends TabActivity {
 					showLog(getText(
 							receiverStarted ? R.string.receiver_started
 									: R.string.receiver_stopped).toString());
+				} else if (action.equals("result")) {
+					String code = intent.getStringExtra("code");
+					String msg = intent.getStringExtra("msg");
+					showLog("Action result: " + code + "(" + msg + ")");
+				} else if (action.equals("error")) {
+					String errcode = intent.getStringExtra("errcode");
+					String errmsg = intent.getStringExtra("errmsg");
+					showLog("Action error: " + errcode + "(" + errmsg + ")");
 				} else {
 					;
 				}
@@ -327,10 +335,11 @@ public class MainActivity extends TabActivity {
 		serviceIntent.putExtra("command", "stop");
 		sendBroadcast(serviceIntent);
 	}
-	
+
 	private void sendMessage() {
 		if (!MyApplicationClass.clientStarted)
 			return;
+		startActivity(new Intent(this, SendMessageActivity.class));
 	}
 
 	private void showNotification(String msgText) {
@@ -514,7 +523,7 @@ public class MainActivity extends TabActivity {
 	private void showLog(String logText) {
 		String log = "[" + sdf.format(new Date()) + "] " + logText;
 		if (logCount < MAX_LOG_COUNT) {
-			logger.setText(log + "\r\n[ÍÆÐÅ]" + logger.getText());
+			logger.setText(log + "\r\n" + logger.getText());
 			logCount++;
 		} else {
 			logger.setText(log);

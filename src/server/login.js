@@ -243,7 +243,7 @@ void main(function () {
 
         function handleClose(hadError) {
 
-            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress)+ ": " + (hadError ? "network error" : "disconnected");
+            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + ": " + (hadError ? "network error" : "disconnected"));
             delete loginingSockets[clientAddress];
         }
 
