@@ -57,14 +57,14 @@ webapp.configure(function () {
 });
 // 定义开发环境
 webapp.configure('development', function () {
-    webapp.use(express.logger('dev'));
+    //webapp.use(express.logger('dev'));
     webapp.use(express.static(__dirname + '/public'));
     webapp.use(express.errorHandler({dumpExceptions: true, showStack: true}));
 });
 // 定义生产环境
 webapp.configure('production', function () {
     var oneYear = 31557600000;
-    webapp.use(express.logger());
+    //webapp.use(express.logger());
     webapp.use(express.static(__dirname + '/public', { maxAge: oneYear }));
     webapp.use(express.errorHandler());
 });

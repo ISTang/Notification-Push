@@ -44,6 +44,8 @@ function startWorker(clientId, clientPassword, onConnected) {
 
 	var keepAliveId = null;
 	var ensureAliveId = null;
+	
+	var onConnectedCalled = false;
 
 	function getUserInfo() {
 	
@@ -56,7 +58,10 @@ function startWorker(clientId, clientPassword, onConnected) {
 	}
 
 	function setLogon() {
-		onConnected();
+		if (!onConnectedCalled) {
+			onConnected();
+			onConnectedCalled = true;
+		}
 
 		clientLogon = true;
 		clientLogging = false;
@@ -198,6 +203,6 @@ void main(function () {
 			startWorker(clientId, clientPassword, callback);
 	}, function (err) {
 		if (err) return log(err);
-		log("All clientts logon");
+		log("All clients logon");
 	});
 });

@@ -232,59 +232,58 @@ process.on('message', function (m, socket) {
             }
         }
 
-        function forwardMsg(appId, sender, receiver, msgText, sendId, handleResult) {
+        function forwardMsg(appId, senderId, receiver, msgText, sendId, handleResult) {
 
             var now = new Date();
             var message = JSON.parse(msgText);
             message.generate_time = now.Format("yyyyMMddHHmmss");
-            message.sender = sender;
+			message.sender_id = senderId;
 
             log("Saving message for application " + appId);
             db.redisPool.acquire(function (err, redis) {
                 if (err) {
                     handleResult(err);
                 } else {
-                    db.saveMessage(redis, appId, message, [], function (err, msgId) {
-                        log("Message id: " + msgId);
-                        db.getAccountIdByName(redis, receiver, function (err, accountId) {
+					db.getAccountIdByName(redis, receiver, function (err, receiverId) {
+						if (err) {
+							db.redisPool.release(redis);
+							return handleResult(err);
+						}
+						if (!receiverId) {
+							db.redisPool.release(redis);
+							return handleResult("Receiver " + receiver + " not exists");
+						}
+						
+						db.saveMessage(redis, appId, message, [receiverId], function (err, msgId) {
+							log("Message id: " + msgId);
+							db.getActiveConnections(redis, appId, receiverId, function (err, connectionInfos) {
+								if (err) {
+									db.redisPool.release(redis);
+									return handleResult(err);
+								}
 
-                            if (err) {
-                                db.redisPool.release(redis);
-                                return handleResult(err);
-                            }
-                            if (!accountId) {
-                                db.redisPool.release(redis);
-                                return handleResult("Receiver " + receiver + " not exists");
-                            }
+								for(var i in connectionInfos) {
+									var connectionInfo = connectionInfos[i];
+									log("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+									publishMessage(connectionInfo, msgId, message, sendId);
+								}
 
-                            db.addMessageToAccounts(redis, msgId, [accountId], appId, now);
+								db.redisPool.release(redis);
+								handleResult();
+							});
 
-                            db.getActiveConnections(redis, appId, accountId, function (err, connectionInfo) {
-
-                                if (err) {
-                                    db.redisPool.release(redis);
-                                    return handleResult(err);
-                                }
-
-                                log("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                                publishMessage(connectionInfo, msgId, message, sendId);
-
-                                db.redisPool.release(redis);
-                                handleResult();
-                            });
-                        });
-
-                        function publishMessage(connectionInfo, msgId, message, sendId) {
-                            var o = {
-                                connId: connectionInfo.connId,
-                                msgId: msgId,
-                                message: message,
-                                msgKey: connectionInfo.msgKey,
-                                sendId: sendId,
-                                needReceipt: true};
-                            redis.publish(connectionInfo.channelId, JSON.stringify(o));
-                        }
-                    });
+							function publishMessage(connectionInfo, msgId, message, sendId) {
+								var o = {
+									connId: connectionInfo.connId,
+									msgId: msgId,
+									message: message,
+									msgKey: connectionInfo.msgKey,
+									sendId: sendId,
+									needReceipt: true};
+								redis.publish(connectionInfo.channelId, JSON.stringify(o));
+							}
+						});
+					});
                 }
             });
         }
@@ -318,7 +317,7 @@ process.on('message', function (m, socket) {
             }
         }
 
-        protocol.handleClientConnection2(socket, appId, accountName, msgKey,
+        protocol.handleClientConnection2(socket, appId, accountId, accountName, msgKey,
             keepAlive, msgConfirmed, forwardMsg, handleError, handleClose, log);
 
         sendOfflineMessages(appId, accountId, config.MAX_OFFLINE_DAYS, connId, msgKey);

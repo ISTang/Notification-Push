@@ -135,7 +135,7 @@ const SEND_MSG_SUCCESS_RES = "SEND MSG\r\nId: {0}\r\nSuccess: true\r\n\r\n"; // 
 const SEND_MSG_FAILED_RES = "SEND MSG\r\nId: {0}\r\nSuccess: false\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {1}\r\n\r\n{2},{3}"; // 体部: 错误代码及解释(已包含)
 
 // 处理连接(适合服务器端和客户端)
-function handleConnection(socket, handlePacket, handleError, handleClose, log) {
+function handleConnection(socket, handlePacket, handleError, handleClose, log, isClient) {
 
     var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
 
@@ -154,7 +154,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
     socket.on("data", function (data) {
 
         var newInput = data.toString();
-        if (TRACK_SOCKET) log("[SOCKET] read from client " + clientAddress + ": " + newInput);
+        if (!isClient && TRACK_SOCKET) log("[SOCKET] read from client " + clientAddress + ": " + newInput);
 
         var starr = [];
 
@@ -202,7 +202,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
                     if (starr.length != 2) {
 
                         // 格式不对
-                        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Invalid action line(" + line + ")");
+                        if (!isClient && TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Invalid action line(" + line + ")");
                         socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_ACTION_LINE_MSG) : INVALID_ACTION_LINE_MSG.length, INVALID_ACTION_LINE_MSG));
                         return;
                     }
@@ -220,13 +220,13 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
                     if (starr.length != 2) {
 
                         // 格式不对
-                        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Invalid field line(" + line + ")");
+                        if (!isClient && TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Invalid field line(" + line + ")");
                         socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_FIELD_LINE_MSG) : INVALID_FIELD_LINE_MSG.length, INVALID_FIELD_LINE_MSG));
                         return;
                     }
 
                     var name = starr[0].trim().toLocaleUpperCase(); // 名字
-                    var value = starr[1].trim().toLocaleUpperCase(); // 值
+                    var value = starr[1].trim(); // 值
                     fields[name] = value;
 
                     //log("Field: " + name + ", value: " + value);
@@ -255,7 +255,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, log) {
                 if (isNaN(bodyLength) || bodyLength < 0) {
 
                     // 体部长度字段值无效
-                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + INVALID_LENGTH_VALUE_MSG);
+                    if (!isClient && TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + INVALID_LENGTH_VALUE_MSG);
                     socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_LENGTH_VALUE_MSG) : INVALID_LENGTH_VALUE_MSG.length, INVALID_LENGTH_VALUE_MSG));
                     return;
                 }
@@ -574,7 +574,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
 }
 
 // 处理同客户端的连接#2
-function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive, msgConfirmed, forwardMsg, handleError, handleClose, log) {
+function handleClientConnection2(socket, appId, accountId, accountName, msgKey, keepAlive, msgConfirmed, forwardMsg, handleError, handleClose, log) {
 
     var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
 
@@ -607,11 +607,11 @@ function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive, 
                 // 解密体部内容
                 msgText = crypt.desDecrypt(body, msgKey);
             }
-            forwardMsg(appId, accountName, receiver, msgText, sendId, function (err) {
+            forwardMsg(appId, accountId, receiver, msgText, sendId, function (err) {
 
                 var ss = (err ? "0," + err : "");
-                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Send message OK");
-                socket.write(/*PNTP_FLAG+*/err ? SEND_MSG_FAILED_RES.format(sendId, 0, BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss) :
+                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Send message " + (err?"ERROR":"OK"));
+                socket.write(/*PNTP_FLAG+*/err ? SEND_MSG_FAILED_RES.format(sendId, 2+(BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     SEND_MSG_SUCCESS_RES.format(sendId));
                 callback();
             });
@@ -630,10 +630,9 @@ function handleClientConnection2(socket, appId, accountName, msgKey, keepAlive, 
 
 // 处理同服务器端的连接
 function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMsgKey, setLogon, setKeepAliveInterval, keepAlive, msgReceived, handleError, handleClose, log) {
-    var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
     var appInfo;
 
-    handleConnection(socket, handlePacket, handleError, handleClose, log);
+    handleConnection(socket, handlePacket, handleError, handleClose, log, true);
 
     function handlePacket(socket, action, target, fields, body, log, callback) {
 
@@ -642,7 +641,7 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             // 应用认证请求, 发送当前应用ID及密码
             appInfo = getAppInfo();
             var password = utils.md5(appInfo.password);
-            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Received application certificate request, sending...");
+            log("[" + clientId + "] Received application certificate request, sending...");
             socket.write(/*PNTP_FLAG+*/GET_APPID_RES.format((BODY_BYTE_LENGTH ? Buffer.byteLength(appInfo.id) : appInfo.id.length) + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(password) : password.length),
                 appInfo.id, password));
             callback();
@@ -672,13 +671,13 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
                     // 需要登录密码
                     var password = utils.md5(userInfo.password);
                     var ss = crypt.rsaEncrypt(userInfo.name + "," + password, protectKey.public);
-                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    log("[" + clientId + "] Getting username...");
                     socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("true", "true", BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length, ss));
                 } else {
 
                     // 不需要登录密码
                     var username = crypt.rsaEncrypt(userInfo.name, protectKey.public);
-                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    log("[" + clientId + "] Getting username...");
                     socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("true", "false", BODY_BYTE_LENGTH ? Buffer.byteLength(username) : username.length,
                         username));
                 }
@@ -689,13 +688,13 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
 
                     // 需要登录密码
                     var password = utils.md5(userInfo.password);
-                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    log("[" + clientId + "] Getting username...");
                     socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("false", "true", (BODY_BYTE_LENGTH ? Buffer.byteLength(userInfo.name) : userInfo.name.length) + 1 + (BODY_BYTE_LENGTH ? Buffer.byteLength(password) : password.length),
                         userInfo.name + "," + password));
                 } else {
 
                     // 不需要登录密码
-                    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Getting username...");
+                    log("[" + clientId + "] Getting username...");
                     socket.write(/*PNTP_FLAG+*/GET_USERNAME_RES.format("false", "false", BODY_BYTE_LENGTH ? Buffer.byteLength(userInfo.name) : userInfo.name.length,
                         userInfo.name));
                 }
@@ -722,7 +721,7 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
                 var protectKey = appInfo.protectKey;
                 msgKey = crypt.rsaDecrypt(msgKey, protectKey.private);
             }
-            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + SET_MSGKEY_ACK);
+            log("[" + clientId + "] "+SET_MSGKEY_ACK);
             socket.write(/*PNTP_FLAG+*/SET_MSGKEY_ACK);
 
             setMsgKey(msgKey);
@@ -732,7 +731,7 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
 
             // 设置心跳周期
             var keepAliveInterval = parseInt(body);
-            if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + SET_ALIVEINT_ACK);
+            log("[" + clientId + "] "+SET_ALIVEINT_ACK);
             socket.write(/*PNTP_FLAG+*/SET_ALIVEINT_ACK);
 
             setLogon();
@@ -752,12 +751,12 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             var receipt = (fields[FIELD_MSG_RECEIPT.toUpperCase()].toUpperCase() == "TRUE");
             var msg = body;
 
-            //log("One message received");
+            //log("[" + clientId + "] One message received");
             msgReceived(msg, secure);
             if (receipt) {
 
                 // 确认已收到消息
-                if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + PUSH_MSG_ACK);
+                log("[" + clientId + "] "+PUSH_MSG_ACK);
                 socket.write(/*PNTP_FLAG+*/PUSH_MSG_ACK);
             }
             callback();
