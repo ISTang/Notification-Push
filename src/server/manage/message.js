@@ -168,7 +168,8 @@ function pushMessage(req, res) {
     var message = {
         type: "text",
         body: req.body.msgBody,
-        need_receipt: true
+        need_receipt: true,
+		sender_id: req.user.id
     };
     if (req.body.msgTitle!="")
         message.title = req.body.msgTitle;
@@ -452,52 +453,58 @@ function pushMessageByMulticast(message, appId, accountNames, res) {
 		if (err) {
 			res.json({success: false, errcode: 1, errmsg: err});
 		} else {
-			db.saveMessage(redis, appId, message, [], function(err, msgId) {
+			var accountIds = [];
+			async.forEachSeries(accountNames, function(accountName, callback) {
+				db.getAccountIdByName(redis, accountName, function (err, accountId) {
+
+					if (err) return callback(err);
+					if (!accountId) return callback("Account "+accountName+" not exists");
+					accountIds.push(accountId);
+					callback();
+				});
+			}, function(err) {
 				if (err) {
 					db.redisPool.release(redis);
-					return res.json({success: false, errcode: 2, errmsg: err});
+					res.json({success: false, errcode: 2, errmsg: err});
+					return;
 				}
-				log("Message id: " + msgId);
+				db.saveMessage(redis, appId, message, accountIds, function(err, msgId) {
+					if (err) {
+						db.redisPool.release(redis);
+						return res.json({success: false, errcode: 3, errmsg: err});
+					}
+					log("Message id: " + msgId);
 
-				delete message.need_receipt;
+					delete message.need_receipt;
+					
+					async.forEachSeries(accountIds, function(accountId, callback) {
+						db.getActiveConnections(redis, appId, accountId, function (err, connectionInfos) {
 
-				async.forEachSeries(accountNames, function(accountName, callback) {
-					db.getAccountIdByName(redis, accountName, function (err, accountId) {
-
-						if (err) return callback(err);
-						if (!accountId) return callback("Account "+accountName+" not exists");
-
-						db.addMessageToAccounts(redis, msgId, [accountId], appId, now, function(err) {
 							if (err) return callback(err);
 
-							db.getActiveConnections(redis, appId, accountId, function (err, connectionInfos) {
-
-								if (err) return callback(err);
-
-								connectionInfos.forEach(function(connectionInfo) {
-									if (!message.send_time) {
-										// 立即发送
+							connectionInfos.forEach(function(connectionInfo) {
+								if (!message.send_time) {
+									// 立即发送
+									log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+									publishMessage(connectionInfo, msgId, message, needReceipt);
+								} else {
+									// 延迟发送
+									var sendTime = utils.DateParse(message.send_time);
+									var timeout = sendTime.getTime() - new Date();
+									log("Will publish message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
+									setTimeout(function () {
 										log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
 										publishMessage(connectionInfo, msgId, message, needReceipt);
-									} else {
-										// 延迟发送
-										var sendTime = utils.DateParse(message.send_time);
-										var timeout = sendTime.getTime() - new Date();
-										log("Will publish message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "] after " + timeout + " ms");
-										setTimeout(function () {
-											log("Publishing message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-											publishMessage(connectionInfo, msgId, message, needReceipt);
-										}, timeout);
-									}
-								});
-								callback();
+									}, timeout);
+								}
 							});
+							callback();
 						});
+					}, function (err) {
+						db.redisPool.release(redis);
+						if (err) res.json({success: false, errcode: 2, errmsg: err});
+						else res.json({success: true});
 					});
-				}, function (err) {
-					db.redisPool.release(redis);
-					if (err) res.json({success: false, errcode: 2, errmsg: err});
-					else res.json({success: true});
 				});
 			});
 		}
@@ -514,27 +521,25 @@ function pushMessageBySend(message, appId, accountName, res) {
 		if (err) {
 			res.json({success: false, errcode: 1, errmsg: err});
 		} else {
-			db.saveMessage(redis, appId, message, [], function(err, msgId) {
+			db.getAccountIdByName(redis, accountName, function (err, accountId) {
+
 				if (err) {
 					db.redisPool.release(redis);
 					return res.json({success: false, errcode: 2, errmsg: err});
 				}
-				log("Message id: " + msgId);
-
-				delete message.need_receipt;
-
-				db.getAccountIdByName(redis, accountName, function (err, accountId) {
-
+				if (!accountId) {
+					db.redisPool.release(redis);
+					return res.json({success: false, errcode: 3, errmsg: "Account " + accountName + " not exists"});
+				}
+				
+				db.saveMessage(redis, appId, message, [accountId], function(err, msgId) {
 					if (err) {
 						db.redisPool.release(redis);
-						return res.json({success: false, errcode: 3, errmsg: err});
+						return res.json({success: false, errcode: 4, errmsg: err});
 					}
-					if (!accountId) {
-						db.redisPool.release(redis);
-						return res.json({success: false, errcode: 4, errmsg: "Account " + accountName + " not exists"});
-					}
+					log("Message id: " + msgId);
 
-					db.addMessageToAccounts(redis, msgId, [accountId], appId, now);
+					delete message.need_receipt;
 
 					db.getActiveConnections(redis, appId, accountId, function (err, connectionInfos) {
 

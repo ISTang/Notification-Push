@@ -28,7 +28,6 @@ exports.recordLatestActivity = recordLatestActivity; // notify
 exports.getOfflineMessages = getOfflineMessages; // notify
 //
 exports.saveMessage = saveMessage; // notify also
-exports.addMessageToAccounts = addMessageToAccounts; // notify also
 exports.getAccountIdByName = getAccountIdByName; // notify also
 exports.getActiveConnections = getActiveConnections; // notify also
 //
@@ -461,6 +460,7 @@ function createAccountByUsername(redis, username, password, handleResult) {
 function recordMessageSentTime(redis, connId, msgId, sentTime, needReceipt, handleResult) {
 	redis.hgetall("connection:" + connId, function (err, connectionInfo) {
 		if (err) return handleResult(err);
+		if (!connectionInfo) return handleResult("No connection info with id "+connId);
 		redis.hset("account:" + connectionInfo.account_id + ":application:" + connectionInfo.application_id + ":message:" + msgId,
 			"sent_time", sentTime.Format("yyyyMMddHHmmss"), redis.print);
 		if (!needReceipt) {
@@ -522,7 +522,7 @@ function getOfflineMessages(redis, appId, accountId, days, handleResult) {
 			redis.zrank("account:" + accountId + ":application:" + appId + ":sent_messages", msgId, function (err, rank) {
 				if (err) return callback(err);
 				if (rank == null)
-					getMessageById(msgId, function (err, message, needReceipt) {
+					getMessageById(redis, msgId, function (err, message, needReceipt) {
 						if (err) return callback(err);
 						if (!message.expiration || (now.getTime() < utils.DateParse(message.expiration).getTime())) {
 							msgs.push({msgId: msgId, message: message, needReceipt: needReceipt});
@@ -600,22 +600,6 @@ function saveMessage(redis, appId, message, accountIds, handleResult) {
 }
 
 /**
- * 将已有消息关联到指定账号
- * @param msgId 消息ID
- * @param accountIds 账号ID表
- * @param appId 应用ID
- * @param time 消息生成时间
- * @param handleResult(err)
- */
-function addMessageToAccounts(redis, msgId, accountIds, appId, time, handleResult) {
-	accountIds.forEach(function (accountId) {
-		redis.zadd("account:" + accountId + ":application:" + appId + ":messages", time.getTime(), msgId);
-	});
-
-	handleResult();
-}
-
-/**
  * 根据用户名获取账号ID
  * @param username 用户名(账号名称/电话号码/邮箱地址)
  * @param handleResult
@@ -645,7 +629,7 @@ function getActiveConnections(redis, appId, accountId, handleResult) {
 		async.forEachSeries(connIds, function (connId, callback) {
 			redis.hgetall("connection:" + connId, function (err, connectionInfo) {
 				if (err) return callback(err);
-				if (!connectionInfo) return callback(/*"Connection " + connId + " not exists"*/);
+				if (!connectionInfo) return callback("Connection " + connId + " not exists");
 				connectionInfos.push({channelId: connectionInfo.channel_id, connId: connId, msgKey: connectionInfo.key});
 				callback();
 			});
@@ -696,7 +680,7 @@ function getMessageById(redis, msgId, handleResult) {
 	async.series([
 		function (callback) {
 			redis.hmget("message:" + msgId, "title", "body", "body_type", "url", "callback", 
-				"generate_time", "send_time", "expiration", "need_receipt", function (err, arr) {
+				"generate_time", "send_time", "expiration", "need_receipt", "sender_id", function (err, arr) {
 				if (err) return callback(err);
 				if (arr[0]) message.title = arr[0];
 				message.body = arr[1];
@@ -706,7 +690,8 @@ function getMessageById(redis, msgId, handleResult) {
 				if (arr[5]) message.generateTime = arr[5];
 				if (arr[6]) message.sendTime = arr[6];
 				if (arr[7]) message.expiration = arr[7];
-				needReceipt = (arr[8] == 1);;
+				needReceipt = (arr[8] == 1);
+				if (arr[9]) message.senderId = arr[9];
 				callback();
 			});
 		},
@@ -746,7 +731,7 @@ function getMessageAllById(redis, msgId, handleResult) {
 	async.series([
 		function (callback) {
 			redis.hmget("message:" + msgId, "title", "body", "body_type", "url", "callback", 
-				"generate_time", "send_time", "expiration", "need_receipt", function (err, arr) {
+				"generate_time", "send_time", "expiration", "need_receipt", "sender_id", function (err, arr) {
 				if (err) return callback(err);
 				if (arr[0]) message.title = arr[0];
 				message.body = arr[1];
@@ -757,6 +742,7 @@ function getMessageAllById(redis, msgId, handleResult) {
 				if (arr[6]) message.sendTime = arr[6];
 				if (arr[7]) message.expiration = arr[7];
 				needReceipt = (arr[8] == 1);;
+				if (arr[9]) message.senderId = arr[9];
 				callback();
 			});
 		},
@@ -1606,7 +1592,7 @@ function getAllMessages(redis, handleResult) {
 		if (err) return handleResult(err);
 		log("总共获取到 " + messageIds.length + " 条消息");
 		var messages = [];
-		async.forEach(messageIds, function (messageId, callback) {
+		async.forEachSeries(messageIds, function (messageId, callback) {
 			log("获取 ID 为 " + messageId + " 的消息内容...");
 			getMessageAllById(redis, messageId, function (err, message) {
 				if (err) return callback(err);
@@ -1624,7 +1610,7 @@ function getAllMessages(redis, handleResult) {
 						});
 					},
 					function (callback) {
-						log("获取 ID 为 " + message.application_id + " 应用的名称...");
+						log("获取 ID 为 " + applicationId + " 应用的名称...");
 						redis.get("application:" + applicationId + ":name", function (err, applicationName) {
 							if (err) return callback(err);
 							log("已获取到 ID 为 " + applicationId + " 应用的名称");
@@ -1633,13 +1619,13 @@ function getAllMessages(redis, handleResult) {
 						});
 					},
 					function (callback) {
-						if (message.sender_id==null) return callback();
-						log("获取 ID 为 " + message.sender_id + " 账号的名称...");
-						redis.get("account:" + message.sender_id + ":name", function (err, sender) {
+						if (message.senderId==null) return callback();
+						log("获取 ID 为 " + message.senderId + " 账号的名称...");
+						redis.get("account:" + message.senderId + ":name", function (err, sender) {
 							if (err) return callback(err);
-							log("已获取到 ID 为 " + message.sender_id + " 账号的名称");
+							log("已获取到 ID 为 " + message.senderId + " 账号的名称");
 							message.sender = sender;
-							delete message.sender_id;
+							delete message.senderId;
 							callback();
 						});
 					},
