@@ -7,12 +7,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.text.ParseException;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.json.JSONException;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -37,17 +34,39 @@ import com.tpsoft.pushnotification.utils.Crypt;
 @SuppressLint("DefaultLocale")
 public class NotifyPushService extends Service {
 
-	// 错误代码
-	public static final int ACTION_OK = 200; // 操作成功
-	public static final int ACTION_REPLIED = 300; // 收到消息确认
+	// 日志类型
+	public static final int LOG_CONNECT = 1; // 连接
+	public static final int LOG_SENDMSG = 2; // 发送消息
+	// 状态码
+	public static final int STATUS_CONNECT_CONNECTING = 1; // 连接服务器...
+	public static final int STATUS_CONNECT_CONNECTED = 2; // 已经连接到服务器
+	public static final int STATUS_CONNECT_APP_CERTIFICATING = 3; // 应用认证...
+	public static final int STATUS_CONNECT_APP_CERTIFICATED = 4; // 应用认证通过
+	public static final int STATUS_CONNECT_USER_CERTIFICATING = 5; // 用户认证...
+	public static final int STATUS_CONNECT_USER_CERTIFICATED = 6; // 用户认证通过
+	public static final int STATUS_CONNECT_MSGKEY_RECEIVED = 7; // 收到消息密钥
+	public static final int STATUS_CONNECT_KEEPALIVEINTERVAL_RECEIVED = 8; // 收到心跳周期
+	public static final int STATUS_CONNECT_LOGON = 9; // 登录成功
+	public static final int STATUS_CONNECT_KEEPALIVE = 10; // 发送心跳信号
+	public static final int STATUS_CONNECT_KEEPALIVE_REPLIED = 11; // 收到心跳回复信号
 	//
-	public static final int ERROR_INVALID_APPINFO = 101; // 应用信息无效
-	public static final int ERROR_INVALID_CLIENT_INFO = 102; // 用户信息无效
-	public static final int ERROR_CLIENT_NOT_LOGON = 201; // 尚未登录成功
-	public static final int ERROR_PARSE_MESSAGE = 202; // 解析消息失败
-	public static final int ERROR_MAKE_MESSAGE = 203; // 生成消息失败
-	public static final int ERROR_SUBMIT_MESSAGE = 204; // 提交消息失败
-	public static final int ERROR_SEND_MESSAGE = 205; // 发送消息失败
+	public static final int STATUS_SENDMSG_SUBMIT = 51; // 提交消息
+	public static final int STATUS_SENDMSG_SUBMITTED = 52; // 消息已提交
+	public static final int STATUS_SENDMSG_OK = 53; // 消息已发送
+	// 错误码
+	public static final int ERROR_CONNECT_NETWORK_UNAVAILABLE = 101; // 网络不可用
+	public static final int ERROR_CONNECT_BROKEN = 102; // 连接已中断
+	public static final int ERROR_CONNECT_SERVER_UNAVAILABLE = 103; // 服务器不可用
+	public static final int ERROR_CONNECT_LOGIN_TIMEOUT = 104; // 登录超时
+	public static final int ERROR_CONNECT_IO_FAULT = 105; // 网络IO故障
+	public static final int ERROR_CONNECT_APP_CERTIFICATE = 106; // 应用认证失败
+	public static final int ERROR_CONNECT_USER_CERTIFICATE = 107; // 用户认证失败
+	public static final int ERROR_CONNECT_SERVER = 108; // 服务器错误
+	//
+	public static final int ERROR_SENDMSG_NOT_LOGON = 151; // 尚未登录成功
+	public static final int ERROR_SENDMSG_DATA = 152; // 消息数据出错
+	public static final int ERROR_SENDMSG_SUBMIT = 153; // 提交消息失败
+	public static final int ERROR_SENDMSG_FAILED = 154; // 发送消息失败
 
 	// 行结束标志
 	private static final String INPUT_RETURN = "\r\n";
@@ -167,25 +186,37 @@ public class NotifyPushService extends Service {
 		return Service.START_STICKY;
 	}
 
-	private void showResult(int code, String msg) {
-		// 广播结果通知
+	private void showStatus(boolean started) {
+		// 广播接收器状态
 		Intent activityIntent = new Intent();
 		activityIntent
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
-		activityIntent.putExtra("action", "result");
-		activityIntent.putExtra("code", code);
-		activityIntent.putExtra("msg", msg);
+		activityIntent.putExtra("action", "status");
+		activityIntent.putExtra("started", started);
 		sendBroadcast(activityIntent);
 	}
 
-	private void showError(int errcode, String errmsg) {
-		// 广播错误通知
+	private void showLogining(boolean logining) {
+		// 广播登录状态
 		Intent activityIntent = new Intent();
 		activityIntent
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
-		activityIntent.putExtra("action", "error");
-		activityIntent.putExtra("errcode", errcode);
-		activityIntent.putExtra("errmsg", errmsg);
+		activityIntent.putExtra("action", "logining");
+		activityIntent.putExtra("logining", logining);
+		sendBroadcast(activityIntent);
+	}
+
+	private void showLog(int type, int code, String params) {
+		// 广播日志
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "log");
+		activityIntent.putExtra("type", type);
+		activityIntent.putExtra("code", code);
+		if (params != null) {
+			activityIntent.putExtra("params", params);
+		}
 		sendBroadcast(activityIntent);
 	}
 
@@ -196,26 +227,6 @@ public class NotifyPushService extends Service {
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
 		activityIntent.putExtra("action", "notify");
 		activityIntent.putExtra("msgText", msgText);
-		sendBroadcast(activityIntent);
-	}
-
-	private void showLog(String logText) {
-		// 广播日志
-		Intent activityIntent = new Intent();
-		activityIntent
-				.setAction("com.tpsoft.pushnotification.NotifyPushService");
-		activityIntent.putExtra("action", "log");
-		activityIntent.putExtra("logText", logText);
-		sendBroadcast(activityIntent);
-	}
-
-	private void showStatus(boolean started) {
-		// 广播接收器状态
-		Intent activityIntent = new Intent();
-		activityIntent
-				.setAction("com.tpsoft.pushnotification.NotifyPushService");
-		activityIntent.putExtra("action", "status");
-		activityIntent.putExtra("started", started);
 		sendBroadcast(activityIntent);
 	}
 
@@ -275,30 +286,26 @@ public class NotifyPushService extends Service {
 					MyMessage message = new MyMessage(
 							intent.getBundleExtra("com.tpsoft.pushnotification.MyMessage"));
 					msgText = MyMessage.makeText(message);
-				} catch (ParseException e) {
-					showError(ERROR_PARSE_MESSAGE, msgId + ":解析消息失败");
-					return;
-				} catch (JSONException e) {
-					showError(ERROR_MAKE_MESSAGE, msgId + ":生成消息失败");
+				} catch (Exception e) {
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_DATA, msgId);
 					return;
 				}
 				if (!clientLogon) {
-					showError(ERROR_CLIENT_NOT_LOGON, msgId + ":尚未登录成功");
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_NOT_LOGON, msgId);
 					return;
 				}
-				showLog("发送消息...");
+				showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMIT, msgId);
 				try {
 					socket.getOutputStream().write(
 							(String.format(SEND_MSG_REQ, receiver, msgId,
 									Boolean.toString(secure), msgText.length(),
 									msgText)).getBytes("UTF-8"));
-					showResult(ACTION_OK, msgId + ":已发送");
+					showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMITTED, msgId);
 				} catch (UnsupportedEncodingException ee) {
 					// impossible!
 					ee.printStackTrace();
 				} catch (IOException ee) {
-					showError(ERROR_SUBMIT_MESSAGE,
-							msgId + ":" + ee.getMessage());
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_SUBMIT, msgId);
 				}
 			}
 		}
@@ -355,19 +362,24 @@ public class NotifyPushService extends Service {
 				socket = null;
 				if (!isNetworkAvailable()) {
 					if (networkOk) {
-						showLog("网络不可用");
+						showLog(LOG_CONNECT, ERROR_CONNECT_NETWORK_UNAVAILABLE,
+								null);
 						networkOk = false;
 					}
+					showLogining(false);
 					waitForReconnect();
 					continue reconnect;
 				}
 				networkOk = true;
-				showLog("连接服务器 " + loginParams.getServerHost() + "["
-						+ loginParams.getServerPort() + "]...");
+				showLog(LOG_CONNECT,
+						STATUS_CONNECT_CONNECTING,
+						loginParams.getServerHost() + "["
+								+ loginParams.getServerPort() + "]");
 				while (!exitNow) {
 					// 创建新的套接字
 					socket = new Socket();
 					// 尝试连接
+					showLogining(true);
 					try {
 						socket.connect(
 								new InetSocketAddress(loginParams
@@ -391,14 +403,16 @@ public class NotifyPushService extends Service {
 							}
 							socket = null;
 						}
+						showLogining(false);
 						waitForReconnect();
 					}
 				}
 				if (exitNow) {
+					showLogining(false);
 					break;
 				}
 				connectedTime = Calendar.getInstance();
-				showLog("已连接到服务器");
+				showLog(LOG_CONNECT, STATUS_CONNECT_CONNECTED, null);
 
 				waitData: while (!exitNow) {
 					// 等待来自服务器的消息
@@ -407,7 +421,8 @@ public class NotifyPushService extends Service {
 						byteCount = in.read(buffer);
 						if (byteCount == -1) {
 							// 遇到EOF
-							showLog("连接已中断");
+							showLog(LOG_CONNECT, ERROR_CONNECT_BROKEN, null);
+							showLogining(false);
 							waitForReconnect();
 							continue reconnect;
 						} else if (byteCount == 0) {
@@ -424,7 +439,8 @@ public class NotifyPushService extends Service {
 							long diff1 = now.getTimeInMillis()
 									- lastActiveTime.getTimeInMillis();
 							if (diff1 >= keepAliveInterval / 2) {
-								showLog("发送心跳信号...");
+								showLog(LOG_CONNECT, STATUS_CONNECT_KEEPALIVE,
+										null);
 								try {
 									socket.getOutputStream().write(
 											SET_ALIVE_REQ.getBytes("UTF-8"));
@@ -432,7 +448,9 @@ public class NotifyPushService extends Service {
 									// impossible!
 									ee.printStackTrace();
 								} catch (IOException ee) {
-									showLog("发送心跳信号不成功: " + ee.getMessage());
+									showLog(LOG_CONNECT,
+											ERROR_CONNECT_IO_FAULT,
+											"发送心跳信号不成功: " + ee.getMessage());
 									waitForReconnect();
 									continue reconnect;
 								}
@@ -443,7 +461,9 @@ public class NotifyPushService extends Service {
 							long diff2 = now.getTimeInMillis()
 									- serverActiveTime.getTimeInMillis();
 							if (diff2 >= keepAliveInterval) {
-								showLog("服务器不可用");
+								showLog(LOG_CONNECT,
+										ERROR_CONNECT_SERVER_UNAVAILABLE,
+										"服务器不可用");
 								waitForReconnect();
 								continue reconnect;
 							}
@@ -452,7 +472,9 @@ public class NotifyPushService extends Service {
 							long diff = now.getTimeInMillis()
 									- connectedTime.getTimeInMillis();
 							if (diff >= networkParams.getLoginTimeout()) {
-								showLog("登录超时");
+								showLog(LOG_CONNECT,
+										ERROR_CONNECT_LOGIN_TIMEOUT, null);
+								showLogining(false);
 								waitForReconnect();
 								continue reconnect;
 							}
@@ -460,7 +482,9 @@ public class NotifyPushService extends Service {
 						continue waitData;
 					} catch (IOException e) {
 						// 网络错误
-						showLog("接收失败: " + e.getMessage());
+						showLog(LOG_CONNECT, ERROR_CONNECT_IO_FAULT,
+								e.getMessage());
+						showLogining(false);
 						waitForReconnect();
 						continue reconnect;
 					}
@@ -473,20 +497,21 @@ public class NotifyPushService extends Service {
 					try {
 						handleServerData(data, out);
 					} catch (Exception e) {
-						showLog("发生异常: " + e.getMessage());
+						showLog(LOG_CONNECT, ERROR_CONNECT_SERVER,
+								e.getMessage());
+						showLogining(false);
 						waitForReconnect();
 						continue reconnect;
 					}
 					if (clientLogon) {
 						// 已登录
 						lastActiveTime = Calendar.getInstance();
+						showLogining(false);
 					} else {
 						// 正登录
 						if (invalidAppInfo || invalidClientInfo) {
 							// 应用或客户信息无效
-							showError(invalidAppInfo ? ERROR_INVALID_APPINFO
-									: ERROR_INVALID_CLIENT_INFO,
-									invalidAppInfo ? "应用认证失败" : "用户认证失败");
+							showLogining(false);
 							break reconnect;
 						}
 					}
@@ -504,6 +529,7 @@ public class NotifyPushService extends Service {
 			}
 
 			receiverStarted = false;
+			showLogining(false);
 			showStatus(false);
 		}
 
@@ -563,7 +589,7 @@ public class NotifyPushService extends Service {
 						}
 
 						action = starr[0].trim().toUpperCase(); // 动作
-						target = starr[1].trim().toUpperCase(); // 目标
+						target = starr[1].trim(); // 目标
 
 						actionLineFound = true;
 					} else if (!line.equals("")) {
@@ -661,7 +687,7 @@ public class NotifyPushService extends Service {
 				throws Exception {
 			if (action.equals("GET") && target.equals("APPID")) {
 				// 应用认证请求，发送当前应用ID及密码
-				showLog("接收到应用认证请求，发送应用信息...");
+				showLog(LOG_CONNECT, STATUS_CONNECT_APP_CERTIFICATING, null);
 				String password = Crypt.md5(appParams.getAppPassword());
 				out.write(String.format(GET_APPID_RES,
 						appParams.getAppId().length() + 1 + password.length(),
@@ -671,14 +697,14 @@ public class NotifyPushService extends Service {
 				boolean appOk = (fields.get(FIELD_ACTION_SUCCESS.toUpperCase())
 						.toUpperCase().equals("TRUE"));
 				if (appOk) {
-					showLog("应用认证通过");
+					showLog(LOG_CONNECT, STATUS_CONNECT_APP_CERTIFICATED, null);
 				} else {
-					showLog("应用认证失败: " + body);
+					showLog(LOG_CONNECT, ERROR_CONNECT_APP_CERTIFICATE, body);
 					invalidAppInfo = true;
 				}
 			} else if (action.equals("GET") && target.equals("USERNAME")) {
 				// 用户认证请求，发送用户名及密码
-				showLog("接收到用户认证请求，发送用户信息...");
+				showLog(LOG_CONNECT, STATUS_CONNECT_USER_CERTIFICATING, null);
 				if (fields.get(FIELD_LOGIN_SECURE.toUpperCase()).toUpperCase()
 						.equals("TRUE")) {
 					// 安全登录
@@ -724,9 +750,9 @@ public class NotifyPushService extends Service {
 						FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
 						.equals("TRUE"));
 				if (usernameOk) {
-					showLog("用户认证通过");
+					showLog(LOG_CONNECT, STATUS_CONNECT_USER_CERTIFICATED, null);
 				} else {
-					showLog("用户认证失败: " + body);
+					showLog(LOG_CONNECT, ERROR_CONNECT_USER_CERTIFICATE, body);
 					invalidClientInfo = true;
 				}
 			} else if (action.equals("SET") && target.equals("MSGKEY")) {
@@ -739,18 +765,19 @@ public class NotifyPushService extends Service {
 							body);
 				}
 				out.write(String.format(SET_MSGKEY_ACK).getBytes("UTF-8"));
-				showLog("接收到消息密钥");
+				showLog(LOG_CONNECT, STATUS_CONNECT_MSGKEY_RECEIVED, null);
 			} else if (action.equals("SET") && target.equals("ALIVEINT")) {
 				// 设置心跳周期
 				keepAliveInterval = Integer.parseInt(body);
 				out.write(String.format(SET_ALIVEINT_ACK).getBytes("UTF-8"));
-				showLog("接收到心跳周期(ms): " + keepAliveInterval);
+				showLog(LOG_CONNECT, STATUS_CONNECT_KEEPALIVEINTERVAL_RECEIVED,
+						Integer.toString(keepAliveInterval));
 
 				clientLogon = true;
-				showLog("登录成功");
+				showLog(LOG_CONNECT, STATUS_CONNECT_LOGON, null);
 			} else if (action.equals("SET") && target.equals("ALIVE")) {
 				// 收到心跳回复信号
-				showLog("接收到心跳回复包");
+				showLog(LOG_CONNECT, STATUS_CONNECT_KEEPALIVE_REPLIED, null);
 			} else if (action.equals("PUSH") && target.equals("MSG")) {
 				// 收到消息
 				boolean secure = fields.get(FIELD_LOGIN_SECURE.toUpperCase())
@@ -774,10 +801,11 @@ public class NotifyPushService extends Service {
 						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
 						.equals("TRUE");
 				if (success) {
-					showResult(ACTION_REPLIED, msgId + ":消息已确认");
+					showLog(LOG_SENDMSG, STATUS_SENDMSG_OK, msgId);
 				} else {
 					String err = body;
-					showError(ERROR_SUBMIT_MESSAGE, msgId + ":" + err);
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_FAILED, msgId + ":"
+							+ err);
 				}
 			} else if (action.equals("CLOSE") && target.equals("CONN")) {
 				// 服务器主动断开连接

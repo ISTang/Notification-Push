@@ -56,25 +56,159 @@ public class MainActivity extends TabActivity {
 			if (intent.getAction().equals(
 					"com.tpsoft.pushnotification.NotifyPushService")) {
 				String action = intent.getStringExtra("action");
-				if (action.equals("notify")) {
-					showNotification(intent.getStringExtra("msgText"));
-				} else if (action.equals("log")) {
-					showLog(intent.getStringExtra("logText"));
-				} else if (action.equals("status")) {
+				if (action.equals("status")) {
 					boolean receiverStarted = intent.getBooleanExtra("started",
 							false);
 					MyApplicationClass.clientStarted = receiverStarted;
 					showLog(getText(
 							receiverStarted ? R.string.receiver_started
 									: R.string.receiver_stopped).toString());
-				} else if (action.equals("result")) {
-					String code = intent.getStringExtra("code");
-					String msg = intent.getStringExtra("msg");
-					showLog("Action result: " + code + "(" + msg + ")");
-				} else if (action.equals("error")) {
-					String errcode = intent.getStringExtra("errcode");
-					String errmsg = intent.getStringExtra("errmsg");
-					showLog("Action error: " + errcode + "(" + errmsg + ")");
+					Toast.makeText(
+							MainActivity.this,
+							receiverStarted ? R.string.receiver_started
+									: R.string.receiver_stopped,
+							Toast.LENGTH_SHORT).show();
+				} else if (action.equals("logining")) {
+					// TODO 响应登录状态变化
+					boolean logining = intent
+							.getBooleanExtra("logining", false);
+					if (logining) {
+						Toast.makeText(MainActivity.this, "正在登录...",
+								Toast.LENGTH_SHORT).show();
+					}
+				} else if (action.equals("log")) {
+					int type = intent.getIntExtra("type", 0);
+					int code = intent.getIntExtra("code", 0);
+					String params = intent.getStringExtra("params");
+					switch (type) {
+					case NotifyPushService.LOG_CONNECT: // 连接:
+						switch (code) {
+						case NotifyPushService.STATUS_CONNECT_CONNECTING: // 连接服务器...
+							showLog("连接服务器 " + params + "...");
+							break;
+						case NotifyPushService.STATUS_CONNECT_CONNECTED: // 已经连接到服务器
+							showLog("已连接到服务器。");
+							break;
+						case NotifyPushService.STATUS_CONNECT_APP_CERTIFICATING: // 应用认证...
+							showLog("校验应用ID和接入密码...");
+							break;
+						case NotifyPushService.STATUS_CONNECT_APP_CERTIFICATED: // 应用认证通过
+							showLog("应用认证通过。");
+							break;
+						case NotifyPushService.STATUS_CONNECT_USER_CERTIFICATING: // 用户认证...
+							showLog("校验用户名和密码...");
+							break;
+						case NotifyPushService.STATUS_CONNECT_USER_CERTIFICATED: // 用户认证通过
+							showLog("用户认证通过。");
+							break;
+						case NotifyPushService.STATUS_CONNECT_MSGKEY_RECEIVED: // 收到消息密钥
+							showLog("收到消息密钥。");
+							break;
+						case NotifyPushService.STATUS_CONNECT_KEEPALIVEINTERVAL_RECEIVED: // 收到心跳周期
+							showLog("收到心跳周期: " + params + "秒。");
+							break;
+						case NotifyPushService.STATUS_CONNECT_LOGON: // 登录成功
+							showLog("登录成功。");
+							Toast.makeText(MainActivity.this, "登录成功",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.STATUS_CONNECT_KEEPALIVE: // 发送心跳信号
+							showLog("发送心跳信号...");
+							break;
+						case NotifyPushService.STATUS_CONNECT_KEEPALIVE_REPLIED: // 收到心跳回复信号
+							showLog("收到心跳回复信号。");
+							break;
+						case NotifyPushService.ERROR_CONNECT_NETWORK_UNAVAILABLE: // 网络不可用
+							showLog("网络不可用！");
+							Toast.makeText(MainActivity.this, "网络不可用",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_BROKEN: // 连接已中断
+							showLog("连接已中断！");
+							Toast.makeText(MainActivity.this, "连接已中断",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_SERVER_UNAVAILABLE: // 服务器不可用
+							showLog("服务器不可用！");
+							Toast.makeText(MainActivity.this, "服务器不可用",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_LOGIN_TIMEOUT: // 登录超时
+							showLog("登录超时！");
+							Toast.makeText(MainActivity.this, "登录超时",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_IO_FAULT: // 网络IO故障
+							showLog("网络IO故障！");
+							Toast.makeText(MainActivity.this, "网络IO故障",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_APP_CERTIFICATE: // 应用认证失败
+							showLog("应用认证失败！");
+							Toast.makeText(MainActivity.this, "应用认证失败",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_USER_CERTIFICATE: // 用户认证失败
+							showLog("用户认证失败！");
+							Toast.makeText(MainActivity.this, "用户认证失败",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_CONNECT_SERVER: // 服务器错误
+							showLog("服务器错误！");
+							Toast.makeText(MainActivity.this, "服务器错误",
+									Toast.LENGTH_SHORT).show();
+							break;
+						default:
+							break;
+						}
+						break;
+					case NotifyPushService.LOG_SENDMSG: // 发送消息:
+						switch (code) {
+						case NotifyPushService.STATUS_SENDMSG_SUBMIT: // 提交消息
+							showLog("提交 #" + params + " 消息...");
+							Toast.makeText(MainActivity.this, "提交消息...",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.STATUS_SENDMSG_SUBMITTED: // 已提交消息
+							showLog("#" + params + " 消息已提交。");
+							Toast.makeText(MainActivity.this, "消息已提交",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.STATUS_SENDMSG_OK: // 收到消息确认
+							showLog("#" + params + " 消息已确认。");
+							Toast.makeText(MainActivity.this, "消息已确认",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_SENDMSG_NOT_LOGON: // 尚未登录成功
+							Toast.makeText(MainActivity.this, "尚未成功登录",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_SENDMSG_DATA: // 消息数据错误
+							showLog("#" + params + " 消息数据错误！");
+							break;
+						case NotifyPushService.ERROR_SENDMSG_SUBMIT: // 提交消息失败
+							showLog("#" + params + " 消息提交失败。");
+							Toast.makeText(MainActivity.this, "消息提交失败",
+									Toast.LENGTH_SHORT).show();
+							break;
+						case NotifyPushService.ERROR_SENDMSG_FAILED: // 发送消息失败
+							int pos = params.indexOf(":");
+							String msgId = params.substring(0, pos);
+							String err = params.substring(pos + 1);
+							String errmsg = err.substring(err.indexOf(",") + 1);
+							showLog("#" + msgId + " 消息发送失败(" + errmsg + ")！");
+							Toast.makeText(MainActivity.this, "消息发送失败",
+									Toast.LENGTH_SHORT).show();
+							break;
+						default:
+							break;
+						}
+						break;
+					default:
+						break;
+					}
+				} else if (action.equals("notify")) {
+					showNotification(intent.getStringExtra("msgText"));
 				} else {
 					;
 				}
@@ -292,6 +426,7 @@ public class MainActivity extends TabActivity {
 		if (MyApplicationClass.clientStarted)
 			return;
 
+		showLog(getText(R.string.receiver_starting).toString());
 		Toast.makeText(this, getText(R.string.receiver_starting),
 				Toast.LENGTH_SHORT).show();
 
