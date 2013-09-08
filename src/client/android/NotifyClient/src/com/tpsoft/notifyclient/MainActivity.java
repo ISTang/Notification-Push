@@ -25,6 +25,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -49,6 +50,8 @@ import com.tpsoft.pushnotification.service.NotifyPushService;
 @SuppressWarnings("deprecation")
 @SuppressLint("SimpleDateFormat")
 public class MainActivity extends TabActivity {
+
+	private static final String LOG_TAG_CONNECT = "CONNECT";
 
 	private class MyBroadcastReceiver extends BroadcastReceiver {
 		@Override
@@ -105,7 +108,7 @@ public class MainActivity extends TabActivity {
 							showLog("收到消息密钥。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_KEEPALIVEINTERVAL_RECEIVED: // 收到心跳周期
-							showLog("收到心跳周期: " + params + "秒。");
+							showLog("收到心跳周期: " + Integer.parseInt(params)/1000 + "秒。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_LOGON: // 登录成功
 							showLog("登录成功。");
@@ -113,10 +116,12 @@ public class MainActivity extends TabActivity {
 									Toast.LENGTH_SHORT).show();
 							break;
 						case NotifyPushService.STATUS_CONNECT_KEEPALIVE: // 发送心跳信号
-							showLog("发送心跳信号...");
+							// showLog("发送心跳信号...");
+							Log.d(LOG_TAG_CONNECT, "发送心跳信号...");
 							break;
 						case NotifyPushService.STATUS_CONNECT_KEEPALIVE_REPLIED: // 收到心跳回复信号
-							showLog("收到心跳回复信号。");
+							// showLog("收到心跳回复信号。");
+							Log.d(LOG_TAG_CONNECT, "收到心跳回复信号");
 							break;
 						case NotifyPushService.ERROR_CONNECT_NETWORK_UNAVAILABLE: // 网络不可用
 							showLog("网络不可用！");
@@ -260,27 +265,6 @@ public class MainActivity extends TabActivity {
 		msg = (LinearLayout) findViewById(R.id.msg);
 		logger = (TextView) findViewById(R.id.log);
 
-		// 恢复消息显示
-		Resources res = getResources();
-		for (MyMessage message : MyApplicationClass.savedMsgs) {
-			// 获取图片URL
-			String imageUrl = null;
-			if (message.getAttachments() != null) {
-				for (MyMessage.Attachment attachment : message.getAttachments()) {
-					if (attachment.getType().matches("image/.*")) {
-						imageUrl = attachment.getUrl();
-						break;
-					}
-				}
-			}
-			msg.addView(
-					makeMessageView(
-							message,
-							(imageUrl != null ? MyApplicationClass.savedImages
-									.get(imageUrl) : null), res), 0);
-		}
-		msgCount = MyApplicationClass.savedMsgs.size();
-
 		if (myBroadcastReceiver == null) {
 			// 准备与后台服务通信
 			myBroadcastReceiver = new MyBroadcastReceiver();
@@ -315,8 +299,26 @@ public class MainActivity extends TabActivity {
 
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
+		// 恢复消息显示
+		Resources res = getResources();
+		for (MyMessage message : MyApplicationClass.savedMsgs) {
+			// 获取图片URL
+			String imageUrl = null;
+			if (message.getAttachments() != null) {
+				for (MyMessage.Attachment attachment : message.getAttachments()) {
+					if (attachment.getType().matches("image/.*")) {
+						imageUrl = attachment.getUrl();
+						break;
+					}
+				}
+			}
+			msg.addView(
+					makeMessageView(
+							message,
+							(imageUrl != null ? MyApplicationClass.savedImages
+									.get(imageUrl) : null), res), 0);
+		}
 		super.onConfigurationChanged(newConfig);
-		setContentView(R.layout.activity_main);
 	}
 
 	@Override

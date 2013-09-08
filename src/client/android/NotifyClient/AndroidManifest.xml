@@ -6,7 +6,7 @@
 
     <uses-sdk
         android:minSdkVersion="8"
-        android:targetSdkVersion="17" />
+        android:targetSdkVersion="10" /> <!-- targetSdkVersion高于10时在平板上无法显示设置菜单 -->
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -17,7 +17,8 @@
     <uses-permission android:name="android.permission.WRITE_SMS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-	
+	<uses-permission android:name="android.permission.CHANGE_CONFIGURATION"></uses-permission>
+		
     <application
         android:name="com.tpsoft.notifyclient.MyApplicationClass"
         android:allowBackup="true"
