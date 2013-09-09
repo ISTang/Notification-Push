@@ -65,6 +65,7 @@ public class MyMessage {
 
 	};
 
+	private String sender;
 	private String title;
 	private String body;
 	private String type;
@@ -72,6 +73,18 @@ public class MyMessage {
 	private Date generateTime;
 	private Date expiration;
 	private Attachment[] attachments;
+
+	public MyMessage(String sender, String title, String body, String type, String url,
+			Date generateTime, Date expiration, Attachment[] attachments) {
+		this.sender = sender;
+		this.title = title;
+		this.body = body;
+		this.type = type;
+		this.url = url;
+		this.generateTime = generateTime;
+		this.expiration = expiration;
+		this.attachments = attachments;
+	}
 
 	public MyMessage(String title, String body, String type, String url,
 			Date generateTime, Date expiration, Attachment[] attachments) {
@@ -93,6 +106,7 @@ public class MyMessage {
 	}
 
 	public MyMessage(Bundle bundle) throws ParseException {
+		sender = bundle.getString("sender");
 		title = bundle.getString("title");
 		body = bundle.getString("body");
 		type = bundle.getString("type");
@@ -128,10 +142,13 @@ public class MyMessage {
 		MyMessage message = new MyMessage();
 		try {
 			JSONObject jsonObject = new JSONObject(msgText);
-			if (jsonObject.has("title")) {
+			if (jsonObject.has("sender_name")) {
+				message.setSender(jsonObject.getString("sender_name"));
+			}
+			if (jsonObject.has("title") && 
+					jsonObject.getString("title")!=null && 
+					!jsonObject.getString("title").equals("")) {
 				message.setTitle(jsonObject.getString("title"));
-			} else {
-				message.setTitle("");
 			}
 			message.setBody(jsonObject.getString("body"));
 			if (jsonObject.has("type")) {
@@ -139,11 +156,10 @@ public class MyMessage {
 			} else {
 				message.setType("text");
 			}
-			if (jsonObject.has("url")
-					&& !jsonObject.getString("url").equals("null")) {
+			if (jsonObject.has("url") && 
+					jsonObject.getString("url")!=null && 
+					!jsonObject.getString("url").equals("")) {
 				message.setUrl(jsonObject.getString("url"));
-			} else {
-				message.setUrl("");
 			}
 			if (jsonObject.has("generate_time")) {
 				message.setGenerateTime(dateFormat.parse(jsonObject
@@ -181,11 +197,15 @@ public class MyMessage {
 	public static String makeText(MyMessage message) throws JSONException {
 		JSONObject object = new JSONObject();
 		try {
+			if (message.sender != null)
+				object.put("sender_name", message.sender);
 			if (message.title != null)
 				object.put("title", message.title);
 			object.put("body", message.body);
 			if (message.type != null)
 				object.put("type", message.type);
+			else
+				object.put("type", "text");
 			if (message.url != null)
 				object.put("url", message.url);
 			if (message.generateTime != null)
@@ -214,16 +234,18 @@ public class MyMessage {
 
 	public Bundle getBundle() {
 		Bundle bundle = new Bundle();
-		bundle.putString("title", title);
+		if (sender!=null)
+			bundle.putString("sender", sender);
+		if (title!=null)
+			bundle.putString("title", title);
 		bundle.putString("body", body);
 		bundle.putString("type", type);
-		bundle.putString("url", url);
-		if (generateTime != null) {
+		if (url!=null)
+			bundle.putString("url", url);
+		if (generateTime != null) 
 			bundle.putString("generateTime", dateFormat.format(generateTime));
-		}
-		if (expiration != null) {
+		if (expiration != null) 
 			bundle.putString("expiration", dateFormat.format(expiration));
-		}
 		if (attachments != null) {
 			bundle.putInt("attachmentCount", attachments.length);
 			for (int i = 0; i < attachments.length; i++) {
@@ -240,6 +262,14 @@ public class MyMessage {
 		return bundle;
 	}
 
+	public String getSender() {
+		return sender;
+	}
+
+	public void setSender(String sender) {
+		this.sender = sender;
+	}
+	
 	public String getTitle() {
 		return title;
 	}

@@ -1,8 +1,8 @@
 var path = require("path");
 
-exports.SERVER_HOST = '192.168.1.102'; // 118.244.9.191, 218.200.212.120
-exports.SERVER_PORT = 3456;
-exports.HTTPD_PORT = 4567;
+exports.SERVER_HOST = 'isajia.com'; // 118.244.9.191, 218.200.212.120
+exports.SERVER_PORT = 1234;
+exports.HTTPD_PORT = 2345;
 
 exports.LOGIN_NUMBER = 5; // 5
 exports.NOTIFY_NUMBER = 2; // 2
@@ -26,9 +26,9 @@ exports.LOG_ENABLED = true;
 exports.TRACK_SOCKET = true;
 
 exports.REDIS_SERVER = "localhost";
-exports.REDIS_PORT = 6379;
+exports.REDIS_PORT = 7379;
 
-exports.SHOW_PACKET = false;
+exports.SHOW_PACKET = true;
 
 exports.CREATE_ACCOUNT_LOCK_FILE = 'create-account.lock';
 

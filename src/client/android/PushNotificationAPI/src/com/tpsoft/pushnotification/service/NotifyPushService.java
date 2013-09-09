@@ -713,10 +713,9 @@ public class NotifyPushService extends Service {
 						// ÐèÒªµÇÂ¼ÃÜÂë
 						String password = Crypt.md5(loginParams
 								.getClientPassword());
-						String ss = Crypt
-								.rsaEncrypt(
-										appParams.getLoginProtectKey(),
-										(loginParams.getClientPassword() + "," + password));
+						String ss = Crypt.rsaEncrypt(
+								appParams.getLoginProtectKey(),
+								(loginParams.getClientId() + "," + password));
 						out.write(String.format(GET_USERNAME_RES, "true",
 								"true", ss.length(), ss).getBytes("UTF-8"));
 					} else {

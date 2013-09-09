@@ -248,7 +248,7 @@ void main(function () {
     webapp.post('/account/:name', accman.checkNewAccountInfo, accman.createNew);
     //
     // 2)修改账号信息
-    // curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"phone\":\"13811111111\"}" http://localhost:4567/account/123
+    // curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"new_phone\":\"13811111111\"}" http://localhost:4567/account/123
     webapp.put('/account/:id', accman.checkId, accman.checkAccountUpdateInfo, accman.updateOld);
     //
     // 3)禁用账号
