@@ -207,6 +207,7 @@ void main(function () {
 		res.setHeader("Content-Type", "text/html");
 		res.render('login', {
 			pageTitle: '消息推送中心 - 登录'
+                        ,req: req
 		});
     });
     webapp.post('/login',  passport.authenticate('local', { successRedirect: '/',
@@ -248,7 +249,7 @@ void main(function () {
     webapp.post('/account/:name', accman.checkNewAccountInfo, accman.createNew);
     //
     // 2)修改账号信息
-    // curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"new_phone\":\"13811111111\"}" http://localhost:4567/account/123
+    // curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"phone\":\"13811111111\"}" http://localhost:4567/account/123
     webapp.put('/account/:id', accman.checkId, accman.checkAccountUpdateInfo, accman.updateOld);
     //
     // 3)禁用账号
@@ -293,14 +294,14 @@ void main(function () {
     //
     // 1)广播消息
     // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"body\":\"hello, everyone\"}" http://localhost:4567/application/4083AD3D-0F41-B78E-4F5D-F41A515F2667/message
-    webapp.post('/application/:id/message', appman.checkId, msgpush.broadcast);
+    webapp.post('/application/:id/message', appman.checkId, accman.checkUser, msgpush.broadcast);
     //
     // 2)群发消息
     // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"accounts\":[{\"name\":\"accname\"}],\"message\":{\"body\":\"hello\",\"attachments\":[{\"title\":\"at1\",\"type\":\"application/oct-stream\",\"filename\":\"at1.bin\",\"url\":\"http://test.com/att1\"}]}}" http://localhost:4567/application/123/accounts/message
-    webapp.post('/application/:id/accounts/message', appman.checkId, msgpush.multicast);
+    webapp.post('/application/:id/accounts/message', appman.checkId, accman.checkUser, msgpush.multicast);
     // 3)发送消息
     // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"body\":\"hello\",\"attachments\":[{\"title\":\"at1\",\"type\":\"application/oct-stream\",\"filename\":\"at1.bin\",\"url\":\"http://test.com/att1\"}]}" http://localhost:4567/application/123/account/accname/message
-    webapp.post('/application/:id/account/:name/message', appman.checkId, accman.checkName, msgpush.send);
+    webapp.post('/application/:id/account/:name/message', appman.checkId, accman.checkName, accman.checkUser, msgpush.send);
     // 4)推送消息(适合web提交)
     webapp.post('/pushmsg', ensureLoggedIn('/login'), user.can('push message'), msgpush.pushMessage);
     // 5)清除所有消息(适合web提交)
@@ -330,6 +331,7 @@ void main(function () {
 		res.setHeader("Content-Type", "text/html");
 		res.render('index', {
 			pageTitle: '消息推送中心 - 首页'
+                        ,req:req
 		});
     });
 
@@ -338,6 +340,7 @@ void main(function () {
 		res.setHeader("Content-Type", "text/html");
 		res.render('appman', {
 			pageTitle: '消息推送中心 - 应用管理'
+                        ,req: req
 		});
     });
 
@@ -346,6 +349,7 @@ void main(function () {
 		res.setHeader("Content-Type", "text/html");
 		res.render('accman', {
 			pageTitle: '消息推送中心 - 账号管理'
+                        ,req: req
 		});
     });
 
@@ -354,6 +358,7 @@ void main(function () {
 		res.setHeader("Content-Type", "text/html");
 		res.render('msgman', {
 			pageTitle: '消息推送中心 - 消息管理'
+                        ,req: req
 		});
     });
 

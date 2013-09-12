@@ -18,15 +18,20 @@ var iconv = require('iconv-lite');  //用于转码
 
 const PLATFORM_SERVER = config.PLATFORM_SERVER;
 const PLATFORM_PORT = config.PLATFORM_PORT;
+const PLATFORM_USERNAME = 'autorss';
+const PLATFORM_PASSWORD = 'gzdx342';
 const APP_ID = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
 //
 const POLL_RSS_INTERVAL = config.POLL_RSS_INTERVAL;
+const FETCH_TIMEOUT = config.FETECH_TIMEOUT;
 //
 const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 //
 const HTTPD_PORT = config.HTTPD_PORT;
 //
 const LOG_ENABLED = config.LOG_ENABLED;
+
+const IMAGE_URL_NOT_CONATINS = config.IMAGE_URL_NOT_CONATINS;
 
 var webapp = express();
 
@@ -69,7 +74,7 @@ webapp.configure('production', function () {
 
 webapp.set('env', 'development');
 
-var logStream = LOG_ENABLED ? fs.createWriteStream("logs/app.log", {"flags": "a"}) : null;
+var logStream = fs.createWriteStream("logs/app.log", {"flags": "a"});
 
 var redis;
 
@@ -83,7 +88,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[app]";
     if (logStream != null) logStream.write(buffer + "\r\n");
-    console.log(buffer);
+    if (LOG_ENABLED) console.log(buffer);
 }
 
 function stripsTags(text)
@@ -91,12 +96,20 @@ function stripsTags(text)
   return $.trim($('<div>').html(text).text());
 }
 
-function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
+function pushMessage(channel, msgTitle, msgBody, msgUrl, pubDate, logoUrl, imageUrls, callback) {
 
-    var bodyText = JSON.stringify({title: msgTitle, body: msgBody,
-        attachments: [
-            {title: "logo", type: 'image/xxx', filename: 'logo', url: logoUrl}
-        ], url: msgUrl, need_receipt: true});
+    var attachments = [];
+    if (logoUrl) {
+       	attachments.push({title: "logo", type: 'image/xxx', filename: 'logo', url: logoUrl});
+    }
+    for (var imageIndex in imageUrls) {
+	if (imageIndex!="each") {
+		var imageUrl = imageUrls[imageIndex];
+		attachments.push({title: "image"+imageIndex, type: 'image/xxx', filename: 'image'+imageIndex, url: imageUrl});
+	}
+    }
+    var bodyText = JSON.stringify({user:{username:PLATFORM_USERNAME,password:PLATFORM_PASSWORD}, title: (!msgTitle||msgTitle==""?channel:msgTitle), body: (msgBody==""?msgTitle:msgBody),
+    attachments: attachments, url: msgUrl, generate_time: pubDate, need_receipt: true});
 
     var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
     options.method = "POST";
@@ -105,8 +118,16 @@ function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
         'Content-Length': Buffer.byteLength(bodyText)
     };
     var req = http.request(options, function (res) {
-
-        callback();
+        res.setEncoding('utf8');
+        var str = '';
+        res.on('data', function (chunk) {
+            str += chunk;
+        });
+        res.on('end', function () {
+            var result = JSON.parse(str);
+            if (result.success) callback();
+            else callback(result.errmsg);
+        });
     });
     req.on("error", function (err) {
 
@@ -116,7 +137,7 @@ function pushMessage(msgTitle, msgBody, msgUrl, logoUrl, callback) {
     req.end();
 }
 
-function getArticles(url, since, handleResult) {
+function getArticles(channel, url, since, handleResult) {
 
     if (!since) {
 
@@ -129,46 +150,87 @@ function getArticles(url, since, handleResult) {
 
         if (res.statusCode != 200) {
 
-            return handleResult("状态码 " + res.statusCode);
+            return handleResult("状态码: " + res.statusCode);
         }
 
+        res.setTimeout(FETCH_TIMEOUT, function() {
+            return handleResult("响应超时");  
+        });
+
         var bufferHelper = new BufferHelper();
+
         res.on('data', function (chunk) {
 
+            //log("接收到数据\""+chunk+"\"");
             bufferHelper.concat(chunk);
         });
         res.on('end', function () {
 
             var text = bufferHelper.toBuffer();
             var encoding = utils.parseXmlEncoding(text);
-            if (encoding != null && encoding.toUpperCase() != "UTF-8")
-                text = iconv.decode(text, encoding);
+            if (encoding != null) {
+                try {
+                    text = iconv.decode(text, encoding);
+                } catch(e) {
+                    log(e);
+                } 
+            }
 
+            //log("解析数据...");
             feedparser.parseString(text, function (err, meta, articles) {
 
                 if (err) return handleResult(err);
-                var logo = (meta.image.url ? meta.image.url : "");
+                var logo = (meta.image.url ? meta.image.url : null);
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
-
-					article.description = stripsTags(article.description);
+		    article.channel = channel;
                     article.logo = logo;
+		    article.images = [];
                     result.push(article);
 
-					var handler = new htmlparser.DefaultHandler(function (error, dom) {
-						if (!error) {
-
-							article.description = "";
-							for (var i in dom) {
-								if (dom[i].type=="text") {
-									article.description += dom[i].data;
-								}
-							}
-							callback();
+		    var handler = new htmlparser.DefaultHandler(function (error, dom) {
+		      if (!error) {
+				article.description = "";
+				for (var i in dom) {
+					if (dom[i].type=="text") {
+						article.description += (dom[i].data||"");
+					} else if (dom[i].type=="tag" && dom[i].name=="img") {
+						var imageSrc = dom[i].attribs.src;
+						if (imageSrc && checkImageUrl(imageSrc)) {
+							article.images.push(dom[i].attribs.src);
 						}
-					});
-					var parser = new htmlparser.Parser(handler);
-					parser.parseComplete(article.description);
+					}
+					if (dom[i].children) {
+						getImagesFromChildren(dom[i].children, article.images);
+					}
+				}
+				function getImagesFromChildren(children, images) {
+					for (var i in children) {
+						if (children[i].type=="tag" && children[i].name=="img") {
+							var imageSrc = children[i].attribs.src;
+							if (imageSrc && checkImageUrl(imageSrc)) {
+								images.push(children[i].attribs.src);
+							}
+						}
+						if (children[i].children) {
+							getImagesFromChildren(children[i].children, images);
+						}
+					}
+				}
+				function checkImageUrl(url) {
+					for (var i in IMAGE_URL_NOT_CONATINS) {
+						var word = IMAGE_URL_NOT_CONATINS[i];
+						if (url.indexOf(word)!=-1) return false;
+					}
+					return true;
+				}
+				article.description = (article.description||"").trim();
+				if (article.description=="null") article.description = "";
+				callback();
+			}
+		    });
+		    var parser = new htmlparser.Parser(handler);
+		    parser.parseComplete(article.description);
                 }, function (err) {
 
                     handleResult(err, result);
@@ -177,8 +239,8 @@ function getArticles(url, since, handleResult) {
         });
     }).on('error', function (e) {
 
-            handleResult(e.message);
-        });
+        handleResult(e.message);
+    });
 }
 
 function getAllArticles(handleResult) {
@@ -190,15 +252,15 @@ function getAllArticles(handleResult) {
         var result = [];
         async.forEachSeries(channles, function (channel, callback) {
 
-            //log("获取频道 "+channel.url+" 上的文章...");
-            getArticles(channel.url, channel.since, function (err, articles) {
+            log("获取频道 "+channel.title+"("+channel.url+")上的文章...");
+            getArticles(channel.title, channel.url, channel.since, function (err, articles) {
                 if (err) {
 
                     log(err);
 
                     return callback(); // 忽略错误
                 }
-                //log("从频道 "+channel.url+" 获取到 "+articles.length+" 篇文章。");
+                log("从频道 "+channel.url+" 获取到 "+articles.length+" 篇文章。");
                 async.forEachSeries(articles, function (article, callback) {
 
                     db.existsArticle(article, function (err, exists) {
@@ -248,7 +310,7 @@ function getAllArticlesAndPush() {
         log("本次共获取到 " + articles.length + " 篇新文章。");
         async.forEachSeries(articles, function (article, callback) {
 
-            pushMessage(article.title, article.description, article.link, article.logo, callback);
+            pushMessage(article.channel, article.title, article.description, article.link, article.pubDate, article.logo, article.images, callback);
         }, function (err) {
 
             if (err) log(err);
@@ -278,97 +340,92 @@ void main(function () {
     process.on('SIGINT', aboutExit);
     process.on('SIGTERM', aboutExit);
 
-    db.openDatabase(function (err) {
+	// 解析 OPML 并增加频道
+	// curl --header "Content-Type:application/json;charset=utf-8" -d "{\"url\":\"http://www.cctv.com/rss/01/index.xml\"}" http://localhost:5678/opml
+	webapp.post('/opml', function (req, res) {
 
-        if (err) process.exit(1);
+		var opmlUrl = req.body.url;
+		log("OPML: " + opmlUrl);
+		channel.getChannelsFromOpml(opmlUrl, function (err, channels) {
 
-        // 解析 OPML 并增加频道
-        // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"url\":\"http://www.cctv.com/rss/01/index.xml\"}" http://localhost:5678/opml
-        webapp.post('/opml', function (req, res) {
+			if (err) {
+				return res.json({success: false,errcode: 1,errmsg: err});
+			}
 
-            var opmlUrl = req.body.url;
-            log("OPML: " + opmlUrl);
-            channel.getChannelsFromOpml(opmlUrl, function (err, channels) {
+			db.addChannels(channels, function (err) {
 
-                if (err) {
-                    return res.json({success: false,errcode: 1,errmsg: err});
-                }
+				if (!err) {
+					res.json({success: true,count: channels.length});
+				} else {
+					res.json({success: false,errcode: 2,errmsg: err});
+				}
+			});
+		});
+	});
 
-                db.addChannels(channels, function (err) {
+	// 手动增加频道
+	// curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"网易新闻\",\"title\":\"头条新闻\",\"description\":\"[网易新闻]头条新闻\",\"url\":\"http://news.163.com/special/00011K6L/rss_newstop.xml\"}" http://localhost:5678/channel
+	webapp.post('/channel', function (req, res) {
 
-                    if (!err) {
-                        res.json({success: true,count: channels.length});
-                    } else {
-                        res.json({success: false,errcode: 2,errmsg: err});
-                    }
-                });
-            });
-        });
+		var channel = req.body;
+		db.addChannel(channel, function (err) {
 
-        // 手动增加频道
-        // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"网易新闻\",\"title\":\"头条新闻\",\"description\":\"[网易新闻]头条新闻\",\"url\":\"http://news.163.com/special/00011K6L/rss_newstop.xml\"}" http://localhost:5678/channel
-        webapp.post('/channel', function (req, res) {
+			if (!err) {
+				res.json({success: true});
+			} else {
+				res.json({success: false,errcode: 1,errmsg: err});
+			}
+		});
+	});
 
-            var channel = req.body;
-            db.addChannel(channel, function (err) {
+	// 删除频道
+	// curl -X DELETE http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
+	webapp.delete('/channel/:id', function (req, res) {
 
-                if (!err) {
-                    res.json({success: true});
-                } else {
-                    res.json({success: false,errcode: 1,errmsg: err});
-                }
-            });
-        });
+		var channelId = req.params.id;
+		db.removeChannel(channelId, function (err) {
 
-        // 删除频道
-        // curl -X DELETE http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
-        webapp.delete('/channel/:id', function (req, res) {
+			if (!err) {
+				res.json({success: true});
+			} else {
+				res.json({success: false,errcode: 1,errmsg: err});
+			}
+		});
+	});
 
-            var channelId = req.params.id;
-            db.removeChannel(channelId, function (err) {
+	// 修改频道
+	// curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"description\":\"ddd\"}" http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
+	webapp.put('/channel/:id', function (req, res) {
 
-                if (!err) {
-                    res.json({success: true});
-                } else {
-                    res.json({success: false,errcode: 1,errmsg: err});
-                }
-            });
-        });
+		var channelId = req.params.id;
+		var channel = req.body;
+		db.updateChannel(channelId, channel, function (err) {
 
-        // 修改频道
-        // curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"description\":\"ddd\"}" http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
-        webapp.put('/channel/:id', function (req, res) {
+			if (!err) {
+				res.json({success: true});
+			} else {
+				res.json({success: false,errcode: 1,errmsg: err});
+			}
+		});
+	});
 
-            var channelId = req.params.id;
-            var channel = req.body;
-            db.updateChannel(channelId, channel, function (err) {
+	// 获取所有频道
+	// curl http://localhost:5678/channels
+	webapp.get('/channels', function (req, res) {
 
-                if (!err) {
-                    res.json({success: true});
-                } else {
-                    res.json({success: false,errcode: 1,errmsg: err});
-                }
-            });
-        });
+		db.getAllChannels(function (err, channels) {
 
-        // 获取所有频道
-        // curl http://localhost:5678/channels
-        webapp.get('/channels', function (req, res) {
+			if (!err) {
+				res.json({success: true, channels:channels});
+			} else {
+				res.json({success: false,errcode: 1,errmsg: err});
+			}
+		});
+	});
 
-            db.getAllChannels(function (err, channels) {
+	webapp.listen(HTTPD_PORT);
+	log('服务器正在监听端口 ' + HTTPD_PORT + '...');
 
-                if (!err) {
-                    res.json({success: true, channels:channels});
-                } else {
-                    res.json({success: false,errcode: 1,errmsg: err});
-                }
-            });
-        });
-
-        webapp.listen(HTTPD_PORT);
-        log('服务器正在监听端口 ' + HTTPD_PORT + '...');
-
-        log("等待 " + (POLL_RSS_INTERVAL / 1000) + " 秒钟...");
-        setTimeout(getAllArticlesAndPush, POLL_RSS_INTERVAL);
-    });
+	//log("等待 " + (POLL_RSS_INTERVAL / 1000) + " 秒钟...");
+	/*setTimeout(*/getAllArticlesAndPush()/*, POLL_RSS_INTERVAL)*/;
 });

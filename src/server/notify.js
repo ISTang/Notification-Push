@@ -26,6 +26,8 @@ const RECEIVE_RECEIPT_TIMEOUT = config.RECEIVE_RECEIPT_TIMEOUT;
 // 体部长度是否采用字节单位
 const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
 
+const USER_AVATAR = config.USER_AVATAR;
+
 var logStream = fs.createWriteStream(__dirname + "/logs/notify.log", {"flags": "a"});
 
 var loginIndex;
@@ -232,34 +234,42 @@ process.on('message', function (m, socket) {
             }
         }
 
-        function forwardMsg(appId, senderId, receiver, msgText, sendId, handleResult) {
+        function forwardMsg(appId, senderId, senderName, receiver, msgText, sendId, handleResult) {
 
             var now = new Date();
             var message = JSON.parse(msgText);
             message.generate_time = now.Format("yyyyMMddHHmmss");
-			message.sender_id = senderId;
+            message.sender_id = senderId; // 不会发送到客户端
+	    message.sender_name = senderName;
 
             log("Saving message for application " + appId);
             db.redisPool.acquire(function (err, redis) {
                 if (err) {
                     handleResult(err);
                 } else {
-					db.getAccountIdByName(redis, receiver, function (err, receiverId) {
-						if (err) {
-							db.redisPool.release(redis);
-							return handleResult(err);
-						}
-						if (!receiverId) {
-							db.redisPool.release(redis);
-							return handleResult("Receiver " + receiver + " not exists");
-						}
+		async.series([
+		    function (callback) {
+                        db.getUserAvatar(redis, senderId, function (err, avatar) {
+                                if (err) return callback(err);
+				if (!message.attachments) message.attachments = [];
+				message.attachments.push({title:"sender-avatar",type:"image/xxx",filename:"sender-avatar",url:(avatar||USER_AVATAR)});
+				callback();
+			});
+		    },
+		    function (callback) {
+			db.getAccountIdByName(redis, receiver, function (err, receiverId) {
+				if (err) return callback(err);
+				if (!receiverId) return callback("Receiver " + receiver + " not exists");
 						
-						db.saveMessage(redis, appId, message, [receiverId], function (err, msgId) {
-							log("Message id: " + msgId);
+				db.saveMessage(redis, appId, message, [senderId,receiverId], function (err, msgId) {
+					if (err) return callback(err);
+					log("Message id: " + msgId);
+					delete message.sender_id;
+                                        async.series([
+                                                function(callback){
 							db.getActiveConnections(redis, appId, receiverId, function (err, connectionInfos) {
 								if (err) {
-									db.redisPool.release(redis);
-									return handleResult(err);
+									return callback(err);
 								}
 
 								for(var i in connectionInfos) {
@@ -268,22 +278,47 @@ process.on('message', function (m, socket) {
 									publishMessage(connectionInfo, msgId, message, sendId);
 								}
 
-								db.redisPool.release(redis);
-								handleResult();
+								callback();
 							});
+                                                },
+                                                function(callback) {
+                                                        db.getActiveConnections(redis, appId, senderId, function (err, connectionInfos) {
+                                                                if (err) {
+                                                                        return callback(err);
+                                                                }
 
-							function publishMessage(connectionInfo, msgId, message, sendId) {
-								var o = {
-									connId: connectionInfo.connId,
-									msgId: msgId,
-									message: message,
-									msgKey: connectionInfo.msgKey,
-									sendId: sendId,
-									needReceipt: true};
-								redis.publish(connectionInfo.channelId, JSON.stringify(o));
-							}
-						});
-					});
+                                                                for(var i in connectionInfos) {
+                                                                        var connectionInfo = connectionInfos[i];
+                                                                        if (connectionInfo.connId!=connId) {
+                                                                        	log("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+                                                                        	publishMessage(connectionInfo, msgId, message, sendId);
+									}
+                                                                }
+
+                                                                callback();
+                                                        });
+                                                }],
+                                                function(err) {
+                                                        callback(err);
+                                                });
+
+                                                function publishMessage(connectionInfo, msgId, message, sendId) {
+                                                        var o = {
+                                                                connId: connectionInfo.connId,
+                                                                msgId: msgId,
+                                                                message: message,
+                                                                msgKey: connectionInfo.msgKey,
+                                                                sendId: sendId,
+                                                                needReceipt: true };
+                                                        redis.publish(connectionInfo.channelId, JSON.stringify(o));
+                                                }
+				});
+			});
+		    }],
+		    function (err) {
+			db.redisPool.release(redis);
+			handleResult(err);
+		    });
                 }
             });
         }

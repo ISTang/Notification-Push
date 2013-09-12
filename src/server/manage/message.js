@@ -29,7 +29,7 @@ const MIN_EXPIRATION_TIME = config.MIN_EXPIRATION_TIME;
 //
 const LOG_ENABLED = config.LOG_ENABLED;
 
-var logStream = LOG_ENABLED ? fs.createWriteStream("logs/message.log", {"flags": "a"}) : null;
+var logStream = fs.createWriteStream("logs/message.log", {"flags": "a"});
 
 Date.prototype.Format = utils.DateFormat;
 
@@ -46,9 +46,20 @@ function log(msg) {
 
 // 广播消息
 function broadcastMessage(req, res) {
+    if (!req.user.passed) {
+        res.json({
+            success:false,
+            errcode: -1,
+            errmsg: req.user.reason
+        });
+        return;
+    }
+
     var appId = req.params.id;
 
     var message = req.body; //JSON.parse(req.rawBody);
+    message.sender_id = req.user.id;
+
     var attachmentsString = '[';
     if (message.attachments != null) {
         message.attachments.forEach(function (attachment) {
@@ -63,11 +74,13 @@ function broadcastMessage(req, res) {
         ', body=' + message.body +
         ', type=' + (message.type != null ? message.type : 'text') +
         ', url=' + (message.url != null ? message.url : '') +
+        ', generate_time=' + (message.generate_time != null ? message.generate_time : 'now') +
         ', send_time=' + (message.send_time != null ? message.send_time : 'now') +
         ', expiration=' + (message.expiration != null ? message.expiration : 'never') +
         ', callback=' + (message.callback != null ? message.callback : '') +
         ', need_receipt=' + (message.need_receipt != false ? 'yes' : 'no') +
         ', attachments=' + attachmentsString +
+        ', sender_id=' + req.user.id+
         ''
     );
 
@@ -76,6 +89,15 @@ function broadcastMessage(req, res) {
 
 // 群发消息
 function multicastMessage(req, res) {
+    if (!req.user.passed) {
+        res.json({
+            success:false,
+            errcode: -1,
+            errmsg: req.user.reason
+        });
+        return;
+    }
+
     var appId = req.params.id;
 
     //var input = req.body; //JSON.parse(req.rawBody);
@@ -89,6 +111,8 @@ function multicastMessage(req, res) {
     accountsStirng += ']';
 
     var message = req.body.message;
+    message.sender_id = req.user.id;
+
     var attachmentsString = '[';
     if (message.attachments != null) {
         message.attachments.forEach(function (attachment) {
@@ -105,10 +129,12 @@ function multicastMessage(req, res) {
         ', type=' + (message.type != null ? message.type : 'text') +
         ', url=' + (message.url != null ? message.url : '') +
         ', send_time=' + (message.send_time != null ? message.send_time : 'now') +
+        ', generate_time=' + (message.generate_time != null ? message.generate_time : 'now') +
         ', expiration=' + (message.expiration != null ? message.expiration : 'never') +
         ', callback=' + (message.callback != null ? message.callback : '') +
         ', need_receipt=' + (message.need_receipt != false ? 'yes' : 'no') +
         ', attachments=' + attachmentsString +
+        ', sender_id=' + req.user.id+
         ''
     );
 
@@ -117,10 +143,21 @@ function multicastMessage(req, res) {
 
 // 发送消息
 function sendMessage(req, res) {
+    if (!req.user.passed) {
+        res.json({
+            success:false,
+            errcode: -1,
+            errmsg: req.user.reason
+        });
+        return;
+    }
+
     var appId = req.params.id;
     var accountName = req.params.name;
 
     var message = req.body; //JSON.parse(req.rawBody);
+    message.sender_id = req.user.id;
+
     var attachmentsString = '[';
     if (message.attachments != null) {
         message.attachments.forEach(function (attachment) {
@@ -136,10 +173,12 @@ function sendMessage(req, res) {
         ', type=' + (message.type != null ? message.type : 'text') +
         ', url=' + (message.url != null ? message.url : '') +
         ', send_time=' + (message.send_time != null ? message.send_time : 'now') +
+        ', generate_time=' + (message.generate_time != null ? message.generate_time : 'now') +
         ', expiration=' + (message.expiration != null ? message.expiration : 'never') +
         ', callback=' + (message.callback != null ? message.callback : '') +
         ', need_receipt=' + (message.need_receipt != false ? 'yes' : 'no') +
         ', attachments=' + attachmentsString +
+        ', sender_id=' + req.user.id+
         ''
     );
 
@@ -169,7 +208,7 @@ function pushMessage(req, res) {
         type: "text",
         body: req.body.msgBody,
         need_receipt: true,
-		sender_id: req.user.id
+        sender_id: req.user.id
     };
     if (req.body.msgTitle!="")
         message.title = req.body.msgTitle;

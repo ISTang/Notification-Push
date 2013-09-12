@@ -71,13 +71,17 @@
 			"aoColumns": [
 				{ "sName": "messageId", "sDefaultContent": "", "sWidth": "80px" },
 				{ "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
-				{ "sName": "sender", "sDefaultContent": "", "sWidth": "47px" },
-				{ "sName": "receivers", "sDefaultContent": "", "sWidth": "48px" },
+				{ "sName": "sender", "sDefaultContent": "", "fnRender": function(obj) {
+                                            return (obj.aData[2]==""?"(后台)":obj.aData[2]);
+                                        }, "sWidth": "47px" },
+				{ "sName": "receivers", "sDefaultContent": "", "fnRender": function(obj) {
+                                            return (obj.aData[3]==""?"(全部)":obj.aData[3]);
+                                        }, "sWidth": "48px" },
 				{ "sName": "type", "sDefaultContent": "文字", "sWidth": "56px" },
 				{ "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
 				{ "sName": "body", "sDefaultContent": "", "fnRender": function(obj) {
                     var body = obj.aData[ obj.iDataColumn ];
-                    return (obj.aData[7]?"<a href='"+obj.aData[7]+"' target='blank'>"+body+"</a>":body);
+                    return (obj.aData[7]?"<a href='"+obj.aData[7]+"' target='blank'>"+(body==null||body==''||body=='null'?'_':body)+"</a>":body);
 					} 
 				},
 				{ "sName": "url", "sDefaultContent": "", "bVisible": false },

@@ -22,7 +22,7 @@ var db = require(__dirname + '/db');
 
 const LOG_ENABLED = config.LOG_ENABLED;
 
-var logStream = LOG_ENABLED ? fs.createWriteStream("logs/channel.log", {"flags": "a"}) : null;
+var logStream = fs.createWriteStream("logs/channel.log", {"flags": "a"});
 
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
@@ -39,7 +39,7 @@ function log(msg) {
     var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
     var buffer = "[" + strDatetime + "] " + msg + "[channel]";
     if (logStream != null) logStream.write(buffer + "\r\n");
-    console.log(buffer);
+    if (LOG_ENABLED) console.log(buffer);
 }
 
 function getChannelsFromOpml(opmlUrl, handleResult) {

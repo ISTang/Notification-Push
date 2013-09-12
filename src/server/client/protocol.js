@@ -607,7 +607,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 // 解密体部内容
                 msgText = crypt.desDecrypt(body, msgKey);
             }
-            forwardMsg(appId, accountId, receiver, msgText, sendId, function (err) {
+            forwardMsg(appId, accountId, accountName, receiver, msgText, sendId, function (err) {
 
                 var ss = (err ? "0," + err : "");
                 if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": Send message " + (err?"ERROR":"OK"));

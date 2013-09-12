@@ -31,6 +31,8 @@ exports.checkNewAccountInfo = checkNewAccountInfo;
 exports.checkAccountUpdateInfo = checkAccountUpdateInfo;
 //
 exports.getAccounts = getAccounts;
+//
+exports.checkUser = checkUser;
 
 const LOG_ENABLED = config.LOG_ENABLED;
 
@@ -381,6 +383,7 @@ function checkAccountUpdateInfo(req, res, next) {
 	});
 }
 
+// 获取账号信息
 function getAccounts(req, res) {
     log('Get accounts: ' +
         'sEcho=' + req.query.sEcho +
@@ -479,4 +482,26 @@ function getAccounts(req, res) {
 	function compareBoolean(b1, b2) {
 		return compareString(b1?"禁用":"启用", b2?"禁用":"启用");
 	}
+}
+
+// 检查用户身份(用户名和密码)
+function checkUser(req, res, next) {
+    var user = req.body.user; //JSON.parse(req.rawBody);
+    log('Checking user ' +
+        'username=' + (user.username||'(null)') +
+        ', password=' + (user.password||'(null)')
+    );
+
+     db.redisPool.acquire(function(err, redis) {
+         if (err) {
+             next(err);
+         } else {
+             db.checkUsername(redis, user.username, utils.md5(user.password), false, function (result) {
+                 db.redisPool.release(redis);
+                 if (!result.passed) req.user = {passed:false, reason:result.reason};
+                 else req.user = {passed:true,id:result.accountId,name:result.accountName,phone:result.phoneNumber,email:result.emailAddress};
+                 next();
+             });
+         }
+     });
 }

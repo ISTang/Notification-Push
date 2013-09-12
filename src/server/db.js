@@ -46,6 +46,9 @@ exports.getAccountInfo = getAccountInfo;
 exports.existsUsername = existsUsername;
 exports.existsAccountId = existsAccountId;
 //
+exports.updateUserAvatar = updateUserAvatar;
+exports.getUserAvatar = getUserAvatar;
+//
 exports.checkApplicationUpdateInfo = checkApplicationUpdateInfo;
 exports.saveNewApplicationInfo = saveNewApplicationInfo;
 exports.updateApplicationInfo = updateApplicationInfo;
@@ -480,6 +483,7 @@ function recordMessageSentTime(redis, connId, msgId, sentTime, needReceipt, hand
 function recordMessageReceiptTime(redis, connId, msgId, receiptTime, handleResult) {
 	redis.hgetall("connection:" + connId, function (err, connectionInfo) {
 		if (err) return handleResult(err);
+                if (!connectionInfo) return handleResult();
 		redis.hset("account:" + connectionInfo.account_id + ":application:" + connectionInfo.application_id + ":message:" + msgId,
 			"receipt_time", receiptTime.Format("yyyyMMddHHmmss"), redis.print);
 		redis.zadd("account:" + connectionInfo.account_id + ":application:" + connectionInfo.application_id + ":sent_messages", receiptTime.getTime(), msgId);
@@ -547,7 +551,8 @@ function getOfflineMessages(redis, appId, accountId, days, handleResult) {
  * @param handuleResult(err, msgId)
  */
 function saveMessage(redis, appId, message, accountIds, handleResult) {
-	var now = new Date();
+        var now = new Date();
+        var generateTime = message.generate_time || now.Format("yyyyMMddHHmmss");
 	var msgId = uuid.v4().toUpperCase();
 
 	redis.hmset("message:" + msgId, 
@@ -558,7 +563,7 @@ function saveMessage(redis, appId, message, accountIds, handleResult) {
 		"send_time", message.send_time || "",
 		"expiration", message.expiration || "",
 		"callback", message.callback || "",
-		"generate_time", now.Format("yyyyMMddHHmmss"),
+		"generate_time", generateTime,
 		"need_receipt", message.need_receipt ? 1 : 0,
 		"sender_id", message.sender_id, function (err, result) {
 			if (err) {
@@ -1066,6 +1071,21 @@ function existsAccountId(redis, accountId, handleResult) {
 }
 
 /**
+ * 修改用户头像
+ */
+function updateUserAvatar(redis, accountId, avatar, callback) {
+	redis.set("account:"+accountId+":avatar", avatar, callback);
+}
+
+/**
+ * 获取用户头像
+ */
+function getUserAvatar(redis, accountId, callback) {
+       redis.get("account:"+accountId+":avatar", callback);
+}
+
+
+/**
  * 检查应用更新信息
  * @param id 应用ID
  * @param name 应用名称
@@ -1128,21 +1148,24 @@ function saveNewApplicationInfo(redis, id, name, password, needLogin, needLoginP
  * @param protectLogin 安全登录
  * @param encryptMessage 安全消息
  * @param updateTime 修改时间
- * @param handleResult
+ * @param callback
  */
 function updateApplicationInfo(redis, id, name, newName, needLogin, needLoginPassword, 
-	autoCreateAccount, protectLogin, encryptMessage, updateTime, handleResult) {
-	redis.get("application:" + id + ":name");
+	autoCreateAccount, protectLogin, encryptMessage, updateTime, callback) {
+	redis.get("application:" + id + ":name", function(err, oldName) {
+		if (err) return callback(err);
+		if (oldName!=name) return callback("Incorrect application name");
+	        
+		if (newName) redis.set("application:" + id + ":name", newName);
+        	if (needLogin != null) redis.set("application:" + id + ":client:need_login", needLogin ? 1 : 0);
+        	if (needLoginPassword != null) redis.set("application:" + id + ":client:need_password", needLoginPassword ? 1 : 0);
+        	if (autoCreateAccount != null) redis.set("application:" + id + ":account:auto_create", autoCreateAccount ? 1 : 0);
+        	if (protectLogin != null) redis.set("application:" + id + ":login:need_protect", protectLogin ? 1 : 0);
+        	if (encryptMessage != null) redis.set("application:" + id + ":message:need_encrypt", encryptMessage ? 1 : 0);
+        	redis.set("application:" + id + ":update_time", updateTime);
 
-	if (newName) redis.set("application:" + id + ":name", newName);
-	if (needLogin != null) redis.set("application:" + id + ":client:need_login", needLogin ? 1 : 0);
-	if (needLoginPassword != null) redis.set("application:" + id + ":client:need_password", needLoginPassword ? 1 : 0);
-	if (autoCreateAccount != null) redis.set("application:" + id + ":account:auto_create", autoCreateAccount ? 1 : 0);
-	if (protectLogin != null) redis.set("application:" + id + ":login:need_protect", protectLogin ? 1 : 0);
-	if (encryptMessage != null) redis.set("application:" + id + ":message:need_encrypt", encryptMessage ? 1 : 0);
-	redis.set("application:" + id + ":update_time", updateTime);
-
-	handleResult();
+        	callback();
+	});
 }
 
 /**
@@ -1808,3 +1831,4 @@ void main(function () {
 		log : false 
 	});	
 });
+

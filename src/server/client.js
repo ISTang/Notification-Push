@@ -191,7 +191,7 @@ void main(function () {
 	
 	var clientIds = [];
 	for (var i=0;i<workerCount;i++) {
-		clientIds.push(clientId);
+		clientIds.push(clientId+(i+1));
 	}
 	
 	async.forEach(clientIds, function (clientId, callback) {
