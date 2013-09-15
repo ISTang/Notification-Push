@@ -66,6 +66,7 @@ public class MyMessage {
 	};
 
 	private String sender;
+	private String receiver;
 	private String title;
 	private String body;
 	private String type;
@@ -74,9 +75,11 @@ public class MyMessage {
 	private Date expiration;
 	private Attachment[] attachments;
 
-	public MyMessage(String sender, String title, String body, String type, String url,
-			Date generateTime, Date expiration, Attachment[] attachments) {
+	public MyMessage(String sender, String receiver, String title, String body,
+			String type, String url, Date generateTime, Date expiration,
+			Attachment[] attachments) {
 		this.sender = sender;
+		this.receiver = receiver;
 		this.title = title;
 		this.body = body;
 		this.type = type;
@@ -107,6 +110,7 @@ public class MyMessage {
 
 	public MyMessage(Bundle bundle) throws ParseException {
 		sender = bundle.getString("sender");
+		receiver = bundle.getString("receiver");
 		title = bundle.getString("title");
 		body = bundle.getString("body");
 		type = bundle.getString("type");
@@ -145,9 +149,9 @@ public class MyMessage {
 			if (jsonObject.has("sender_name")) {
 				message.setSender(jsonObject.getString("sender_name"));
 			}
-			if (jsonObject.has("title") && 
-					jsonObject.getString("title")!=null && 
-					!jsonObject.getString("title").equals("")) {
+			if (jsonObject.has("title")
+					&& jsonObject.getString("title") != null
+					&& !jsonObject.getString("title").equals("")) {
 				message.setTitle(jsonObject.getString("title"));
 			}
 			message.setBody(jsonObject.getString("body"));
@@ -156,9 +160,8 @@ public class MyMessage {
 			} else {
 				message.setType("text");
 			}
-			if (jsonObject.has("url") && 
-					jsonObject.getString("url")!=null && 
-					!jsonObject.getString("url").equals("")) {
+			if (jsonObject.has("url") && jsonObject.getString("url") != null
+					&& !jsonObject.getString("url").equals("")) {
 				message.setUrl(jsonObject.getString("url"));
 			}
 			if (jsonObject.has("generate_time")) {
@@ -234,17 +237,19 @@ public class MyMessage {
 
 	public Bundle getBundle() {
 		Bundle bundle = new Bundle();
-		if (sender!=null)
+		if (sender != null)
 			bundle.putString("sender", sender);
-		if (title!=null)
+		if (receiver != null)
+			bundle.putString("receiver", receiver);
+		if (title != null)
 			bundle.putString("title", title);
 		bundle.putString("body", body);
 		bundle.putString("type", type);
-		if (url!=null)
+		if (url != null)
 			bundle.putString("url", url);
-		if (generateTime != null) 
+		if (generateTime != null)
 			bundle.putString("generateTime", dateFormat.format(generateTime));
-		if (expiration != null) 
+		if (expiration != null)
 			bundle.putString("expiration", dateFormat.format(expiration));
 		if (attachments != null) {
 			bundle.putInt("attachmentCount", attachments.length);
@@ -269,7 +274,15 @@ public class MyMessage {
 	public void setSender(String sender) {
 		this.sender = sender;
 	}
-	
+
+	public String getReceiver() {
+		return receiver;
+	}
+
+	public void setReceiver(String receiver) {
+		this.receiver = receiver;
+	}
+
 	public String getTitle() {
 		return title;
 	}
