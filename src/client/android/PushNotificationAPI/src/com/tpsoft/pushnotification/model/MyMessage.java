@@ -65,6 +65,7 @@ public class MyMessage {
 
 	};
 
+	private long id;
 	private String sender;
 	private String receiver;
 	private String title;
@@ -109,6 +110,7 @@ public class MyMessage {
 	}
 
 	public MyMessage(Bundle bundle) throws ParseException {
+		id = bundle.getLong("id");
 		sender = bundle.getString("sender");
 		receiver = bundle.getString("receiver");
 		title = bundle.getString("title");
@@ -237,6 +239,7 @@ public class MyMessage {
 
 	public Bundle getBundle() {
 		Bundle bundle = new Bundle();
+		bundle.putLong("id", id);
 		if (sender != null)
 			bundle.putString("sender", sender);
 		if (receiver != null)
@@ -265,6 +268,14 @@ public class MyMessage {
 			}
 		}
 		return bundle;
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
 	}
 
 	public String getSender() {
