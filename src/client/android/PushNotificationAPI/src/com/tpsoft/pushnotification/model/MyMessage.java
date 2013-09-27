@@ -65,16 +65,16 @@ public class MyMessage {
 
 	};
 
-	private long id;
-	private String sender;
-	private String receiver;
-	private String title;
-	private String body;
-	private String type;
-	private String url;
-	private Date generateTime;
-	private Date expiration;
-	private Attachment[] attachments;
+	private long id; // 消息编号(仅用于发送，由调用者指定)
+	private String sender; // 消息发送者账号名称(仅适合接收到的消息)
+	private String receiver; // 消息接收者(账号名称、电话号码或Email地址皆可，仅用于发送)
+	private String title; // 消息标题(可选)
+	private String body; // 消息内容
+	private String type; // 消息类型(text/xml/html)
+	private String url; // 消息详情URL(可选)
+	private Date generateTime; // 消息生成时间(yyyyMMddHHmmss)
+	private Date expiration; // 消息过期时间(可选，格式同上)
+	private Attachment[] attachments; // 消息附件
 
 	public MyMessage(String sender, String receiver, String title, String body,
 			String type, String url, Date generateTime, Date expiration,
