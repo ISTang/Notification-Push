@@ -28,7 +28,7 @@ exports.TRACK_SOCKET = true;
 exports.REDIS_SERVER = "localhost";
 exports.REDIS_PORT = 7379;
 
-exports.SHOW_PACKET = false;
+exports.SHOW_PACKET = true;
 
 exports.CREATE_ACCOUNT_LOCK_FILE = 'create-account.lock';
 

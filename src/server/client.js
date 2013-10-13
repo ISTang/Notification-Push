@@ -24,7 +24,7 @@ function log(msg) {
 
 const appId = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
 const appPassword = "@0Vd*4Ak";
-const  protectKey = {public:"n9SfmcRs",private:"n9SfmcRs"};
+const protectKey = {public:"n9SfmcRs",private:"n9SfmcRs"};
 
 function getAppInfo() {
     return {id: appId, password: appPassword, protectKey: protectKey};
@@ -191,13 +191,16 @@ void main(function () {
 	
 	var clientIds = [];
 	for (var i=0;i<workerCount;i++) {
-		clientIds.push(clientId+(i+1));
+		clientIds.push(clientId);
 	}
 	
 	async.forEach(clientIds, function (clientId, callback) {
-			startWorker(clientId, clientPassword, callback);
+			startWorker(clientId, clientPassword, function(){
+                            log("Client "+clientId+" logon.");
+                            callback();
+                        });
 	}, function (err) {
 		if (err) return log(err);
-		log("All clientts logon");
+		log("All clients logon");
 	});
 });
