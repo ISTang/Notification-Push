@@ -278,7 +278,7 @@ public class NotifyPushService extends Service {
 				receiverStarted = false;
 			} else if (command.equals("send")) {
 				// 发送消息
-				String msgId = intent.getStringExtra("msgId"); // 发送标识[回传用]
+				int msgId = intent.getIntExtra("msgId", 0); // 发送标识[回传用]
 				boolean secure = intent.getBooleanExtra("secure", false); // 消息是否加密
 				String receiver, msgText;
 				try {
@@ -287,25 +287,31 @@ public class NotifyPushService extends Service {
 					receiver = message.getReceiver();
 					msgText = MyMessage.makeText(message);
 				} catch (Exception e) {
-					showLog(LOG_SENDMSG, ERROR_SENDMSG_DATA, msgId);
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_DATA,
+							Integer.toString(msgId));
 					return;
 				}
 				if (!clientLogon) {
-					showLog(LOG_SENDMSG, ERROR_SENDMSG_NOT_LOGON, msgId);
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_NOT_LOGON,
+							Integer.toString(msgId));
 					return;
 				}
-				showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMIT, msgId);
+				showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMIT,
+						Integer.toString(msgId));
 				try {
 					socket.getOutputStream().write(
-							(String.format(SEND_MSG_REQ, receiver, msgId,
+							(String.format(SEND_MSG_REQ, receiver,
+									Integer.toString(msgId),
 									Boolean.toString(secure), msgText.length(),
 									msgText)).getBytes("UTF-8"));
-					showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMITTED, msgId);
+					showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMITTED,
+							Integer.toString(msgId));
 				} catch (UnsupportedEncodingException ee) {
 					// impossible!
 					ee.printStackTrace();
 				} catch (IOException ee) {
-					showLog(LOG_SENDMSG, ERROR_SENDMSG_SUBMIT, msgId);
+					showLog(LOG_SENDMSG, ERROR_SENDMSG_SUBMIT,
+							Integer.toString(msgId));
 				}
 			}
 		}

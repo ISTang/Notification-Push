@@ -40,7 +40,7 @@ public interface MessageTransceiverListener {
 	 * @param text
 	 *            发送状态文本
 	 */
-	public void onMessageStatus(String msgId, int code, String text);
+	public void onMessageStatus(int msgId, int code, String text);
 
 	/**
 	 * 新消息通知

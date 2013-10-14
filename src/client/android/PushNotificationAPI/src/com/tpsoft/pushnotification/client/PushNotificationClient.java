@@ -203,26 +203,33 @@ public class PushNotificationClient {
 					case NotifyPushService.LOG_SENDMSG: // 发送消息:
 						switch (code) {
 						case NotifyPushService.STATUS_SENDMSG_SUBMIT: // 提交消息
-							listener.onMessageStatus(params, 1, "提交...");
+							listener.onMessageStatus(Integer.parseInt(params),
+									1, "提交...");
 							break;
 						case NotifyPushService.STATUS_SENDMSG_SUBMITTED: // 已提交消息
-							listener.onMessageStatus(params, 2, "已提交");
+							listener.onMessageStatus(Integer.parseInt(params),
+									2, "已提交");
 							break;
 						case NotifyPushService.STATUS_SENDMSG_OK: // 收到消息确认
-							listener.onMessageStatus(params, 3, "已确认");
+							listener.onMessageStatus(Integer.parseInt(params),
+									3, "已确认");
 							break;
 						case NotifyPushService.ERROR_SENDMSG_NOT_LOGON: // 尚未登录成功
-							listener.onMessageStatus(params, -1, "未登录");
+							listener.onMessageStatus(Integer.parseInt(params),
+									-1, "未登录");
 							break;
 						case NotifyPushService.ERROR_SENDMSG_DATA: // 消息数据错误
-							listener.onMessageStatus(params, -2, "数据错误！");
+							listener.onMessageStatus(Integer.parseInt(params),
+									-2, "数据错误！");
 							break;
 						case NotifyPushService.ERROR_SENDMSG_SUBMIT: // 提交消息失败
-							listener.onMessageStatus(params, -3, "提交失败！");
+							listener.onMessageStatus(Integer.parseInt(params),
+									-3, "提交失败！");
 							break;
 						case NotifyPushService.ERROR_SENDMSG_FAILED: // 发送消息失败
 							int pos = params.indexOf(":");
-							String msgId = params.substring(0, pos);
+							int msgId = Integer.parseInt(params.substring(0,
+									pos));
 							String err = params.substring(pos + 1);
 							String errcode = err.substring(0, err.indexOf(","));
 							String errmsg = err.substring(err.indexOf(",") + 1);
@@ -238,14 +245,16 @@ public class PushNotificationClient {
 					}
 				} else if (action.equals("status")) {
 					// 消息接收器状态通知
-					boolean receiverStarted = intent.getBooleanExtra("started",
-							false);
-					listener.onTransceiverStatus(receiverStarted);
+					clientStarted = intent.getBooleanExtra("started", false);
+					if (!clientStarted)
+						clientLogon = false;
+					listener.onTransceiverStatus(clientStarted);
 				} else if (action.equals("logining")) {
 					// 登录状态通知
 					boolean logining = intent
 							.getBooleanExtra("logining", false);
-					listener.onLoginStatus(logining, 0, null);
+					listener.onLoginStatus(logining, 0, logining ? "正在登录..."
+							: "登录结束。");
 				} else {
 					// 未知动作
 				}
