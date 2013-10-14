@@ -65,7 +65,6 @@ public class MyMessage {
 
 	};
 
-	private long id; // 消息编号(仅用于发送，由调用者指定)
 	private String sender; // 消息发送者账号名称(me代表是自己发送的消息)
 	private String receiver; // 消息接收者(账号名称、电话号码或Email地址皆可，仅用于发送)
 	private String title; // 消息标题(可选)
@@ -110,7 +109,6 @@ public class MyMessage {
 	}
 
 	public MyMessage(Bundle bundle) throws ParseException {
-		id = bundle.getLong("id");
 		sender = bundle.getString("sender");
 		receiver = bundle.getString("receiver");
 		title = bundle.getString("title");
@@ -239,7 +237,6 @@ public class MyMessage {
 
 	public Bundle getBundle() {
 		Bundle bundle = new Bundle();
-		bundle.putLong("id", id);
 		if (sender != null)
 			bundle.putString("sender", sender);
 		if (receiver != null)
@@ -268,14 +265,6 @@ public class MyMessage {
 			}
 		}
 		return bundle;
-	}
-
-	public long getId() {
-		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
 	}
 
 	public String getSender() {

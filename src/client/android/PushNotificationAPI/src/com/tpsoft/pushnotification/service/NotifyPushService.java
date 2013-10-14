@@ -127,7 +127,7 @@ public class NotifyPushService extends Service {
 	public void onCreate() {
 		super.onCreate();
 
-		// 开始结束广播
+		// 开始接收广播
 		myBroadcastReceiver = new MyBroadcastReceiver();
 		IntentFilter filter = new IntentFilter();
 		filter.addAction("com.tpsoft.pushnotification.ServiceController");
@@ -279,12 +279,12 @@ public class NotifyPushService extends Service {
 			} else if (command.equals("send")) {
 				// 发送消息
 				String msgId = intent.getStringExtra("msgId"); // 发送标识[回传用]
-				String receiver = intent.getStringExtra("receiver"); // 接收者账号
 				boolean secure = intent.getBooleanExtra("secure", false); // 消息是否加密
-				String msgText;
+				String receiver, msgText;
 				try {
 					MyMessage message = new MyMessage(
 							intent.getBundleExtra("com.tpsoft.pushnotification.MyMessage"));
+					receiver = message.getReceiver();
 					msgText = MyMessage.makeText(message);
 				} catch (Exception e) {
 					showLog(LOG_SENDMSG, ERROR_SENDMSG_DATA, msgId);
