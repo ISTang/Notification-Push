@@ -37,6 +37,10 @@ public class NotifyPushService extends Service {
 	// 日志类型
 	public static final int LOG_CONNECT = 1; // 连接
 	public static final int LOG_SENDMSG = 2; // 发送消息
+	public static final int LOG_QUERYPUBLIC = 3; // 查询公众号
+	public static final int LOG_FOLLOWPUBLIC = 4; // 关注公众号
+	public static final int LOG_UNFOLLOWPUBLIC = 5; // 取消关注公众号
+	public static final int LOG_GETFOLLOWED = 6; // 获取已关注的公众号
 	// 状态码
 	public static final int STATUS_CONNECT_CONNECTING = 1; // 连接服务器...
 	public static final int STATUS_CONNECT_CONNECTED = 2; // 已经连接到服务器
@@ -53,6 +57,22 @@ public class NotifyPushService extends Service {
 	public static final int STATUS_SENDMSG_SUBMIT = 51; // 提交消息
 	public static final int STATUS_SENDMSG_SUBMITTED = 52; // 消息已提交
 	public static final int STATUS_SENDMSG_OK = 53; // 消息已发送
+	//
+	public static final int STATUS_QUERYPUBLIC_SUBMIT = 61; // 提交公众号查询请求
+	public static final int STATUS_QUERYPUBLIC_SUBMITTED = 62; // 公众号查询请求已提交
+	public static final int STATUS_QUERYPUBLIC_OK = 63; // 公众号查询成功
+	//
+	public static final int STATUS_FOLLOWPUBLIC_SUBMIT = 71; // 提交公众号关注请求
+	public static final int STATUS_FOLLOWPUBLIC_SUBMITTED = 72; // 公众号关注请求已提交
+	public static final int STATUS_FOLLOWPUBLIC_OK = 73; // 公众号关注成功
+	//
+	public static final int STATUS_UNFOLLOWPUBLIC_SUBMIT = 81; // 提交公众号取消关注请求
+	public static final int STATUS_UNFOLLOWPUBLIC_SUBMITTED = 82; // 公众号取消关注请求已提交
+	public static final int STATUS_UNFOLLOWPUBLIC_OK = 83; // 公众号取消关注成功
+	//
+	public static final int STATUS_GETFOLLOWED_SUBMIT = 91; // 提交获取已关注公众号请求
+	public static final int STATUS_GETFOLLOWED_SUBMITTED = 92; // 获取已关注公众号请求已提交
+	public static final int STATUS_GETFOLLOWED_OK = 93; // 获取已关注公众号成功
 	// 错误码
 	public static final int ERROR_CONNECT_NETWORK_UNAVAILABLE = 101; // 网络不可用
 	public static final int ERROR_CONNECT_BROKEN = 102; // 连接已中断
@@ -67,6 +87,22 @@ public class NotifyPushService extends Service {
 	public static final int ERROR_SENDMSG_DATA = 152; // 消息数据出错
 	public static final int ERROR_SENDMSG_SUBMIT = 153; // 提交消息失败
 	public static final int ERROR_SENDMSG_FAILED = 154; // 发送消息失败
+	//
+	public static final int ERROR_QUERYPUBLIC_NOT_LOGON = 161; // 尚未登录成功
+	public static final int ERROR_QUERYPUBLIC_SUBMIT = 162; // 提交公众号查询请求失败
+	public static final int ERROR_QUERYPUBLIC_FAILED = 163; // 公众号查询失败
+	//
+	public static final int ERROR_FOLLOWPUBLIC_NOT_LOGON = 171; // 尚未登录成功
+	public static final int ERROR_FOLLOWPUBLIC_SUBMIT = 172; // 提交公众号关注请求失败
+	public static final int ERROR_FOLLOWPUBLIC_FAILED = 173; // 公众号关注失败
+	//
+	public static final int ERROR_UNFOLLOWPUBLIC_NOT_LOGON = 181; // 尚未登录成功
+	public static final int ERROR_UNFOLLOWPUBLIC_SUBMIT = 182; // 提交公众号取消关注请求失败
+	public static final int ERROR_UNFOLLOWPUBLIC_FAILED = 183; // 公众号取消关注失败
+	//
+	public static final int ERROR_GETFOLLOWED_NOT_LOGON = 191; // 尚未登录成功
+	public static final int ERROR_GETFOLLOWED_SUBMIT = 192; // 提交获取已关注公众号请求失败
+	public static final int ERROR_GETFOLLOWED_FAILED = 193; // 获取已关注公众号失败
 
 	// 行结束标志
 	private static final String INPUT_RETURN = "\r\n";
@@ -78,7 +114,8 @@ public class NotifyPushService extends Service {
 	private static final String FIELD_LOGIN_SECURE = "Secure";
 	private static final String FIELD_LOGIN_PASSWORD = "Password";
 	private static final String FIELD_MSG_RECEIPT = "Receipt";
-	private static final String FIELD_MSG_ID = "Id";
+	private static final String FIELD_ACTION_ID = "Id";
+	private static final String FIELD_ACTION_ACCOUNT = "Account";
 
 	private static final String CLOSE_CONN_RES = "CLOSE CONN\r\nLength: %d\r\n\r\n%s"; // 体部:
 																						// 错误内容(已包含)
@@ -94,11 +131,15 @@ public class NotifyPushService extends Service {
 	private static final String PUSH_MSG_ACK = "PUSH MSG\r\n\r\n"; // 不需要体部
 	private static final String SET_ALIVE_REQ = "SET ALIVE\r\n\r\n"; // 不需要体部
 
-	private static final String SEND_MSG_REQ = "SEND MSG\r\nAccount: %s\r\nId: %s\r\nSecure: %s\r\nLength:%d\r\n\r\n%s"; // 0-接收者账号,
+	private static final String SEND_MSG_REQ = "SEND MSG\r\nAccount: %s\r\nId: %d\r\nSecure: %s\r\nLength:%d\r\n\r\n%s"; // 0-接收者账号,
 																															// 1-发送标识[回传用],
 																															// 2-消息是否加密,
 																															// 3-体部长度,
 																															// 4-消息JSON对象
+	private static final String QUERY_PUBLIC_REQ = "QUERY PUBLIC\r\nId: %d\r\nLength:%d\r\n\r\n%s"; // 0-查询标识[回传用],1-体部长度,2-公众号(支持模糊匹配)
+	private static final String FOLLOW_PUBLIC_REQ = "FOLLOW PUBLIC\r\nAccount: %s\r\n\r\n"; // 0-公众号
+	private static final String UNFOLLOW_PUBLIC_REQ = "UNFOLLOW PUBLIC\r\nAccount: %s\r\n\r\n"; // 0-公众号
+	private static final String GET_FOLLOWED_REQ = "GET FOLLOWED\r\n\r\n";
 
 	// 错误消息
 	private static final String INVALID_ACTION_LINE = "Invalid aciton line";
@@ -110,6 +151,10 @@ public class NotifyPushService extends Service {
 
 	// 通知栏ID
 	public static final int ONGOING_NOTIFICATION = 10086;
+
+	public static final String NOTIFICATION_MESSAGE = "message";
+	public static final String NOTIFICATION_PUBLIC_ACCOUNTS = "public_accounts";
+	public static final String NOTIFICATION_FOLLOWED_ACCOUNTS = "followed_accounts";
 
 	private MyBroadcastReceiver myBroadcastReceiver;
 	private Thread mServiceThread = null;
@@ -220,13 +265,14 @@ public class NotifyPushService extends Service {
 		sendBroadcast(activityIntent);
 	}
 
-	private void showNotification(String msgText) {
-		// 广播新消息通知
+	private void showNotification(String type, String content) {
+		// 广播新消息等通知
 		Intent activityIntent = new Intent();
 		activityIntent
 				.setAction("com.tpsoft.pushnotification.NotifyPushService");
 		activityIntent.putExtra("action", "notify");
-		activityIntent.putExtra("msgText", msgText);
+		activityIntent.putExtra("type", type);
+		activityIntent.putExtra("content", content);
 		sendBroadcast(activityIntent);
 	}
 
@@ -300,10 +346,9 @@ public class NotifyPushService extends Service {
 						Integer.toString(msgId));
 				try {
 					socket.getOutputStream().write(
-							(String.format(SEND_MSG_REQ, receiver,
-									Integer.toString(msgId),
+							(String.format(SEND_MSG_REQ, receiver, msgId,
 									Boolean.toString(secure), msgText.length(),
-									msgText)).getBytes("UTF-8"));
+									msgText)).getBytes("UTF-8")); // TODO 支持消息加密
 					showLog(LOG_SENDMSG, STATUS_SENDMSG_SUBMITTED,
 							Integer.toString(msgId));
 				} catch (UnsupportedEncodingException ee) {
@@ -312,6 +357,94 @@ public class NotifyPushService extends Service {
 				} catch (IOException ee) {
 					showLog(LOG_SENDMSG, ERROR_SENDMSG_SUBMIT,
 							Integer.toString(msgId));
+				}
+			} else if (command.equals("query_public")) {
+				// 查询公众号
+				int queryId = intent.getIntExtra("queryId", 0); // 查询标识[回传用]
+				String condition = intent.getStringExtra("condition"); // 查询条件:公众号(支持模糊匹配)
+				if (!clientLogon) {
+					showLog(LOG_QUERYPUBLIC, ERROR_QUERYPUBLIC_NOT_LOGON,
+							Integer.toString(queryId));
+					return;
+				}
+				showLog(LOG_QUERYPUBLIC, STATUS_QUERYPUBLIC_SUBMIT,
+						Integer.toString(queryId));
+				try {
+					socket.getOutputStream().write(
+							(String.format(QUERY_PUBLIC_REQ, queryId,
+									condition.length(), condition))
+									.getBytes("UTF-8"));
+					showLog(LOG_QUERYPUBLIC, STATUS_QUERYPUBLIC_SUBMITTED,
+							Integer.toString(queryId));
+				} catch (UnsupportedEncodingException ee) {
+					// impossible!
+					ee.printStackTrace();
+				} catch (IOException ee) {
+					showLog(LOG_QUERYPUBLIC, ERROR_QUERYPUBLIC_SUBMIT,
+							Integer.toString(queryId));
+				}
+			} else if (command.equals("follow_public")) {
+				// 关注公众号
+				String account = intent.getStringExtra("account"); // 公众号
+				if (!clientLogon) {
+					showLog(LOG_FOLLOWPUBLIC, ERROR_FOLLOWPUBLIC_NOT_LOGON,
+							account);
+					return;
+				}
+				showLog(LOG_FOLLOWPUBLIC, STATUS_FOLLOWPUBLIC_SUBMIT, account);
+				try {
+					socket.getOutputStream().write(
+							(String.format(FOLLOW_PUBLIC_REQ, account))
+									.getBytes("UTF-8"));
+					showLog(LOG_FOLLOWPUBLIC, STATUS_FOLLOWPUBLIC_SUBMITTED,
+							account);
+				} catch (UnsupportedEncodingException ee) {
+					// impossible!
+					ee.printStackTrace();
+				} catch (IOException ee) {
+					showLog(LOG_FOLLOWPUBLIC, ERROR_FOLLOWPUBLIC_SUBMIT,
+							account);
+				}
+			} else if (command.equals("unfollow_public")) {
+				// 取消关注公众号
+				String account = intent.getStringExtra("account"); // 公众号
+				if (!clientLogon) {
+					showLog(LOG_UNFOLLOWPUBLIC, ERROR_UNFOLLOWPUBLIC_NOT_LOGON,
+							account);
+					return;
+				}
+				showLog(LOG_UNFOLLOWPUBLIC, STATUS_UNFOLLOWPUBLIC_SUBMIT,
+						account);
+				try {
+					socket.getOutputStream().write(
+							(String.format(UNFOLLOW_PUBLIC_REQ, account))
+									.getBytes("UTF-8"));
+					showLog(LOG_UNFOLLOWPUBLIC,
+							STATUS_UNFOLLOWPUBLIC_SUBMITTED, account);
+				} catch (UnsupportedEncodingException ee) {
+					// impossible!
+					ee.printStackTrace();
+				} catch (IOException ee) {
+					showLog(LOG_UNFOLLOWPUBLIC, ERROR_UNFOLLOWPUBLIC_SUBMIT,
+							account);
+				}
+			} else if (command.equals("get_followed")) {
+				// 获取已关注公众号
+				if (!clientLogon) {
+					showLog(LOG_GETFOLLOWED, ERROR_GETFOLLOWED_NOT_LOGON, null);
+					return;
+				}
+				showLog(LOG_GETFOLLOWED, STATUS_GETFOLLOWED_SUBMIT, null);
+				try {
+					socket.getOutputStream()
+							.write((String.format(GET_FOLLOWED_REQ))
+									.getBytes("UTF-8"));
+					showLog(LOG_GETFOLLOWED, STATUS_GETFOLLOWED_SUBMITTED, null);
+				} catch (UnsupportedEncodingException ee) {
+					// impossible!
+					ee.printStackTrace();
+				} catch (IOException ee) {
+					showLog(LOG_GETFOLLOWED, ERROR_GETFOLLOWED_SUBMIT, null);
 				}
 			}
 		}
@@ -610,7 +743,7 @@ public class NotifyPushService extends Service {
 						}
 
 						String name = starr[0].trim().toUpperCase(); // 名字
-						String value = starr[1].trim().toUpperCase(); // 值
+						String value = starr[1].trim(); // 值
 						fields.put(name, value);
 					} else {
 						// 找到空行
@@ -798,10 +931,10 @@ public class NotifyPushService extends Service {
 					// 消息解密
 					msg = Crypt.desDecrypt(msgKey, msg);
 				}
-				showNotification(msg);
+				showNotification(NOTIFICATION_MESSAGE, msg);
 			} else if (action.equals("SEND") && target.equals("MSG")) {
 				// 收到消息回复
-				String msgId = fields.get(FIELD_MSG_ID.toUpperCase());
+				String msgId = fields.get(FIELD_ACTION_ID.toUpperCase());
 				boolean success = fields
 						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
 						.equals("TRUE");
@@ -811,6 +944,65 @@ public class NotifyPushService extends Service {
 					String err = body;
 					showLog(LOG_SENDMSG, ERROR_SENDMSG_FAILED, msgId + ":"
 							+ err);
+				}
+			} else if (action.equals("QUERY") && target.equals("PUBLIC")) {
+				// 收到公众号查询回复
+				String queryId = fields.get(FIELD_ACTION_ID.toUpperCase());
+				boolean success = fields
+						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
+						.equals("TRUE");
+				if (success) {
+					String accountsText = body;
+					showNotification(NOTIFICATION_PUBLIC_ACCOUNTS, accountsText);
+					showLog(LOG_QUERYPUBLIC, STATUS_QUERYPUBLIC_OK, queryId);
+				} else {
+					String err = body;
+					showLog(LOG_QUERYPUBLIC, ERROR_QUERYPUBLIC_FAILED, queryId
+							+ ":" + err);
+				}
+			} else if (action.equals("FOLLOW") && target.equals("PUBLIC")) {
+				// 收到公众号关注回复
+				String publicAccount = fields.get(FIELD_ACTION_ACCOUNT
+						.toUpperCase());
+				boolean success = fields
+						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
+						.equals("TRUE");
+				if (success) {
+					showLog(LOG_FOLLOWPUBLIC, STATUS_FOLLOWPUBLIC_OK,
+							publicAccount);
+				} else {
+					String err = body;
+					showLog(LOG_FOLLOWPUBLIC, ERROR_FOLLOWPUBLIC_FAILED,
+							publicAccount + ":" + err);
+				}
+			} else if (action.equals("UNFOLLOW") && target.equals("PUBLIC")) {
+				// 收到公众号取消关注回复
+				String publicAccount = fields.get(FIELD_ACTION_ACCOUNT
+						.toUpperCase());
+				boolean success = fields
+						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
+						.equals("TRUE");
+				if (success) {
+					showLog(LOG_UNFOLLOWPUBLIC, STATUS_UNFOLLOWPUBLIC_OK,
+							publicAccount);
+				} else {
+					String err = body;
+					showLog(LOG_UNFOLLOWPUBLIC, ERROR_UNFOLLOWPUBLIC_FAILED,
+							publicAccount + ":" + err);
+				}
+			} else if (action.equals("GET") && target.equals("FOLLOWED")) {
+				// 收到获取已关注公众号回复
+				boolean success = fields
+						.get(FIELD_ACTION_SUCCESS.toUpperCase()).toUpperCase()
+						.equals("TRUE");
+				if (success) {
+					String accountsText = body;
+					showNotification(NOTIFICATION_FOLLOWED_ACCOUNTS,
+							accountsText);
+					showLog(LOG_GETFOLLOWED, STATUS_GETFOLLOWED_OK, null);
+				} else {
+					String err = body;
+					showLog(LOG_GETFOLLOWED, ERROR_GETFOLLOWED_FAILED, err);
 				}
 			} else if (action.equals("CLOSE") && target.equals("CONN")) {
 				// 服务器主动断开连接

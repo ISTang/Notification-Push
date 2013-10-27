@@ -133,6 +133,57 @@ const SEND_MSG_REQ = "SEND MSG\r\nAccount: {0}\r\nId: {1}\r\nSecure: {2}\r\n" + 
 const SEND_MSG_SUCCESS_RES = "SEND MSG\r\nId: {0}\r\nSuccess: true\r\n\r\n"; // 无体部
 // (3)失败响应({0}-发送标识 {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
 const SEND_MSG_FAILED_RES = "SEND MSG\r\nId: {0}\r\nSuccess: false\r\n" + (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") + "Length: {1}\r\n\r\n{2},{3}"; // 体部: 错误代码及解释(已包含)
+//
+//
+// :查询公众号
+//
+// (1)请求 ({0}-查询标识[回传用], {1}-{2}的长度, {2}查询条件)(C-->P)
+const QUERY_PUBLIC_REQ = "QUERY PUBLIC\r\nId: {0}\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {1}\r\n\r\n{2}"; // 体部:公众号(支持模糊匹配)
+// (2)成功响应 ({0}-查询标识, {1}-{2}的长度,{2}-公众号列表)(P-->C)
+const QUERY_PUBLIC_SUCCESS_RES = "QUERY PUBLIC\r\nId: {0}\r\nSuccess: true\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {1}\r\n\r\n{2}"; // 体部:公众号列表[{\"name\":'<name>',\"avatar\":\"<avatar>\",\"desc\":'<desc>',\"type\":<type>},...]
+// (3)失败响应 ({0}-查询标识, {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
+const QUERY_PUBLIC_FAILED_RES = "QUERY PUBLIC\r\nId: {0}\r\nSuccess: false\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {1}\r\n\r\n{2},{3}"; // 体部:错误代码及解释(已包含)
+//
+// :关注公众号
+//
+// (1)请求 ({0}-公众号)(C-->P)
+const FOLLOW_PUBLIC_REQ = "FOLLOW PUBLIC\r\nAccount: {0}\r\n\r\n"; // 无体部
+// (2)成功响应 ({0}-公众号)(P-->C)
+const FOLLOW_PUBLIC_SUCCESS_RES = "FOLLOW PUBLIC\r\nAccount: {0}\r\nSuccess: true\r\n\r\n"; // 无体部
+// (3)失败响应 ({0}-公众号 {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
+const FOLLOW_PUBLIC_FAILED_RES = "FOLLCOW PUBLIC\r\nAccount: {0}\r\nSuccess: false\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {1}\r\n\r\n{2},{3}"; // 体部:错误代码及解释(已包含)
+//
+// :取消关注公众号
+//
+// (1)请求 ({0}-公众号)(C-->P)
+const UNFOLLOW_PUBLIC_REQ = "UNFOLLOW PUBLIC\r\nAccount: {0}\r\n\r\n"; // 无体部
+// (2)成功响应 ({0}-公众号)(P-->C)
+const UNFOLLOW_PUBLIC_SUCCESS_RES = "UNFOLLOW PUBLIC\r\nAccount: {0}\r\nSuccess: true\r\n\r\n"; // 无体部
+// (3)失败响应 ({0}-公众号 {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
+const UNFOLLOW_PUBLIC_FAILED_RES = "UNFOLLCOW PUBLIC\r\nAccount: {0}\r\nSuccess: false\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {1}\r\n\r\n{2},{3}"; // 体部:错误代码及解释(已包含)
+//
+// :获取已关注的公众号
+//
+// (1)请求 (C-->P)
+const GET_FOLLOWED_REQ = "GET FOLLOWED\r\n\r\n"; // 无体部
+// (2)成功响应 ({0}-{1}的长度,{1}-公众号列表)(P-->C)
+const GET_FOLLOWED_SUCCESS_RES = "GET FOLLOWED\r\nSuccess: true\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {0}\r\n\r\n{1}"; // 体部:公众号列表(逗号分隔)
+// (3)失败响应 ({0}-{1}和{2}的长度和加1,{1}-错误代码,{2}-错误原因)(P-->C)
+const GET_FOLLOWED_FAILED_RES = "GET FOLLOWED\r\nSuccess: false\r\n" +
+        (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+        "Length: {0}\r\n\r\n{1},{2}"; // 体部:错误代码及解释(已包含)
 
 // 处理连接(适合服务器端和客户端)
 function handleConnection(socket, handlePacket, handleError, handleClose, log, isClient) {

@@ -1,6 +1,7 @@
 package com.tpsoft.pushnotification.client;
 
 import com.tpsoft.pushnotification.model.MyMessage;
+import com.tpsoft.pushnotification.model.PublicAccount;
 
 /**
  * 消息收发器侦听器
@@ -31,7 +32,7 @@ public interface MessageTransceiverListener {
 	public void onLoginStatus(boolean logining, int code, String text);
 
 	/**
-	 * 消息(发送)状态通知
+	 * 消息发送状态通知
 	 * 
 	 * @param msgId
 	 *            消息ID
@@ -40,7 +41,7 @@ public interface MessageTransceiverListener {
 	 * @param text
 	 *            发送状态文本
 	 */
-	public void onMessageStatus(int msgId, int code, String text);
+	public void onMessageSendStatus(int msgId, int code, String text);
 
 	/**
 	 * 新消息通知
@@ -48,5 +49,37 @@ public interface MessageTransceiverListener {
 	 * @param msg
 	 *            消息
 	 */
-	public void onMessageReceived(MyMessage msg);
+	public void onNewMessageReceived(MyMessage msg);
+
+	/**
+	 * 公众号信息列表通知
+	 * 
+	 * @param accounts
+	 *            公众号信息列表
+	 */
+	public void onPublicAccountsReceived(PublicAccount[] accounts);
+
+	/**
+	 * 公众号已关注通知
+	 * 
+	 * @param account
+	 *            公众号
+	 */
+	public void onPublicAccountFollowed(String accountName);
+
+	/**
+	 * 公众号已已取消关注通知
+	 * 
+	 * @param accountName
+	 *            公众号
+	 */
+	public void onPublicAccountUnfollowed(String accountName);
+
+	/**
+	 * 已关注公众号信息列表通知
+	 * 
+	 * @param accounts
+	 *            公众号信息列表
+	 */
+	public void onFollowedAccountsReceived(PublicAccount[] accounts);
 }
