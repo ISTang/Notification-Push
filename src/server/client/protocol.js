@@ -712,7 +712,8 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + (err ? "ERROR" : "OK"));
                 socket.write(/*PNTP_FLAG+*/err ? FOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
-                callback();
+
+                forwardMsg(appId, accountId, accountName, publicAccount, "followed", "followPublicAccount", callback);
             });
         } else if (action == "UNFOLLOW" && target == "PUBLIC") {
 
@@ -724,7 +725,8 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + (err ? "ERROR" : "OK"));
                 socket.write(/*PNTP_FLAG+*/err ? UNFOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
-                callback();
+
+                forwardMsg(appId, accountId, accountName, publicAccount, "unfollowed", "unfollowPublicAccount", callback);
             });
         } else if (action == "GET" && target == "FOLLOWED") {
 

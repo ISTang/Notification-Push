@@ -1,7 +1,10 @@
+var net = require("net");
 var config = require(__dirname + '/config');
 var utils = require(__dirname + '/utils');
 var db = require(__dirname + '/db');
 var channel = require(__dirname + '/channel');
+var protocol = require(__dirname + '/client/protocol');
+var crypt = require(__dirname + '/client/crypt');
 
 //var $ = require('jquery');
 var fs = require('fs');
@@ -18,9 +21,16 @@ var iconv = require('iconv-lite');  //用于转码
 
 const PLATFORM_SERVER = config.PLATFORM_SERVER;
 const PLATFORM_PORT = config.PLATFORM_PORT;
-const PLATFORM_USERNAME = 'autorss';
-const PLATFORM_PASSWORD = 'gzdx342';
-const APP_ID = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
+//
+const APP_PORT = config.APP_PORT;
+const RETRY_INTERVAL = config.RETRY_INTERVAL; // ms
+//
+const APP_ID = config.APP_ID;
+const APP_PASSWORD = config.APP_PASSWORD;
+const APP_PROTECTKEY = config.APP_PROTECTKEY;
+//
+const PLATFORM_USERNAME = config.PLATFORM_SERVER;
+const PLATFORM_PASSWORD = config.PLATFORM_PASSWORD;
 //
 const POLL_RSS_INTERVAL = config.POLL_RSS_INTERVAL;
 const FETCH_TIMEOUT = config.FETECH_TIMEOUT;
@@ -28,8 +38,6 @@ const FETCH_TIMEOUT = config.FETECH_TIMEOUT;
 const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 //
 const HTTPD_PORT = config.HTTPD_PORT;
-//
-const LOG_ENABLED = config.LOG_ENABLED;
 
 const IMAGE_URL_NOT_CONATINS = config.IMAGE_URL_NOT_CONATINS;
 
@@ -42,19 +50,6 @@ webapp.configure(function () {
     webapp.set('view engine', 'html');
 
     webapp.use(express.logger());
-    webapp.use(function (req, res, next) {
-        /*var data = '';
-         req.setEncoding('utf-8');
-         req.on('data', function (chunk) {
-         data += chunk;
-         });
-         req.on('end', function () {
-         req.rawBody = data;
-         next();
-         });*/
-        //res.setHeader("Content-Type", "application/json;charset=utf-8");
-        next();
-    });
     webapp.use(express.bodyParser()); // can't coexists with req.on(...)!
     webapp.use(express.methodOverride());
     webapp.use(webapp.router);
@@ -74,42 +69,29 @@ webapp.configure('production', function () {
 
 webapp.set('env', 'development');
 
-var logStream = fs.createWriteStream("logs/app.log", {"flags": "a"});
-
 var redis;
 
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
 String.prototype.format = utils.StringFormat;
 
-function log(msg) {
-
-    var now = new Date();
-    var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
-    var buffer = "[" + strDatetime + "] " + msg + "[app]";
-    if (logStream != null) logStream.write(buffer + "\r\n");
-    if (LOG_ENABLED) console.log(buffer);
-}
-
-function stripsTags(text)
-{
-  return $.trim($('<div>').html(text).text());
-}
+var logger = config.log4js.getLogger('app');
+logger.setLevel(config.LOG_LEVEL);
 
 function pushMessage(channel, msgTitle, msgBody, msgUrl, pubDate, logoUrl, imageUrls, callback) {
 
     var attachments = [];
     if (logoUrl) {
-       	attachments.push({title: "logo", type: 'image/xxx', filename: 'logo', url: logoUrl});
+        attachments.push({title: "logo", type: 'image/xxx', filename: 'logo', url: logoUrl});
     }
     for (var imageIndex in imageUrls) {
-	if (imageIndex!="each") {
-		var imageUrl = imageUrls[imageIndex];
-		attachments.push({title: "image"+imageIndex, type: 'image/xxx', filename: 'image'+imageIndex, url: imageUrl});
-	}
+        if (imageIndex != "each") {
+            var imageUrl = imageUrls[imageIndex];
+            attachments.push({title: "image" + imageIndex, type: 'image/xxx', filename: 'image' + imageIndex, url: imageUrl});
+        }
     }
-    var bodyText = JSON.stringify({user:{username:PLATFORM_USERNAME,password:PLATFORM_PASSWORD}, title: (!msgTitle||msgTitle==""?channel:msgTitle), body: (msgBody==""?msgTitle:msgBody),
-    attachments: attachments, url: msgUrl, generate_time: pubDate, need_receipt: true});
+    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, title: (!msgTitle || msgTitle == "" ? channel : msgTitle), body: (msgBody == "" ? msgTitle : msgBody),
+        attachments: attachments, url: msgUrl, generate_time: pubDate, need_receipt: true});
 
     var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
     options.method = "POST";
@@ -153,15 +135,15 @@ function getArticles(channel, url, since, handleResult) {
             return handleResult("状态码: " + res.statusCode);
         }
 
-        res.setTimeout(FETCH_TIMEOUT, function() {
-            return handleResult("响应超时");  
+        res.setTimeout(FETCH_TIMEOUT, function () {
+            return handleResult("响应超时");
         });
 
         var bufferHelper = new BufferHelper();
 
         res.on('data', function (chunk) {
 
-            //log("接收到数据\""+chunk+"\"");
+            //logger.trace("接收到数据\""+chunk+"\"");
             bufferHelper.concat(chunk);
         });
         res.on('end', function () {
@@ -171,66 +153,68 @@ function getArticles(channel, url, since, handleResult) {
             if (encoding != null) {
                 try {
                     text = iconv.decode(text, encoding);
-                } catch(e) {
-                    log(e);
-                } 
+                } catch (e) {
+                    logger.warn(e);
+                }
             }
 
-            //log("解析数据...");
+            //logger.trace("解析数据...");
             feedparser.parseString(text, function (err, meta, articles) {
 
                 if (err) return handleResult(err);
                 var logo = (meta.image.url ? meta.image.url : null);
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
-		    article.channel = channel;
+                    article.channel = channel;
                     article.logo = logo;
-		    article.images = [];
+                    article.images = [];
                     result.push(article);
 
-		    var handler = new htmlparser.DefaultHandler(function (error, dom) {
-		      if (!error) {
-				article.description = "";
-				for (var i in dom) {
-					if (dom[i].type=="text") {
-						article.description += (dom[i].data||"");
-					} else if (dom[i].type=="tag" && dom[i].name=="img") {
-						var imageSrc = dom[i].attribs.src;
-						if (imageSrc && checkImageUrl(imageSrc)) {
-							article.images.push(dom[i].attribs.src);
-						}
-					}
-					if (dom[i].children) {
-						getImagesFromChildren(dom[i].children, article.images);
-					}
-				}
-				function getImagesFromChildren(children, images) {
-					for (var i in children) {
-						if (children[i].type=="tag" && children[i].name=="img") {
-							var imageSrc = children[i].attribs.src;
-							if (imageSrc && checkImageUrl(imageSrc)) {
-								images.push(children[i].attribs.src);
-							}
-						}
-						if (children[i].children) {
-							getImagesFromChildren(children[i].children, images);
-						}
-					}
-				}
-				function checkImageUrl(url) {
-					for (var i in IMAGE_URL_NOT_CONATINS) {
-						var word = IMAGE_URL_NOT_CONATINS[i];
-						if (url.indexOf(word)!=-1) return false;
-					}
-					return true;
-				}
-				article.description = (article.description||"").trim();
-				if (article.description=="null") article.description = "";
-				callback();
-			}
-		    });
-		    var parser = new htmlparser.Parser(handler);
-		    parser.parseComplete(article.description);
+                    var handler = new htmlparser.DefaultHandler(function (error, dom) {
+                        if (!error) {
+                            article.description = "";
+                            for (var i in dom) {
+                                if (dom[i].type == "text") {
+                                    article.description += (dom[i].data || "");
+                                } else if (dom[i].type == "tag" && dom[i].name == "img") {
+                                    var imageSrc = dom[i].attribs.src;
+                                    if (imageSrc && checkImageUrl(imageSrc)) {
+                                        article.images.push(dom[i].attribs.src);
+                                    }
+                                }
+                                if (dom[i].children) {
+                                    getImagesFromChildren(dom[i].children, article.images);
+                                }
+                            }
+                            function getImagesFromChildren(children, images) {
+                                for (var i in children) {
+                                    if (children[i].type == "tag" && children[i].name == "img") {
+                                        var imageSrc = children[i].attribs.src;
+                                        if (imageSrc && checkImageUrl(imageSrc)) {
+                                            images.push(children[i].attribs.src);
+                                        }
+                                    }
+                                    if (children[i].children) {
+                                        getImagesFromChildren(children[i].children, images);
+                                    }
+                                }
+                            }
+
+                            function checkImageUrl(url) {
+                                for (var i in IMAGE_URL_NOT_CONATINS) {
+                                    var word = IMAGE_URL_NOT_CONATINS[i];
+                                    if (url.indexOf(word) != -1) return false;
+                                }
+                                return true;
+                            }
+
+                            article.description = (article.description || "").trim();
+                            if (article.description == "null") article.description = "";
+                            callback();
+                        }
+                    });
+                    var parser = new htmlparser.Parser(handler);
+                    parser.parseComplete(article.description);
                 }, function (err) {
 
                     handleResult(err, result);
@@ -239,8 +223,8 @@ function getArticles(channel, url, since, handleResult) {
         });
     }).on('error', function (e) {
 
-        handleResult(e.message);
-    });
+            handleResult(e.message);
+        });
 }
 
 function getAllArticles(handleResult) {
@@ -252,15 +236,15 @@ function getAllArticles(handleResult) {
         var result = [];
         async.forEachSeries(channles, function (channel, callback) {
 
-            log("获取频道 "+channel.title+"("+channel.url+")上的文章...");
+            logger.trace("获取频道 " + channel.title + "(" + channel.url + ")上的文章...");
             getArticles(channel.title, channel.url, channel.since, function (err, articles) {
                 if (err) {
 
-                    log(err);
+                    logger.warn(err);
 
                     return callback(); // 忽略错误
                 }
-                log("从频道 "+channel.url+" 获取到 "+articles.length+" 篇文章。");
+                logger.trace("从频道 " + channel.url + " 获取到 " + articles.length + " 篇文章。");
                 async.forEachSeries(articles, function (article, callback) {
 
                     db.existsArticle(article, function (err, exists) {
@@ -302,23 +286,174 @@ function getAllArticles(handleResult) {
 
 function getAllArticlesAndPush() {
 
-    log("获取最新文章并推送...");
+    logger.trace("获取最新文章并推送...");
     getAllArticles(function (err, articles) {
 
-        if (err) return log(err);
+        if (err) return logger.error(err);
 
-        log("本次共获取到 " + articles.length + " 篇新文章。");
+        logger.trace("本次共获取到 " + articles.length + " 篇新文章。");
         async.forEachSeries(articles, function (article, callback) {
 
             pushMessage(article.channel, article.title, article.description, article.link, article.pubDate, article.logo, article.images, callback);
         }, function (err) {
 
-            if (err) log(err);
+            if (err) logger.error(err);
 
-            log("等待 " + (POLL_RSS_INTERVAL / 1000) + " 秒钟...");
+            logger.trace("等待 " + (POLL_RSS_INTERVAL / 1000) + " 秒钟...");
             setTimeout(getAllArticlesAndPush, POLL_RSS_INTERVAL);
         });
     });
+}
+
+function getAppInfo() {
+    return {id: APP_ID, password: APP_PASSWORD, protectKey: APP_PROTECTKEY};
+}
+
+function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
+
+    var socket;
+    var clientLogon = false; // 是否登录成功
+
+    var clientLogging = false;
+
+    var msgKey;
+    var maxInactiveTime;
+
+    var lastActiveTime;
+
+    var keepAliveId = null;
+    var ensureAliveId = null;
+
+    function getUserInfo() {
+
+        return {name: clientId, password: clientPassword};
+    }
+
+    function setMsgKey(key) {
+
+        msgKey = key;
+    }
+
+    function setLogon() {
+        onConnected();
+
+        clientLogon = true;
+        clientLogging = false;
+        lastActiveTime = new Date();
+
+        ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
+    }
+
+    function setKeepAliveInterval(n) {
+
+        if (keepAliveId != null) {
+
+            clearInterval(keepAliveId);
+        }
+
+        maxInactiveTime = n * 3;
+
+        keepAliveId = setInterval(function () {
+
+            if (!clientLogon) return;
+
+            var diff = new Date().getTime() - lastActiveTime.getTime();
+            if (diff >= n) {
+
+                logger.debug("[" + clientId + "] Keeping alive...");
+                socket.write(protocol.SET_ALIVE_REQ);
+            }
+        }, n);
+    }
+
+    function keepAlive() {
+
+        logger.debug("[" + clientId + "] Server still alive");
+        lastActiveTime = new Date();
+    }
+
+    function msgReceived(msg, secure) {
+
+        lastActiveTime = new Date();
+
+        if (secure) {
+            crypt.desDecrypt(msg, msgKey, function (err, data) {
+                if (err) return logger.error("[" + clientId + "] " + err);
+                var msgObj = JSON.parse(data);
+                onNewMessage(msgObj);
+                logger.debug("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
+            });
+        } else {
+            var msgObj = JSON.parse(msg);
+            onNewMessage(msgObj);
+            logger.debug("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
+        }
+    }
+
+    function connectToServer() {
+
+        if (clientLogon || clientLogging) {
+
+            return;
+        }
+
+        clientLogging = true;
+
+        logger.debug("[" + clientId + "] Connecting..." + PLATFORM_SERVER + "[" + APP_PORT + "]");
+        socket = net.createConnection(APP_PORT, PLATFORM_SERVER);
+
+        protocol.handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMsgKey, setLogon, setKeepAliveInterval, keepAlive, msgReceived,
+            handleError, handleClose, logger);
+
+        function handleClose() {
+
+            if (keepAliveId != null) {
+
+                clearInterval(keepAliveId);
+                keepAliveId = null;
+            }
+
+            if (ensureAliveId != null) {
+
+                clearInterval(ensureAliveId);
+                ensureAliveId = null;
+            }
+
+            if (clientLogon) {
+
+                logger.debug("[" + clientId + "] Disconnected");
+                clientLogon = false;
+            }
+
+            if (clientLogging) {
+
+                clientLogging = false;
+            }
+        }
+
+        function handleError() {
+
+            logger.error(">>>[" + clientId + "] Network error<<<");
+        }
+    }
+
+    function ensureActive() {
+
+        if (!clientLogon) return;
+
+        var diff = (new Date().getTime() - lastActiveTime.getTime()); //ms
+        if (diff >= maxInactiveTime) {
+
+            logger.warn("[" + clientId + "] Server inactive timeout");
+
+            socket.end(protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+            return;
+        }
+        ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
+    }
+
+    connectToServer();
+    setInterval(connectToServer, RETRY_INTERVAL);
 }
 
 var exitTimer = null;
@@ -340,92 +475,99 @@ void main(function () {
     process.on('SIGINT', aboutExit);
     process.on('SIGTERM', aboutExit);
 
-	// 解析 OPML 并增加频道
-	// curl --header "Content-Type:application/json;charset=utf-8" -d "{\"url\":\"http://www.cctv.com/rss/01/index.xml\"}" http://localhost:5678/opml
-	webapp.post('/opml', function (req, res) {
+    // 解析 OPML 并增加频道
+    // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"url\":\"http://www.cctv.com/rss/01/index.xml\"}" http://localhost:5678/opml
+    webapp.post('/opml', function (req, res) {
 
-		var opmlUrl = req.body.url;
-		log("OPML: " + opmlUrl);
-		channel.getChannelsFromOpml(opmlUrl, function (err, channels) {
+        var opmlUrl = req.body.url;
+        logger.debug("OPML: " + opmlUrl);
+        channel.getChannelsFromOpml(opmlUrl, function (err, channels) {
 
-			if (err) {
-				return res.json({success: false,errcode: 1,errmsg: err});
-			}
+            if (err) {
+                return res.json({success: false, errcode: 1, errmsg: err});
+            }
 
-			db.addChannels(channels, function (err) {
+            db.addChannels(channels, function (err) {
 
-				if (!err) {
-					res.json({success: true,count: channels.length});
-				} else {
-					res.json({success: false,errcode: 2,errmsg: err});
-				}
-			});
-		});
-	});
+                if (!err) {
+                    res.json({success: true, count: channels.length});
+                } else {
+                    res.json({success: false, errcode: 2, errmsg: err});
+                }
+            });
+        });
+    });
 
-	// 手动增加频道
-	// curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"网易新闻\",\"title\":\"头条新闻\",\"description\":\"[网易新闻]头条新闻\",\"url\":\"http://news.163.com/special/00011K6L/rss_newstop.xml\"}" http://localhost:5678/channel
-	webapp.post('/channel', function (req, res) {
+    // 手动增加频道
+    // curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"网易新闻\",\"title\":\"头条新闻\",\"description\":\"[网易新闻]头条新闻\",\"url\":\"http://news.163.com/special/00011K6L/rss_newstop.xml\"}" http://localhost:5678/channel
+    webapp.post('/channel', function (req, res) {
 
-		var channel = req.body;
-		db.addChannel(channel, function (err) {
+        var channel = req.body;
+        db.addChannel(channel, function (err) {
 
-			if (!err) {
-				res.json({success: true});
-			} else {
-				res.json({success: false,errcode: 1,errmsg: err});
-			}
-		});
-	});
+            if (!err) {
+                res.json({success: true});
+            } else {
+                res.json({success: false, errcode: 1, errmsg: err});
+            }
+        });
+    });
 
-	// 删除频道
-	// curl -X DELETE http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
-	webapp.delete('/channel/:id', function (req, res) {
+    // 删除频道
+    // curl -X DELETE http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
+    webapp.delete('/channel/:id', function (req, res) {
 
-		var channelId = req.params.id;
-		db.removeChannel(channelId, function (err) {
+        var channelId = req.params.id;
+        db.removeChannel(channelId, function (err) {
 
-			if (!err) {
-				res.json({success: true});
-			} else {
-				res.json({success: false,errcode: 1,errmsg: err});
-			}
-		});
-	});
+            if (!err) {
+                res.json({success: true});
+            } else {
+                res.json({success: false, errcode: 1, errmsg: err});
+            }
+        });
+    });
 
-	// 修改频道
-	// curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"description\":\"ddd\"}" http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
-	webapp.put('/channel/:id', function (req, res) {
+    // 修改频道
+    // curl --header "Content-Type:application/json;charset=utf-8" -X PUT -d "{\"description\":\"ddd\"}" http://localhost:5678/channel/408B8FC7-0937-4EF3-893C-982AD6461F6A
+    webapp.put('/channel/:id', function (req, res) {
 
-		var channelId = req.params.id;
-		var channel = req.body;
-		db.updateChannel(channelId, channel, function (err) {
+        var channelId = req.params.id;
+        var channel = req.body;
+        db.updateChannel(channelId, channel, function (err) {
 
-			if (!err) {
-				res.json({success: true});
-			} else {
-				res.json({success: false,errcode: 1,errmsg: err});
-			}
-		});
-	});
+            if (!err) {
+                res.json({success: true});
+            } else {
+                res.json({success: false, errcode: 1, errmsg: err});
+            }
+        });
+    });
 
-	// 获取所有频道
-	// curl http://localhost:5678/channels
-	webapp.get('/channels', function (req, res) {
+    // 获取所有频道
+    // curl http://localhost:5678/channels
+    webapp.get('/channels', function (req, res) {
 
-		db.getAllChannels(function (err, channels) {
+        db.getAllChannels(function (err, channels) {
 
-			if (!err) {
-				res.json({success: true, channels:channels});
-			} else {
-				res.json({success: false,errcode: 1,errmsg: err});
-			}
-		});
-	});
+            if (!err) {
+                res.json({success: true, channels: channels});
+            } else {
+                res.json({success: false, errcode: 1, errmsg: err});
+            }
+        });
+    });
 
-	webapp.listen(HTTPD_PORT);
-	log('服务器正在监听端口 ' + HTTPD_PORT + '...');
+    webapp.listen(HTTPD_PORT);
+    logger.debug('服务器正在监听端口 ' + HTTPD_PORT + '...');
 
-	//log("等待 " + (POLL_RSS_INTERVAL / 1000) + " 秒钟...");
-	/*setTimeout(*/getAllArticlesAndPush()/*, POLL_RSS_INTERVAL)*/;
+    // 启动消息推送客户端
+    startWorker(PLATFORM_USERNAME, PLATFORM_PASSWORD, function () {
+
+        // 定时获取文章并推送
+        getAllArticlesAndPush();
+    }, function (msgObj) {
+
+        // 处理新消息
+    });
 });
