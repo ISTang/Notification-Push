@@ -886,6 +886,9 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
                 socket.write(/*PNTP_FLAG+*/PUSH_MSG_ACK);
             }
             callback();
+        } else if (action == "SEND" && target == "MSG") {
+
+            // TODO 收到发送消息回复
         } else if (action == "CLOSE" && target == "CONN") {
 
             // 服务器主动断开连接
