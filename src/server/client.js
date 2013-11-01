@@ -16,15 +16,15 @@ Date.prototype.Format = utils.DateFormat;
  */
 function log(msg) {
 
-	var now = new Date();
-	var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
-	var buffer = "[" + strDatetime + "] " + msg;
-	console.log(buffer);
+    var now = new Date();
+    var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
+    var buffer = "[" + strDatetime + "] " + msg;
+    console.log(buffer);
 }
 
 const appId = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
 const appPassword = "@0Vd*4Ak";
-const protectKey = {public:"n9SfmcRs",private:"n9SfmcRs"};
+const protectKey = {public: "n9SfmcRs", private: "n9SfmcRs"};
 
 function getAppInfo() {
     return {id: appId, password: appPassword, protectKey: protectKey};
@@ -32,175 +32,172 @@ function getAppInfo() {
 
 function startWorker(clientId, clientPassword, onConnected) {
 
-	var socket;
-	var clientLogon = false; // 是否登录成功
+    var socket;
+    var clientLogon = false; // 是否登录成功
 
-	var clientLogging = false;
+    var clientLogging = false;
 
-	var msgKey;
-	var maxInactiveTime;
+    var msgKey;
+    var maxInactiveTime;
 
-	var lastActiveTime;
+    var lastActiveTime;
 
-	var keepAliveId = null;
-	var ensureAliveId = null;
+    var keepAliveId = null;
+    var ensureAliveId = null;
 
-	function getUserInfo() {
-	
-		return {name: clientId, password: clientPassword};
-	}
+    function getUserInfo() {
 
-	function setMsgKey(key) {
+        return {name: clientId, password: clientPassword};
+    }
 
-		msgKey = key;
-	}
+    function setMsgKey(key) {
 
-	function setLogon() {
-		onConnected();
+        msgKey = key;
+    }
 
-		clientLogon = true;
-		clientLogging = false;
-		lastActiveTime = new Date();
+    function setLogon() {
+        onConnected();
 
-		ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
-	}
+        clientLogon = true;
+        clientLogging = false;
+        lastActiveTime = new Date();
 
-	function setKeepAliveInterval(n) {
+        ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
+    }
 
-		if (keepAliveId != null) {
+    function setKeepAliveInterval(n) {
 
-			clearInterval(keepAliveId);
-		}
+        if (keepAliveId != null) {
 
-		maxInactiveTime = n*3;
-		
-		keepAliveId = setInterval(function () {
+            clearInterval(keepAliveId);
+        }
 
-			if (!clientLogon) return;
+        maxInactiveTime = n * 3;
 
-			var diff = new Date().getTime() - lastActiveTime.getTime();
-			if (diff >= n) {
+        keepAliveId = setInterval(function () {
 
-				log("["+clientId+"] Keeping alive...");
-				socket.write(protocol.SET_ALIVE_REQ);
-			}
-		}, n);
-	}
+            if (!clientLogon) return;
 
-	function keepAlive() {
+            var diff = new Date().getTime() - lastActiveTime.getTime();
+            if (diff >= n) {
 
-		log("["+clientId+"] Server still alive");
-		lastActiveTime = new Date();
-	}
+                log("[" + clientId + "] Keeping alive...");
+                socket.write(protocol.SET_ALIVE_REQ);
+            }
+        }, n);
+    }
 
-	function msgReceived(msg, secure) {
+    function keepAlive() {
 
-		lastActiveTime = new Date();
+        log("[" + clientId + "] Server still alive");
+        lastActiveTime = new Date();
+    }
 
-		if (secure) {
+    function msgReceived(msg, secure) {
+
+        lastActiveTime = new Date();
+
+        if (secure) {
             crypt.desDecrypt(msg, msgKey, function (err, data) {
-                if (err) return log("["+clientId+"] " + err);
+                if (err) return log("[" + clientId + "] " + err);
                 var msgObj = JSON.parse(data);
-                log("["+clientId+"] "+msgObj.generate_time+" "+(msgObj.title!=null?msgObj.title:"---")+": "+msgObj.body);
+                log("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
             });
-		} else {
+        } else {
             var msgObj = JSON.parse(msg);
-            log("["+clientId+"] "+msgObj.generate_time+" "+(msgObj.title!=null?msgObj.title:"---")+": "+msgObj.body);
-		}
-	}
+            log("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
+        }
+    }
 
-	function connectToServer() {
+    function connectToServer() {
 
-		if (clientLogon || clientLogging) {
+        if (clientLogon || clientLogging) {
 
-			return;
-		}
+            return;
+        }
 
-		clientLogging = true;
+        clientLogging = true;
 
-		log("["+clientId+"] Connecting..." + SERVER_HOST + "[" + SERVER_PORT + "]");
-		socket = net.createConnection(SERVER_PORT, SERVER_HOST);
+        log("[" + clientId + "] Connecting..." + SERVER_HOST + "[" + SERVER_PORT + "]");
+        socket = net.createConnection(SERVER_PORT, SERVER_HOST);
 
-		protocol.handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMsgKey, setLogon, setKeepAliveInterval, keepAlive, msgReceived,
-			handleError, handleClose, log);
+        protocol.handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMsgKey, setLogon, setKeepAliveInterval, keepAlive, msgReceived,
+            handleError, handleClose, log);
 
-		function handleClose() {
+        function handleClose() {
 
-			if (keepAliveId != null) {
+            if (keepAliveId != null) {
 
-				clearInterval(keepAliveId);
-				keepAliveId = null;
-			}
+                clearInterval(keepAliveId);
+                keepAliveId = null;
+            }
 
-			if (ensureAliveId != null) {
+            if (ensureAliveId != null) {
 
-				clearInterval(ensureAliveId);
-				ensureAliveId = null;
-			}
+                clearInterval(ensureAliveId);
+                ensureAliveId = null;
+            }
 
-			if (clientLogon) {
+            if (clientLogon) {
 
-				log("["+clientId+"] Disconnected");
-				clientLogon = false;
-			}
+                log("[" + clientId + "] Disconnected");
+                clientLogon = false;
+            }
 
-			if (clientLogging) {
+            if (clientLogging) {
 
-				clientLogging = false;
-			}
-		}
+                clientLogging = false;
+            }
+        }
 
-		function handleError() {
+        function handleError() {
 
-			log(">>>["+clientId+"] Network error<<<");
-		}
-	}
+            log(">>>[" + clientId + "] Network error<<<");
+        }
+    }
 
-	function ensureActive() {
+    function ensureActive() {
 
-		if (!clientLogon) return;
+        if (!clientLogon) return;
 
-		var diff = (new Date().getTime() - lastActiveTime.getTime()); //ms
-		if (diff >= maxInactiveTime) {
+        var diff = (new Date().getTime() - lastActiveTime.getTime()); //ms
+        if (diff >= maxInactiveTime) {
 
-			log("["+clientId+"] Server inactive timeout");
+            log("[" + clientId + "] Server inactive timeout");
 
-			socket.end(protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
-			return;
-		}
-		ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
-	}
+            socket.end(protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+            return;
+        }
+        ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
+    }
 
     connectToServer();
     setInterval(connectToServer, RETRY_INTERVAL);
 }
 
 function main(fn) {
-	fn();
+    fn();
 }
 
 // linux/mac: ulimit -n MAX_FILES
 // 设置最大允许打开的文件数
 void main(function () {
 
-	var clientId = (process.argv.length >= 4 ? process.argv[2] : "testacc"); // 客户ID
-	var clientPassword = (process.argv.length >= 4 ? process.argv[3] : "testpass"); // 客户密码
+    var clientId = (process.argv.length >= 4 ? process.argv[2] : "testacc"); // 客户ID
+    var clientPassword = (process.argv.length >= 4 ? process.argv[3] : "testpass"); // 客户密码
 
-	var workerCount = (process.argv.length >= 5 ? parseInt(process.argv[4]) : 1);
-	log("Total "+workerCount+" worker to start...");
-	
-	var clientIds = [];
-	for (var i=0;i<workerCount;i++) {
-		clientIds.push(clientId);
-	}
-	
-	async.forEach(clientIds, function (clientId, callback) {
-			startWorker(clientId, clientPassword, function(){
-                            log("Client "+clientId+" logon.");
-                            callback();
-                        });
-	}, function (err) {
-		if (err) return log(err);
-		log("All clients logon");
-	});
+    var workerCount = (process.argv.length >= 5 ? parseInt(process.argv[4]) : 1);
+    log("Total " + workerCount + " worker to start...");
+
+    var clientIds = [];
+    for (var i = 0; i < workerCount; i++) {
+        clientIds.push(clientId + (i + 1));
+    }
+
+    async.forEach(clientIds, function (clientId, callback) {
+        startWorker(clientId, clientPassword, callback);
+    }, function (err) {
+        if (err) return log(err);
+        log("All clientts logon");
+    });
 });

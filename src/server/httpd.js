@@ -8,8 +8,8 @@ var fs = require('fs');
 var express = require('express');
 //
 var passport = require('passport')
-  , LocalStrategy = require('passport-local').Strategy
-  , ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn;
+    , LocalStrategy = require('passport-local').Strategy
+    , ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn;
 var user = require('connect-roles');
 //
 var config = require(__dirname + '/config');
@@ -23,7 +23,6 @@ var connman = require(__dirname + "/manage/connection");
 
 // 定义常量
 const HTTPD_PORT = config.HTTPD_PORT;
-const LOG_ENABLED = config.LOG_ENABLED;
 const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 
 var webapp = express();
@@ -35,16 +34,16 @@ webapp.configure(function () {
     webapp.set('view engine', 'html');
 
     /*webapp.use(function (req, res, next) {
-        req.setEncoding('utf-8');
-        var data = '';
-        req.on('data', function (chunk) {
-        	data += chunk;
-        });
-        req.on('end', function () {
-        	req.rawBody = data;
-        	next();
-        });
-    });*/
+     req.setEncoding('utf-8');
+     var data = '';
+     req.on('data', function (chunk) {
+     data += chunk;
+     });
+     req.on('end', function () {
+     req.rawBody = data;
+     next();
+     });
+     });*/
     webapp.use(express.cookieParser());
     webapp.use(express.bodyParser());
     webapp.use(express.methodOverride());
@@ -72,113 +71,117 @@ webapp.configure('production', function () {
 webapp.set('env', 'development');
 
 passport.use(new LocalStrategy(
-	function(username, password, done) {
-		db.redisPool.acquire(function(err, redis) {
-			if (err) {
-				log(err);
-				return done(err);
-			}
-			db.checkUsername(redis, username, utils.md5(password), false, function(result) {
-				db.redisPool.release(redis);
-				if (!result.passed) {
-					log("Login check failed: "+result.reason );
-					return done(null, false, { message: result.reason }); 
-				}
-				log("Login check passed.");
-				done(null, {id:result.accountId,name:result.accountName,phone:result.phoneNumber,email:result.emailAddress});
-			});
-		});
-	}
+    function (username, password, done) {
+        db.redisPool.acquire(function (err, redis) {
+            if (err) {
+                logger.error(err);
+                return done(err);
+            }
+            logger.trace("Checking username " + username + "...");
+            db.checkUsername(redis, username, utils.md5(password), false, function (result) {
+                db.redisPool.release(redis);
+                if (!result.passed) {
+                    logger.warn("Login check failed: " + result.reason);
+                    return done(null, false, { message: result.reason });
+                }
+                logger.trace("Login check passed.");
+                if ((result.type || false)) logger.trace(username + " is a public account.");
+                db.getAccountPermissions(redis, result.accountId, function (err, permissions) {
+                    if (err) {
+                        logger.fatal("Get account permissions failed: " + err);
+                        process.exit(1);
+                    }
+                    logger.trace("permissions of " + result.accountId + ": " + JSON.stringify(permissions));
+                    done(null, {id: result.accountId, name: result.accountName, phone: result.phoneNumber, email: result.emailAddress,
+                        isPublic: (result.type || false), permissions: permissions});
+                });
+            });
+        });
+    }
 ));
 
-passport.serializeUser(function(user, done) {
-	done(null, user.id);
+passport.serializeUser(function (user, done) {
+    done(null, user.id);
 });
 
-passport.deserializeUser(function(id, done) {
-	db.redisPool.acquire(function(err, redis) {
-		if (err) {
-			log(err);
-			return done(err);
-		}
-		db.getAccountInfo(redis, id, function(err, result) {
-			db.redisPool.release(redis);
-			done(err, result);
-		});
-	});
+passport.deserializeUser(function (id, done) {
+    db.redisPool.acquire(function (err, redis) {
+        if (err) {
+            logger.error(err);
+            return done(err);
+        }
+        db.getAccountInfo(redis, id, function (err, result) {
+            if (err) {
+                db.redisPool.release(redis);
+                done(err, result);
+                return;
+            }
+            db.getAccountPermissions(redis, result.id, function (err, permissions) {
+                db.redisPool.release(redis);
+                if (err) {
+                    logger.warn("Get account permissions failed: " + err);
+                    permissions = {};
+                }
+                result.permissions = permissions;
+                done(null, result);
+            });
+        });
+    });
 });
 
 webapp.use(user);
 
-user.use('view connections', function(req) {
-    return true;
+user.use('view connections', function (req) {
+    return req.user.permissions.view_connections;
 });
 
-user.use('view applications', function(req) {
-    return true;
+user.use('view applications', function (req) {
+    return req.user.permissions.view_applications;
 });
 
-user.use('view accounts', function(req) {
-    return true;
+user.use('view accounts', function (req) {
+    return req.user.permissions.view_accounts;
 });
 
-user.use('view messages', function(req) {
-    return true;
+user.use('view messages', function (req) {
+    return req.user.permissions.view_messages;
 });
 
-user.use('list applications', function(req) {
-    return true;
+user.use('list applications', function (req) {
+    return req.user.permissions.list_applications;
 });
 
-user.use('list accounts', function(req) {
-    return true;
+user.use('list accounts', function (req) {
+    return req.user.permissions.list_accounts;
 });
 
-user.use('push message', function(req) {
-    return true;
+user.use('push message', function (req) {
+    return req.user.permissions.push_message || req.user.isPublic;
 });
 
-user.use('clear messages', function(req) {
-    return true;
+user.use('clear messages', function (req) {
+    return req.user.permissions.clear_messages;
 });
-
-/*user.use(function(req) {
-  if (req.user.role === 'admin') {
-    return true;
-  }
-});*/
 
 //optionally controll the access denid page displayed
-user.setFailureHandler(function (req, res, action){
-	var accept = req.headers.accept || '';
-	res.status(403);
-	if (~accept.indexOf('html')) {
-		res.render('access-denied', {action: action});
-	} else {
-		res.json({
-			success: false,
-			errcode: -1,
-			errmsg: 'Access Denied - You don\'t have permission to: ' + action
-		});
-	}
+user.setFailureHandler(function (req, res, action) {
+    var accept = req.headers.accept || '';
+    res.status(403);
+    if (~accept.indexOf('html')) {
+        res.render('access-denied', {action: action});
+    } else {
+        res.json({
+            success: false,
+            errcode: -1,
+            errmsg: 'Access Denied - You don\'t have permission to: ' + action
+        });
+    }
 });
-
-
-var logStream =   fs.createWriteStream(__dirname+"/logs/httpd.log", {"flags": "a"}) ;
 
 Date.prototype.Format = utils.DateFormat;
 
-/*
- * Print log
- */
-function log(msg) {
-
-    var now = new Date();
-    var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
-    var buffer = "[" + strDatetime + "] " + msg + "[httpd]";
-    if (logStream != null) logStream.write(buffer + "\r\n");
-    if ( LOG_ENABLED) console.log(buffer);
-}
+var logger = config.log4js.getLogger('httpd');
+logger.setLevel(config.LOG_LEVEL);
 
 function main(fn) {
     fn();
@@ -191,7 +194,7 @@ function aboutExit() {
 
     exitTimer = setTimeout(function () {
 
-        log("web app exit...");
+        logger.info("web app exit...");
 
         process.exit(0);
 
@@ -204,16 +207,15 @@ void main(function () {
     process.on('SIGTERM', aboutExit);
 
     webapp.get('/login', function (req, res) {
-		res.setHeader("Content-Type", "text/html");
-		res.render('login', {
-			pageTitle: '消息推送中心 - 登录'
-                        ,req: req
-		});
+        res.setHeader("Content-Type", "text/html");
+        res.render('login', {
+            pageTitle: '消息推送中心 - 登录', req: req
+        });
     });
-    webapp.post('/login',  passport.authenticate('local', { successRedirect: '/',
-									   failureRedirect: '/login',
-									   failureFlash: false }));
-    
+    webapp.post('/login', passport.authenticate('local', { successRedirect: '/',
+        failureRedirect: '/login',
+        failureFlash: false }));
+
     // 1.应用接入
     //
     // 1)注册新应用
@@ -239,7 +241,7 @@ void main(function () {
     // 6)检查应用名称
     //  curl http://localhost:4567/application/name/appname
     webapp.get('/application/name/:name', appman.existsName);
-	// 7)获取应用信息(适合web提交)
+    // 7)获取应用信息(适合web提交)
     webapp.get('/applications/AjaxHandler', ensureLoggedIn('/login'), user.can('view applications'), appman.getApplications);
 
     // 2.用户账号
@@ -287,7 +289,7 @@ void main(function () {
     // 11)检查邮箱地址
     // curl http://localhost:4567/account/email/test@tets.com
     webapp.get('/account/email/:email', accman.existsEmailAddress);
-	// 12)获取账号(适合web提交)
+    // 12)获取账号(适合web提交)
     webapp.get('/accounts/AjaxHandler', user.can('list accounts'), accman.getAccounts);
 
     // 3.消息推送
@@ -320,50 +322,46 @@ void main(function () {
             }
         });
     });
-	// 6)获取消息(适合web提交)
+    // 6)获取消息(适合web提交)
     webapp.get('/messages/AjaxHandler', ensureLoggedIn('/login'), user.can('view messages'), msgpush.getMessages);
 
-	// 获取连接消息(适合web提交)
+    // 获取连接消息(适合web提交)
     webapp.get('/connections/AjaxHandler', ensureLoggedIn('/login'), user.can('view connections'), connman.getConnections);
 
     webapp.get('/', ensureLoggedIn('/login'), user.can('view connections'), function (req, res) {
-        log("打开首页...");
-		res.setHeader("Content-Type", "text/html");
-		res.render('index', {
-			pageTitle: '消息推送中心 - 首页'
-                        ,req:req
-		});
+        logger.trace("打开首页...");
+        res.setHeader("Content-Type", "text/html");
+        res.render('index', {
+            pageTitle: '消息推送中心 - 首页', req: req
+        });
     });
 
     webapp.get('/appman', ensureLoggedIn('/login'), user.can('view applications'), function (req, res) {
-        log("打开应用管理页面...");
-		res.setHeader("Content-Type", "text/html");
-		res.render('appman', {
-			pageTitle: '消息推送中心 - 应用管理'
-                        ,req: req
-		});
+        logger.trace("打开应用管理页面...");
+        res.setHeader("Content-Type", "text/html");
+        res.render('appman', {
+            pageTitle: '消息推送中心 - 应用管理', req: req
+        });
     });
 
     webapp.get('/accman', ensureLoggedIn('/login'), user.can('view accounts'), function (req, res) {
-        log("打开账号管理页面...");
-		res.setHeader("Content-Type", "text/html");
-		res.render('accman', {
-			pageTitle: '消息推送中心 - 账号管理'
-                        ,req: req
-		});
+        logger.trace("打开账号管理页面...");
+        res.setHeader("Content-Type", "text/html");
+        res.render('accman', {
+            pageTitle: '消息推送中心 - 账号管理', req: req
+        });
     });
 
     webapp.get('/msgman', ensureLoggedIn('/login'), user.can('view messages'), function (req, res) {
-        log("打开消息管理页面...");
-		res.setHeader("Content-Type", "text/html");
-		res.render('msgman', {
-			pageTitle: '消息推送中心 - 消息管理'
-                        ,req: req
-		});
+        logger.trace("打开消息管理页面...");
+        res.setHeader("Content-Type", "text/html");
+        res.render('msgman', {
+            pageTitle: '消息推送中心 - 消息管理', req: req
+        });
     });
 
     webapp.get('/appInfos', ensureLoggedIn('/login'), user.can('list applications'), function (req, res) {
-        log("获取应用信息...");
+        logger.trace("获取应用信息...");
         appman.getApplicationInfos(function (err, appInfos) {
             if (!err) {
                 res.json({
@@ -382,5 +380,5 @@ void main(function () {
     });
 
     webapp.listen(HTTPD_PORT);
-    log('HTTPD process is running at port ' + HTTPD_PORT + '...');
+    logger.info('HTTPD process is running at port ' + HTTPD_PORT + '...');
 });

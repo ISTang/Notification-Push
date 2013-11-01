@@ -16,30 +16,18 @@ const NOTIFY_NUMBER = config.NOTIFY_NUMBER;
 const LOGIN_TIMEOUT = config.LOGIN_TIMEOUT;
 const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 //
-const LOG_ENABLED = config.LOG_ENABLED;
 const TRACK_SOCKET = config.TRACK_SOCKET;
 
 var myIndex;
 
 var loginingSockets = []; // clientAddress->(socket, connectTime, accountName)
 
-var logStream = fs.createWriteStream(__dirname + "/logs/login.log", {"flags": "a"});
-
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
 String.prototype.format = utils.StringFormat;
 
-/*
- * Print log
- */
-function log(msg) {
-
-    var now = new Date();
-    var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
-    var buffer = "[" + strDatetime + "] " + msg + "[login]";
-    if (logStream != null) logStream.write(buffer + "\r\n");
-    if (LOG_ENABLED) console.log(buffer);
-}
+var logger = config.log4js.getLogger('login');
+logger.setLevel(config.LOG_LEVEL);
 
 /**
  * 检查应用ID及密码
@@ -127,7 +115,7 @@ function startNotifyPool() {
 
     function onError(error) {
 
-        log(error.toString());
+        logger.error(error.toString());
         this.kill();
     }
 
@@ -146,7 +134,7 @@ function startNotifyPool() {
 
                 notifyProcessPool[index] = notifyProcess;
 
-                log("#" + index + " notify process restarted");
+                logger.warn("#" + index + " notify process restarted");
             }
         }
     }
@@ -163,11 +151,11 @@ process.on('message', function (m, handle) {
 
             if (err) {
 
-                log('"Process will exit: login process listen error');
+                logger.fatal('"Process will exit: login process listen error');
                 process.exit(1);
             } else {
 
-                log('Login process ' + myIndex + ' listen ok');
+                logger.info('Login process ' + myIndex + ' listen ok');
 
                 startNotifyPool();
             }
@@ -188,7 +176,8 @@ function aboutExit() {
     if (server != null) server.close();
     exitTimer = setTimeout(function () {
 
-        log('Login process will exit...');
+
+        logger.info('Login process will exit...');
 
         process.exit(0);
 
@@ -203,12 +192,12 @@ void main(function () {
 
         //noinspection JSUnresolvedVariable
         var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
-        if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + " connected");
+        if (TRACK_SOCKET) logger.trace("[SOCKET] client " + clientAddress + " connected");
 
         loginingSockets[clientAddress] = {"socket": socket, "connectTime": new Date(), "accountName": null};
 
         function clientLogon(socket, accountId, accountName, appId, msgKey, callback) {
-            log("[" + accountName + "] logon");
+            logger.trace("[" + accountName + "] logon");
             var connId = uuid.v4().toUpperCase();
             var channelId = "notify-" + myIndex + "-" + nextNotifyProcessIndex;
             db.redisPool.acquire(function (err, redis) {
@@ -238,22 +227,22 @@ void main(function () {
 
         function handleError(e) {
 
-            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + ": " + e.toString());
+            if (TRACK_SOCKET) logger.trace("[SOCKET] client " + clientAddress + ": " + e.toString());
         }
 
         function handleClose(hadError) {
 
-            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + ": " + (hadError ? "network error" : "disconnected"));
+            if (TRACK_SOCKET) logger.trace("[SOCKET] client " + clientAddress + ": " + (hadError ? "network error" : "disconnected"));
             delete loginingSockets[clientAddress];
         }
 
         // 发送应用认证请求
-        if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " +  protocol.GET_APPID_REQ);
+        if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": " + protocol.GET_APPID_REQ);
         socket.write(/*protocol.PNTP_FLAG+*/protocol.GET_APPID_REQ);
 
         // 处理连接
         protocol.handleClientConnection(socket, checkAppId, checkUsername, clientLogon,
-            handleError, handleClose, log);
+            handleError, handleClose, logger);
     });
 
     setInterval(function () {
@@ -271,8 +260,7 @@ void main(function () {
                 var socket = socketInfo.socket;
                 //var accountName = socketInfo.accountName;
 
-                //log("Client " + (accountName != null ? accountName : clientAddress) + " login timeout");
-                if (TRACK_SOCKET) log("[SOCKET] end client " + clientAddress + ": " +  protocol.LOGIN_TIMEOUT_MSG);
+                if (TRACK_SOCKET) logger.trace("[SOCKET] end client " + clientAddress + ": " + protocol.LOGIN_TIMEOUT_MSG);
                 socket.end(protocol.CLOSE_CONN_RES.format(protocol.LOGIN_TIMEOUT_MSG.length, protocol.LOGIN_TIMEOUT_MSG));
 
                 delete loginingSockets[clientAddress];

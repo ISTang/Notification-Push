@@ -47,17 +47,20 @@
             "bServerSide": true,
             "bProcessing": true,
             "sAjaxSource": "/applications/AjaxHandler",
-			"sAjaxDataProp": "aaData",
-			"aoColumns": [
-				{ "sName": "appId", "sDefaultContent": "" },
-				{ "sName": "name", "sDefaultContent": "", "sWidth": "64px" },
-				{ "sName": "needLogin", "sDefaultContent": "否", "sWidth": "48px" },
-				{ "sName": "needLoginPassword", "sDefaultContent": "否", "sWidth": "72px" },
-				{ "sName": "autoCreateAccount", "sDefaultContent": "是", "sWidth": "72px" },
-				{ "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
-				{ "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
-				{ "sName": "createTime", "sDefaultContent": "" }
-			],
+            "sAjaxDataProp": "aaData",
+            "aoColumns": [
+                { "sName": "appId", "sDefaultContent": "" },
+                { "sName": "name", "sDefaultContent": "", "sWidth": "64px" },
+                { "sName": "needLogin", "sDefaultContent": "否", "sWidth": "48px" },
+                { "sName": "needLoginPassword", "sDefaultContent": "否", "sWidth": "72px" },
+                { "sName": "autoCreateAccount", "sDefaultContent": "是", "sWidth": "72px" },
+                { "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
+                { "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
+                { "sName": "createTime", "sDefaultContent": "" }
+            ],
+            "aaSorting": [
+                [7, 'desc']
+            ],
             "oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,
@@ -67,14 +70,14 @@
             "bInfo": true,
             "bAutoWidth": true
         });
-                
+
         $("#appOption").selectable({
-            stop: function() {
+            stop: function () {
                 var appOptions = "";
-                $(".ui-selected", this).each(function(li) {
+                $(".ui-selected", this).each(function (li) {
                     var index = $("#appOption li").index(this);
                     var li = $($("#appOption li")[index]);
-                    if (appOptions!="") appOptions += ",";
+                    if (appOptions != "") appOptions += ",";
                     appOptions += li.attr("data-id");
                 });
                 $("#appOptions").val(appOptions);
@@ -87,44 +90,44 @@
             width: 640,
             modal: true,
             buttons: {
-                "添加": function() {
+                "添加": function () {
                     var bValid = true;
 
-                    if ( bValid ) {
+                    if (bValid) {
                         $("#addapp").submit();
                     }
                 },
-                Cancel: function() {
-                    $(this).dialog( "close" );
+                Cancel: function () {
+                    $(this).dialog("close");
                 }
             },
-            close: function() {
+            close: function () {
                 $("#addapp")[0].reset();
             }
         });
 
         $("#add-app")
                 .button()
-                .click(function() {
+                .click(function () {
                     $("#addapp-form").dialog("open");
                 });
 
         // bind to the form's submit event
-        $('#addapp').submit(function() {
-            $(this).ajaxSubmit({dataType:"json",success:showResponse});
+        $('#addapp').submit(function () {
+            $(this).ajaxSubmit({dataType: "json", success: showResponse});
             return false;
         });
 
         // post-submit callback
-        function showResponse(data, statusText)  {
+        function showResponse(data, statusText) {
             if (data.success) {
                 alert("已成功添加应用。");
-                $("#addapp-form").dialog( "close" );
+                $("#addapp-form").dialog("close");
             } else {
-                alert("添加应用失败："+data.errmsg+"(#"+data.errcode+")");
+                alert("添加应用失败：" + data.errmsg + "(#" + data.errcode + ")");
             }
         }
-   });
+    });
 </script>
 
 

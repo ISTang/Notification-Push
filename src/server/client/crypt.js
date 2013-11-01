@@ -62,24 +62,22 @@ function rsaDecrypt(str, key, callback) {
  */
 function desEncrypt(str, key, callback) {
 
-	var dataLength = Buffer.byteLength(str);
-	var paddingLength = (8-(4+dataLength)%8)%8;
-	var buffer = new Buffer(8+4+dataLength+paddingLength);
-	buffer.fill(0, 0, 8);
-	buffer.writeInt32BE(dataLength, 8);
-	buffer.write(str, 8+4, dataLength);
-	buffer.fill(0, 8+4+dataLength);
-	
+    var dataLength = Buffer.byteLength(str);
+    var paddingLength = (8 - (4 + dataLength) % 8) % 8;
+    var buffer = new Buffer(8 + 4 + dataLength + paddingLength);
+    buffer.fill(0, 0, 8);
+    buffer.writeInt32BE(dataLength, 8);
+    buffer.write(str, 8 + 4, dataLength);
+    buffer.fill(0, 8 + 4 + dataLength);
+
     try {
         var cipher = crypto.createCipheriv(ALGORITHM_DES, key, '12345678');
         cipher.setAutoPadding(false);
         var cryptedData = cipher.update(buffer.toString('binary'), /*IN*/'binary', /*OUT*/ENCODING);
-        cryptedData+= cipher.final(ENCODING);
-		//console.log("cryptedData:"+cryptedData);
+        cryptedData += cipher.final(ENCODING);
         if (callback) callback(null, cryptedData);
         else return cryptedData;
     } catch (e) {
-        console.log("desEncrypt: "+e);
         if (callback) return callback(e);
         return "";
     }
@@ -100,20 +98,18 @@ function desDecrypt(str, key, callback) {
 
     try {
         var decipher = crypto.createDecipheriv(ALGORITHM_DES, key, '12345678');
-		decipher.setAutoPadding(false);
+        decipher.setAutoPadding(false);
         var decryptedData = decipher.update(str, /*IN*/ENCODING, /*OUT*/'binary');
         decryptedData += decipher.final('binary');
-		//console.log("decryptedData:"+decryptedData);
-		
-		var buffer = new Buffer(decryptedData, 'binary');
-		var length = buffer.readInt32BE(8); // 跳过多余的8个字符
-		if (length>buffer.length-8-4) throw "DES decrypt error";
-		var result = buffer.slice(8+4, 8+4+length).toString();
-        		
-		if (callback) callback(null, result);
+
+        var buffer = new Buffer(decryptedData, 'binary');
+        var length = buffer.readInt32BE(8); // 跳过多余的8个字符
+        if (length > buffer.length - 8 - 4) throw "DES decrypt error";
+        var result = buffer.slice(8 + 4, 8 + 4 + length).toString();
+
+        if (callback) callback(null, result);
         else return result;
     } catch (e) {
-        console.log("desDecrypt: "+e);
         if (callback) return callback(e);
         return '';
     }
@@ -135,7 +131,7 @@ function makeAppKey() {
 function makeRsaKeys(handleResult) {
     // rsaJson({bits:1024}, handleResult);
     var key = randomstring.generate(PROTECTKEY_SIZE);
-    handleResult(null, {public:key, private:key});
+    handleResult(null, {public: key, private: key});
 }
 
 /**
@@ -149,28 +145,28 @@ function makeMsgKey() {
 }
 
 function main(fn) {
-	fn();
+    fn();
 }
 
 function test() {
-	var key = "n9SfmcRs";
-	var data = "15555215554,E7961F4A347DB79144BB21CE2427D53A";
-	console.log("data:"+data);
-	var en = rsaEncrypt(data, key);
-	console.log("en:"+en);
-	var de = rsaDecrypt(en, key);
-	console.log("de:"+de);
-	assert.equal(data, de);
+    var key = "n9SfmcRs";
+    var data = "15555215554,E7961F4A347DB79144BB21CE2427D53A";
+    console.log("data:" + data);
+    var en = rsaEncrypt(data, key);
+    console.log("en:" + en);
+    var de = rsaDecrypt(en, key);
+    console.log("de:" + de);
+    assert.equal(data, de);
 
     /*makeRsaKeys(function (err, keys) {
-        if (err) return console.log(err);
-        console.log(keys.public);
-        console.log(keys.private);
-    })*/
+     if (err) return console.log(err);
+     console.log(keys.public);
+     console.log(keys.private);
+     })*/
 }
 
-void main(function(){
-	//test();
+void main(function () {
+    //test();
     //var key = makeMsgKey();
     //console.log("key: "+key);
 });

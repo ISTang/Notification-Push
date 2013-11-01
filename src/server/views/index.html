@@ -26,16 +26,19 @@
             "bServerSide": true,
             "bProcessing": true,
             "sAjaxSource": "/connections/AjaxHandler",
-			"sAjaxDataProp": "aaData",
-			"aoColumns": [
-				{ "sName": "connId", "sDefaultContent": "" },
-				{ "sName": "clientAddress", "sDefaultContent": "", "sWidth": "128px" },
-				{ "sName": "accountInfo", "sDefaultContent": "", "sWidth": "128px" },
-				{ "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
-				{ "sName": "beginTime", "sDefaultContent": "", "sWidth": "80px" },
-				{ "sName": "duration", "sDefaultContent": "", "sWidth": "52px" },
-				{ "sName": "latestActivity", "sDefaultContent": "" }
-			],
+            "sAjaxDataProp": "aaData",
+            "aoColumns": [
+                { "sName": "connId", "sDefaultContent": "" },
+                { "sName": "clientAddress", "sDefaultContent": "", "sWidth": "128px" },
+                { "sName": "accountInfo", "sDefaultContent": "", "sWidth": "128px" },
+                { "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
+                { "sName": "beginTime", "sDefaultContent": "", "sWidth": "80px" },
+                { "sName": "duration", "sDefaultContent": "", "sWidth": "52px" },
+                { "sName": "latestActivity", "sDefaultContent": "" }
+            ],
+            "aaSorting": [
+                [4, 'desc']
+            ],
             "oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,

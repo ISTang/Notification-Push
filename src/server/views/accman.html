@@ -26,16 +26,19 @@
             "bServerSide": true,
             "bProcessing": true,
             "sAjaxSource": "/accounts/AjaxHandler",
-			"sAjaxDataProp": "aaData",
-			"aoColumns": [
-				{ "sName": "accountId", "sDefaultContent": "" },
-				{ "sName": "name", "sDefaultContent": "" },
-				{ "sName": "phoneNumber", "sDefaultContent": "" },
-				{ "sName": "emailAddress", "sDefaultContent": "" },
-				{ "sName": "disabled", "sDefaultContent": "启用", "sWidth": "56px" },
-				{ "sName": "createTime", "sDefaultContent": "", "sWidth": "80px" },
-				{ "sName": "updateTime", "sDefaultContent": "", "sWidth": "80px" }
-			],
+            "sAjaxDataProp": "aaData",
+            "aoColumns": [
+                { "sName": "accountId", "sDefaultContent": "" },
+                { "sName": "name", "sDefaultContent": "" },
+                { "sName": "phoneNumber", "sDefaultContent": "" },
+                { "sName": "emailAddress", "sDefaultContent": "" },
+                { "sName": "disabled", "sDefaultContent": "启用", "sWidth": "56px" },
+                { "sName": "createTime", "sDefaultContent": "", "sWidth": "80px" },
+                { "sName": "updateTime", "sDefaultContent": "", "sWidth": "80px" }
+            ],
+            "aaSorting": [
+                [5, 'desc']
+            ],
             "oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,

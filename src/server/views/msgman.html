@@ -29,8 +29,10 @@
     <form id="msgpush" method="post" enctype="multipart/form-data" action="/pushmsg">
         <fieldset>
             <div id="pushMethod">
-                <input type="radio" id="broadcast" name="pushMethod" value="broadcast" checked="checked"/><label for="broadcast">广播到所有接收者</label>
-                <input type="radio" id="multicast" name="pushMethod" value="multicast"/><label for="multicast">群发到多个接收者</label>
+                <input type="radio" id="broadcast" name="pushMethod" value="broadcast" checked="checked"/><label
+                    for="broadcast">广播到所有接收者</label>
+                <input type="radio" id="multicast" name="pushMethod" value="multicast"/><label
+                    for="multicast">群发到多个接收者</label>
                 <input type="radio" id="send" name="pushMethod" value="send"/><label for="send">发送到指定接收者</label>
             </div>
             <label for="msgTitle">消息标题(可选)</label>
@@ -44,12 +46,15 @@
             <!--<input id="attachment2" type="file" name="attachment2">
             <input id="attachment3" type="file" name="attachment3">
             <input id="attachment4" type="file" name="attachment4">-->
-            <label for="expiration">过期时间(可选)&nbsp;&nbsp;当前: <%=new Date().Format("yyyy-MM-dd")%> <span id="serverTime" class="clock"></span></label>
-            <input id="expiration" type="text" name="expiration" onfocus="WdatePicker({dateFmt:'yyyy-MM-dd HH:mm:ss'})"/>
+            <label for="expiration">过期时间(可选)&nbsp;&nbsp;当前: <%=new Date().Format("yyyy-MM-dd")%> <span id="serverTime"
+                                                                                                       class="clock"></span></label>
+            <input id="expiration" type="text" name="expiration"
+                   onfocus="WdatePicker({dateFmt:'yyyy-MM-dd HH:mm:ss'})"/>
             <label for="appId">应用</label>
             <select id="appId" name="appId" class="text ui-widget-content ui-corner-all">
                 <!--<option value="id">name</option>-->
             </select>
+
             <div id="receiver-container" style="display:none">
                 <label for="receiver">接收者</label>
                 <ol id="receiver" class="text ui-widget-content ui-corner-all" style="height:72px;overflow:scroll">
@@ -67,38 +72,41 @@
             "bServerSide": true,
             "bProcessing": true,
             "sAjaxSource": "/messages/AjaxHandler",
-			"sAjaxDataProp": "aaData",
-			"aoColumns": [
-				{ "sName": "messageId", "sDefaultContent": "", "sWidth": "80px" },
-				{ "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
-				{ "sName": "sender", "sDefaultContent": "", "fnRender": function(obj) {
-                                            return (obj.aData[2]==""?"(后台)":obj.aData[2]);
-                                        }, "sWidth": "47px" },
-				{ "sName": "receivers", "sDefaultContent": "", "fnRender": function(obj) {
-                                            return (obj.aData[3]==""?"(全部)":obj.aData[3]);
-                                        }, "sWidth": "48px" },
-				{ "sName": "type", "sDefaultContent": "文字", "sWidth": "56px" },
-				{ "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
-				{ "sName": "body", "sDefaultContent": "", "fnRender": function(obj) {
+            "sAjaxDataProp": "aaData",
+            "aoColumns": [
+                { "sName": "messageId", "sDefaultContent": "", "sWidth": "80px" },
+                { "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
+                { "sName": "sender", "sDefaultContent": "", "fnRender": function (obj) {
+                    return (obj.aData[2] == "" ? "(后台)" : obj.aData[2]);
+                }, "sWidth": "47px" },
+                { "sName": "receivers", "sDefaultContent": "", "fnRender": function (obj) {
+                    return (obj.aData[3] == "" ? "(全部)" : obj.aData[3]);
+                }, "sWidth": "48px" },
+                { "sName": "type", "sDefaultContent": "文字", "sWidth": "56px" },
+                { "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
+                { "sName": "body", "sDefaultContent": "", "fnRender": function (obj) {
                     var body = obj.aData[ obj.iDataColumn ];
-                    return (obj.aData[7]?"<a href='"+obj.aData[7]+"' target='blank'>"+(body==null||body==''||body=='null'?'_':body)+"</a>":body);
-					} 
-				},
-				{ "sName": "url", "sDefaultContent": "", "bVisible": false },
-				{ "sName": "attachments", "sDefaultContent": "", "sWidth": "56px", "fnRender": function(obj) {
+                    return (obj.aData[7] ? "<a href='" + obj.aData[7] + "' target='blank'>" + (body == null || body == '' || body == 'null' ? '_' : body) + "</a>" : body);
+                }
+                },
+                { "sName": "url", "sDefaultContent": "", "bVisible": false },
+                { "sName": "attachments", "sDefaultContent": "", "sWidth": "56px", "fnRender": function (obj) {
                     var attachments = obj.aData[ obj.iDataColumn ];
-					var linksString = "";
-					for (var i in attachments) {
-						var attachment = attachments[i];
-						if (linksString!="") linksString += "<br/>";
-						linksString += "<a href='"+attachment.url+"' target='blank'>"+attachment.title+"</a>";
-					}
+                    var linksString = "";
+                    for (var i in attachments) {
+                        var attachment = attachments[i];
+                        if (linksString != "") linksString += "<br/>";
+                        linksString += "<a href='" + attachment.url + "' target='blank'>" + attachment.title + "</a>";
+                    }
                     return linksString;
-					}
-				},
-				{ "sName": "generateTime", "sDefaultContent": "", "sWidth": "56px" }
-			],
-			"oLanguage": dataTablesLanguage,
+                }
+                },
+                { "sName": "generateTime", "sDefaultContent": "", "sWidth": "56px" }
+            ],
+            "aaSorting": [
+                [9, 'desc']
+            ],
+            "oLanguage": dataTablesLanguage,
             //"fnDrawCallback": groupMyTable,
             "bPaginate": true,
             "bLengthChange": true,
@@ -107,16 +115,16 @@
             "bInfo": true,
             "bAutoWidth": true
         });
-    
+
         $("#pushMethod").buttonset();
         $("#msgType").buttonset();
         $("#receiver").selectable({
-            stop: function() {
+            stop: function () {
                 var receivers = "";
-                $(".ui-selected", this).each(function(li) {
+                $(".ui-selected", this).each(function (li) {
                     var index = $("#receiver li").index(this);
                     var li = $($("#receiver li")[index]);
-                    if (receivers!="") receivers += ",";
+                    if (receivers != "") receivers += ",";
                     receivers += li.attr("data-id");
                 });
                 $("#receivers").val(receivers);
@@ -129,18 +137,18 @@
             width: 640,
             modal: true,
             buttons: {
-                "推送": function() {
+                "推送": function () {
                     var bValid = true;
 
-                    if ( bValid ) {
+                    if (bValid) {
                         $("#msgpush").submit();
                     }
                 },
-                "取消": function() {
-                    $(this).dialog( "close" );
+                "取消": function () {
+                    $(this).dialog("close");
                 }
             },
-            close: function() {
+            close: function () {
                 $("#msgpush")[0].reset();
                 $("#receivers").val("");
                 $("#receiver-container").hide("drop", {}, 1000);
@@ -149,20 +157,20 @@
 
         $("#clear-messages")
                 .button()
-                .click(function() {
+                .click(function () {
                     var confirmed = window.confirm("是否真的要删除所有消息？\r\n\r\n单击“确定”继续。单击“取消”停止。");
                     if (confirmed) {
                         $.ajax({
                             url: '/allMessages',
                             type: 'DELETE',
-                            success: function(result) {
+                            success: function (result) {
                                 if (result.success)
                                     alert("所有消息均已被删除！");
                                 else
-                                    alert("清除消息失败："+result.errmsg+"(#"+result.errcode+")");
+                                    alert("清除消息失败：" + result.errmsg + "(#" + result.errcode + ")");
                             },
-                            error: function(err) {
-                                alert("清除消息失败："+err);
+                            error: function (err) {
+                                alert("清除消息失败：" + err);
                             }
                         });
                     }
@@ -170,29 +178,29 @@
 
         $("#push-message")
                 .button()
-                .click(function() {
+                .click(function () {
                     $("#appId option").remove();
-                    $.get("/appInfos", function(object) {
-                        object.appInfos.list.forEach(function(appInfo) {
-                            $("#appId").append("<option value='"+appInfo.id+"'>"+appInfo.name+"</option>");
+                    $.get("/appInfos", function (object) {
+                        object.appInfos.list.forEach(function (appInfo) {
+                            $("#appId").append("<option value='" + appInfo.id + "'>" + appInfo.name + "</option>");
                         });
                     }, "json");
 
                     $("#receiver li").remove();
-                    $.get("/accounts", function(object) {
-                        object.list.forEach(function(accountInfo) {
-                            if (accountInfo.name!="") {
+                    $.get("/accounts", function (object) {
+                        object.list.forEach(function (accountInfo) {
+                            if (accountInfo.name != "") {
                                 var name = accountInfo.name;
                                 var tip = null;
                                 if (accountInfo.phone) {
                                     name = accountInfo.phone;
                                     tip = accountInfo.name;
-                                    if (accountInfo.email) tip += "("+accountInfo.email+")";
+                                    if (accountInfo.email) tip += "(" + accountInfo.email + ")";
                                 } else if (accountInfo.email) {
                                     name = accountInfo.email;
                                     tip = accountInfo.name;
                                 }
-                                $("#receiver").append("<li class='ui-widget-content' data-id='"+accountInfo.name+"'><span "+(tip?"title='"+tip+"'":"")+">"+name+"</span></li>");
+                                $("#receiver").append("<li class='ui-widget-content' data-id='" + accountInfo.name + "'><span " + (tip ? "title='" + tip + "'" : "") + ">" + name + "</span></li>");
                             }
                         });
                     }, "json");
@@ -201,83 +209,84 @@
 
         $("#broadcast")
                 .button()
-                .click(function() {
+                .click(function () {
                     $("#receiver-container").hide("drop", {}, 1000);
                 });
         $("#multicast")
                 .button()
-                .click(function() {
+                .click(function () {
                     $("#receiver-container").removeAttr("style").hide().fadeIn();
                 });
         $("#send")
                 .button()
-                .click(function() {
+                .click(function () {
                     $("#receiver-container").removeAttr("style").hide().fadeIn();
                 });
 
         // bind to the form's submit event
-        $('#msgpush').submit(function() {
-            $(this).ajaxSubmit({dataType:"json",success:showResponse,error:showError});
+        $('#msgpush').submit(function () {
+            $(this).ajaxSubmit({dataType: "json", success: showResponse, error: showError});
             return false;
         });
 
         // post-submit callback
-        function showResponse(data, statusText)  {
+        function showResponse(data, statusText) {
             if (data.success) {
                 alert("要推送的消息已提交。");
-                $("#msgpush-form").dialog( "close" );
+                $("#msgpush-form").dialog("close");
             } else {
-                alert("消息推送失败："+data.errmsg+"(#"+data.errcode+")");
+                alert("消息推送失败：" + data.errmsg + "(#" + data.errcode + ")");
             }
         }
-        function showError(XMLHttpRequest, textStatus)  {
-            alert("消息推送失败：#"+XMLHttpRequest.status+"("+textStatus+")");
+
+        function showError(XMLHttpRequest, textStatus) {
+            alert("消息推送失败：#" + XMLHttpRequest.status + "(" + textStatus + ")");
         }
     });
 </script>
 
 <script type="text/javascript">
-/*
+    /*
      This script downloaded from www.JavaScriptBank.com
      Come to view and download over 2000+ free javascript at www.JavaScriptBank.com
-*/
-function moveClock(idClock,startTime){//move given clock
-	var timeout=1000;//miliseconds to repeat the function
+     */
+    function moveClock(idClock, startTime) {//move given clock
+        var timeout = 1000;//miliseconds to repeat the function
 
-	if ( startTime === undefined ) {//just take the browser time
-	    	rightNow = new Date();
-		hour = rightNow.getHours();
-		minute = rightNow.getMinutes();
-		second = rightNow.getSeconds();		
-	}	
-	else{//starttime set
-		rightNow = startTime.split(':',3);
-		hour = parseInt(rightNow[0],10);
-		minute =  parseInt(rightNow[1],10);
-		second =  parseInt(rightNow[2],10);
-		if (second==59){
-			if (minute==59){
-				if (hour==23) hour=0;	
-				else hour++;
-				minute=0;
-			}else minute++;
-			second=0;
-		}else second++;
-	}
+        if (startTime === undefined) {//just take the browser time
+            rightNow = new Date();
+            hour = rightNow.getHours();
+            minute = rightNow.getMinutes();
+            second = rightNow.getSeconds();
+        }
+        else {//starttime set
+            rightNow = startTime.split(':', 3);
+            hour = parseInt(rightNow[0], 10);
+            minute = parseInt(rightNow[1], 10);
+            second = parseInt(rightNow[2], 10);
+            if (second == 59) {
+                if (minute == 59) {
+                    if (hour == 23) hour = 0;
+                    else hour++;
+                    minute = 0;
+                } else minute++;
+                second = 0;
+            } else second++;
+        }
 
-	if (minute<10) minute= "0" + minute;
-	if (second<10) second= "0" + second;
+        if (minute < 10) minute = "0" + minute;
+        if (second < 10) second = "0" + second;
 
-	currentTime=hour + ":" + minute + ":" +second;// tim to return
-	document.getElementById(idClock).innerHTML = currentTime;//tim for the HTML element
+        currentTime = hour + ":" + minute + ":" + second;// tim to return
+        document.getElementById(idClock).innerHTML = currentTime;//tim for the HTML element
 
-	//recursivity
-	if (startTime===undefined) setTimeout("moveClock('"+idClock+"')",timeout);//browser time
-	else setTimeout("moveClock('"+idClock+"','"+currentTime+"')",timeout);//set time
-		
-}
+        //recursivity
+        if (startTime === undefined) setTimeout("moveClock('" + idClock + "')", timeout);//browser time
+        else setTimeout("moveClock('" + idClock + "','" + currentTime + "')", timeout);//set time
 
-moveClock("serverTime", "<%=new Date().Format('HH:mm:ss')%>");
+    }
+
+    moveClock("serverTime", "<%=new Date().Format('HH:mm:ss')%>");
 
 </script>
 

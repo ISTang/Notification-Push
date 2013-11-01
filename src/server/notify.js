@@ -19,7 +19,6 @@ const KEEPALVE_FAILURECOUNT = config.KEEPALVE_FAILURECOUNT;
 
 const GRACE_EXIT_TIME = config.GRACE_EXIT_TIME;
 //
-const LOG_ENABLED = config.LOG_ENABLED;
 const TRACK_SOCKET = config.TRACK_SOCKET;
 const RECEIVE_RECEIPT_TIMEOUT = config.RECEIVE_RECEIPT_TIMEOUT;
 
@@ -27,8 +26,6 @@ const RECEIVE_RECEIPT_TIMEOUT = config.RECEIVE_RECEIPT_TIMEOUT;
 const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
 
 const USER_AVATAR = config.USER_AVATAR;
-
-var logStream = fs.createWriteStream(__dirname + "/logs/notify.log", {"flags": "a"});
 
 var loginIndex;
 var myIndex;
@@ -57,17 +54,8 @@ net.Socket.prototype.setKeepAlive = function (setting, msecs, interval, count) {
         this._handle.setKeepAlive(setting, ~~(msecs / 1000), ~~(interval / 1000), count);
 }
 
-/*
- * Print log
- */
-function log(msg) {
-
-    var now = new Date();
-    var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
-    var buffer = "[" + strDatetime + "] " + msg + "[notify]";
-    if (logStream != null) logStream.write(buffer + "\r\n");
-    if (LOG_ENABLED) console.log(buffer);
-}
+var logger = config.log4js.getLogger('notify');
+logger.setLevel(config.LOG_LEVEL);
 
 function main(fn) {
     fn();
@@ -91,27 +79,27 @@ process.on('message', function (m, socket) {
 
         loginIndex = m.loginIndex;
         myIndex = m.notifyIndex;
-        //log('Notify process ' + loginIndex + '-' + myIndex + ' is running...');
+        logger.trace('Notify process ' + loginIndex + '-' + myIndex + ' is running...');
 
         var channelId = "notify-" + loginIndex + "-" + myIndex;
         db.redisPool.acquire(function (err, msgSub) {
             if (err) {
-                log("Process will exit: " + err);
+                logger.fatal("Process will exit: " + err);
                 process.exit(1);
             } else {
                 msgSub.subscribe(channelId);
 
                 msgSub.on("message", function (pattern, content) {
-                    log("Received message at channel " + channelId + ": " + content);
+                    logger.debug("Received message at channel " + channelId + ": " + content);
                     var o = JSON.parse(content);
                     sendMessage(o.connId, o.msgId, o.message, o.msgKey, o.needReceipt);
                 });
 
                 msgSub.on("error", function (err) {
-                    log("Error " + err);
+                    logger.error("Error " + err);
                 });
 
-                log("Waiting for message at channel " + channelId + "...");
+                logger.debug("Waiting for message at channel " + channelId + "...");
             }
         });
     } else if (m.type === 'client') {
@@ -128,13 +116,13 @@ process.on('message', function (m, socket) {
             clientAddress: socket.remoteAddress + "[" + socket.remotePort + "]"};
         db.redisPool.acquire(function (err, redis) {
             if (err) {
-                log("Process will exit: " + err);
+                logger.fatal("Process will exit: " + err);
                 process.exit(2);
             } else {
                 db.recordLatestActivity(redis, connId, "刚登录", function (err) {
                     db.redisPool.release(redis);
                     if (err) {
-                        log("Process will exit: " + err);
+                        logger.fatal("Process will exit: " + err);
                         process.exit(3);
                     }
                 });
@@ -148,16 +136,16 @@ process.on('message', function (m, socket) {
 
             // 收到客户端心跳包
             clientConns[connId].lastActiveTime = new Date();
-            log("Client " + clientConns[connId].clientAddress +"[" + accountName + "] still alive");
+            logger.debug("Client " + clientConns[connId].clientAddress + "[" + accountName + "] still alive");
             db.redisPool.acquire(function (err, redis) {
                 if (err) {
-                    log("Process will exit: " + err);
+                    logger.fatal("Process will exit: " + err);
                     process.exit(4);
                 } else {
                     db.recordLatestActivity(redis, connId, "接收到心跳信号", function (err) {
                         db.redisPool.release(redis);
                         if (err) {
-                            log("Process will exit: " + err);
+                            logger.fatal("Process will exit: " + err);
                             process.exit(5);
                         }
                     });
@@ -174,25 +162,25 @@ process.on('message', function (m, socket) {
                 var now = new Date();
                 clientConns[connId].lastActiveTime = now;
 
-                log("Client " + clientConns[connId].clientAddress +"[" + accountName + "] received message " + pendingMsg.msgId);
+                logger.debug("Client " + clientConns[connId].clientAddress + "[" + accountName + "] received message " + pendingMsg.msgId);
                 delete pendingMsgs[connId];
 
                 db.redisPool.acquire(function (err, redis) {
                     if (err) {
-                        log("Process will exit: " + err);
+                        logger.fatal("Process will exit: " + err);
                         process.exit(6);
                     } else {
                         db.recordMessageReceiptTime(redis, connId, pendingMsg.msgId, now, function (err) {
                             if (err) {
                                 db.redisPool.release(redis);
-                                log("Process will exit: " + err);
+                                logger.fatal("Process will exit: " + err);
                                 process.exit(7);
                             }
 
                             db.recordLatestActivity(redis, connId, "已确认一条消息", function (err) {
                                 if (err) {
                                     db.redisPool.release(redis);
-                                    log("Process will exit: " + err);
+                                    logger.fatal("Process will exit: " + err);
                                     process.exit(8);
                                 }
                                 var msgs = queuedMsgs[connId];
@@ -208,7 +196,7 @@ process.on('message', function (m, socket) {
                                     }
                                 }
                                 db.redisPool.release(redis);
-                                log("Client " + clientConns[connId].clientAddress +": no more message(s) to send");
+                                logger.debug("Client " + clientConns[connId].clientAddress + ": no more message(s) to send");
                             });
                         });
                     }
@@ -219,18 +207,18 @@ process.on('message', function (m, socket) {
                     var options = url.parse(pendingMsg.message.callback);
                     options.method = "POST";
                     //
-                    log("Client " + clientConns[connId].clientAddress +": callback for message " + pendingMsg.msgId + "...");
+                    logger.debug("Client " + clientConns[connId].clientAddress + ": callback for message " + pendingMsg.msgId + "...");
                     var req = http.request(options, function (res) {
-                        log("Client " + clientConns[connId].clientAddress +": callback STATUS is " + res.statusCode);
+                        logger.debug("Client " + clientConns[connId].clientAddress + ": callback STATUS is " + res.statusCode);
                     });
                     req.on("error", function (err) {
-                        log("Client " + clientConns[connId].clientAddress +": callback error \"" + err.message + "\"");
+                        logger.error("Client " + clientConns[connId].clientAddress + ": callback error \"" + err.message + "\"");
                     });
                     req.write(JSON.stringify({success: true}));
                     req.end();
                 }
             } else {
-                log("Client " + clientConns[connId].clientAddress +": received unexpected message confirmation");
+                logger.warn("Client " + clientConns[connId].clientAddress + ": received unexpected message confirmation");
             }
         }
 
@@ -240,109 +228,156 @@ process.on('message', function (m, socket) {
             var message = JSON.parse(msgText);
             message.generate_time = now.Format("yyyyMMddHHmmss");
             message.sender_id = senderId; // 不会发送到客户端
-	    message.sender_name = senderName;
+            message.sender_name = senderName;
 
-            log("Saving message for application " + appId);
+            logger.trace("Saving message for application " + appId);
             db.redisPool.acquire(function (err, redis) {
                 if (err) {
                     handleResult(err);
                 } else {
-		async.series([
-		    function (callback) {
-                        db.getUserAvatar(redis, senderId, function (err, avatar) {
+                    async.series([
+                        function (callback) {
+                            db.getUserAvatar(redis, senderId, function (err, avatar) {
                                 if (err) return callback(err);
-				if (!message.attachments) message.attachments = [];
-				message.attachments.push({title:"sender-avatar",type:"image/xxx",filename:"sender-avatar",url:(avatar||USER_AVATAR)});
-				callback();
-			});
-		    },
-		    function (callback) {
-			db.getAccountIdByName(redis, receiver, function (err, receiverId) {
-				if (err) return callback(err);
-				if (!receiverId) return callback("Receiver " + receiver + " not exists");
-						
-				db.saveMessage(redis, appId, message, [senderId,receiverId], function (err, msgId) {
-					if (err) return callback(err);
-					log("Message id: " + msgId);
-					delete message.sender_id;
-                                        async.series([
-                                                function(callback){
-							db.getActiveConnections(redis, appId, receiverId, function (err, connectionInfos) {
-								if (err) {
-									return callback(err);
-								}
+                                if (!message.attachments) message.attachments = [];
+                                message.attachments.push({title: "sender-avatar", type: "image/xxx", filename: "sender-avatar", url: (avatar || USER_AVATAR)});
+                                callback();
+                            });
+                        },
+                        function (callback) {
+                            db.getAccountIdByName(redis, receiver, function (err, receiverId) {
+                                if (err) return callback(err);
+                                if (!receiverId) return callback("Receiver " + receiver + " not exists");
 
-								for(var i in connectionInfos) {
-									var connectionInfo = connectionInfos[i];
-									log("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-									publishMessage(connectionInfo, msgId, message, sendId);
-								}
-
-								callback();
-							});
-                                                },
-                                                function(callback) {
-                                                        db.getActiveConnections(redis, appId, senderId, function (err, connectionInfos) {
-                                                                if (err) {
-                                                                        return callback(err);
-                                                                }
-
-                                                                for(var i in connectionInfos) {
-                                                                        var connectionInfo = connectionInfos[i];
-                                                                        if (connectionInfo.connId!=connId) {
-                                                                        	log("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                                                                        	publishMessage(connectionInfo, msgId, message, sendId);
-									}
-                                                                }
-
-                                                                callback();
-                                                        });
-                                                }],
-                                                function(err) {
-                                                        callback(err);
-                                                });
-
-                                                function publishMessage(connectionInfo, msgId, message, sendId) {
-                                                        var o = {
-                                                                connId: connectionInfo.connId,
-                                                                msgId: msgId,
-                                                                message: message,
-                                                                msgKey: connectionInfo.msgKey,
-                                                                sendId: sendId,
-                                                                needReceipt: true };
-                                                        redis.publish(connectionInfo.channelId, JSON.stringify(o));
+                                db.saveMessage(redis, appId, null, message, (senderId == receiverId ? [receiverId] : [senderId, receiverId]), function (err, msgId) {
+                                    if (err) return callback(err);
+                                    logger.trace("Message id: " + msgId);
+                                    delete message.sender_id;
+                                    async.series([
+                                        function (callback) {
+                                            db.getActiveConnections(redis, appId, null, receiverId, function (err, connectionInfos) {
+                                                if (err) {
+                                                    return callback(err);
                                                 }
-				});
-			});
-		    }],
-		    function (err) {
-			db.redisPool.release(redis);
-			handleResult(err);
-		    });
+
+                                                for (var i in connectionInfos) {
+                                                    var connectionInfo = connectionInfos[i];
+                                                    if (connectionInfo.connId != connId) {
+                                                        logger.trace("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+                                                        publishMessage(connectionInfo, msgId, message, sendId);
+                                                    }
+                                                }
+
+                                                callback();
+                                            });
+                                        },
+                                        function (callback) {
+                                            if (senderId == receiverId) return callback();
+                                            db.getActiveConnections(redis, appId, null, senderId, function (err, connectionInfos) {
+                                                if (err) {
+                                                    return callback(err);
+                                                }
+
+                                                for (var i in connectionInfos) {
+                                                    var connectionInfo = connectionInfos[i];
+                                                    if (connectionInfo.connId != connId) {
+                                                        logger.trace("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+                                                        publishMessage(connectionInfo, msgId, message, sendId);
+                                                    }
+                                                }
+
+                                                callback();
+                                            });
+                                        }],
+                                        function (err) {
+                                            callback(err);
+                                        });
+
+                                    function publishMessage(connectionInfo, msgId, message, sendId) {
+                                        var o = {
+                                            connId: connectionInfo.connId,
+                                            msgId: msgId,
+                                            message: message,
+                                            msgKey: connectionInfo.msgKey,
+                                            sendId: sendId,
+                                            needReceipt: true };
+                                        redis.publish(connectionInfo.channelId, JSON.stringify(o));
+                                    }
+                                });
+                            });
+                        }],
+                        function (err) {
+                            db.redisPool.release(redis);
+                            handleResult(err);
+                        });
                 }
+            });
+        }
+
+        function queryPublicAccounts(publicAccount, callback) {
+            logger.trace("Query public account matches " + publicAccount);
+            db.redisPool.acquire(function (err, redis) {
+                if (err) return callback(err);
+                db.queryPublicAccounts(redis, publicAccount, function (err, publicAccounts) {
+                    db.redisPool.release(redis);
+                    callback(err, publicAccounts);
+                });
+            });
+        }
+
+        function followPublicAccount(accountId, publicAccount, callback) {
+            logger.trace("Follow public account: " + accountId + "@" + publicAccount);
+            db.redisPool.acquire(function (err, redis) {
+                if (err) return callback(err);
+                db.followPublicAccount(redis, accountId, publicAccount, function (err) {
+                    db.redisPool.release(redis);
+                    callback(err);
+                });
+            });
+        }
+
+        function unfollowPublicAccount(accountId, publicAccount, callback) {
+            logger.trace("Unfollow public account: " + accountId + "!@" + publicAccount);
+            db.redisPool.acquire(function (err, redis) {
+                if (err) return callback(err);
+                db.unfollowPublicAccount(redis, accountId, publicAccount, function (err) {
+                    db.redisPool.release(redis);
+                    callback(err);
+                });
+            });
+        }
+
+        function getFollowedPublicAccounts(accountId, callback) {
+            logger.trace("Get followed public account for " + accountId);
+            db.redisPool.acquire(function (err, redis) {
+                if (err) return callback(err);
+                db.getFollowedPublicAccounts(redis, accountId, function (err, publicAccounts) {
+                    db.redisPool.release(redis);
+                    callback(err, publicAccounts);
+                });
             });
         }
 
         function handleError(e) {
 
-            if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + ": " + e.toString());
+            if (TRACK_SOCKET) logger.trace("[SOCKET] client " + clientAddress + ": " + e.toString());
         }
 
         function handleClose(hadError) {
 
             if (typeof clientConns[connId] != "undefined") {
 
-                if (TRACK_SOCKET) log("[SOCKET] client " + clientAddress + ": " + (hadError ? "error" : "disconnected"));
+                if (TRACK_SOCKET) logger.trace("[SOCKET] client " + clientAddress + ": " + (hadError ? "error" : "disconnected"));
 
                 db.redisPool.acquire(function (err, redis) {
                     if (err) {
-                        log("Process will exit: " + err);
+                        logger.fatal("Process will exit: " + err);
                         process.exit(9);
                     } else {
                         db.removeLoginInfo(redis, connId, function (err) {
                             db.redisPool.release(redis);
                             if (err) {
-                                log("Process will exit: " + err);
+                                logger.fatal("Process will exit: " + err);
                                 process.exit(10);
                             }
                             clientConns.splice(clientConns.indexOf(connId), 1);
@@ -353,27 +388,28 @@ process.on('message', function (m, socket) {
         }
 
         protocol.handleClientConnection2(socket, appId, accountId, accountName, msgKey,
-            keepAlive, msgConfirmed, forwardMsg, handleError, handleClose, log);
+            keepAlive, msgConfirmed, forwardMsg, queryPublicAccounts, followPublicAccount, unfollowPublicAccount, getFollowedPublicAccounts,
+            handleError, handleClose, logger);
 
-        sendOfflineMessages(appId, accountId, config.MAX_OFFLINE_DAYS, connId, msgKey);
+        sendOfflineMessages(appId, accountId, accountName, config.MAX_OFFLINE_DAYS, connId, msgKey);
     }
 });
 
-function sendOfflineMessages(appId, accountId, maxOfflineDays, connId, msgKey) {
+function sendOfflineMessages(appId, accountId, accountName, maxOfflineDays, connId, msgKey) {
 
-    //log("Sending offline messages to account " + accountId + "...");
+    logger.trace("Sending offline messages to account " + accountId + "...");
     db.redisPool.acquire(function (err, redis) {
         if (err) {
-            log("Process will exit: " + err);
+            logger.fatal("Process will exit: " + err);
             process.exit(11);
         } else {
-            db.getOfflineMessages(redis, appId, accountId, maxOfflineDays, function (err, msgs) {
+            db.getOfflineMessages(redis, appId, accountId, accountName, maxOfflineDays, function (err, msgs) {
                 db.redisPool.release(redis);
                 if (err) {
-                    log("Process will exit: " + err);
+                    logger.fatal("Process will exit: " + err);
                     process.exit(12);
                 }
-                //log("Total " + msgs.length + " offline message for account " + accountId + " found");
+                logger.trace("Total " + msgs.length + " offline message for account " + accountId + " found");
                 msgs.forEach(function (msg) {
                     sendMessage(connId, msg.msgId, msg.message, msgKey, msg.needReceipt);
                 });
@@ -385,7 +421,7 @@ function sendOfflineMessages(appId, accountId, maxOfflineDays, connId, msgKey) {
 function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
     // TODO 增加对延迟发送消息的支持
 
-    log("Sending message " + msgId + " on connection " + connId + "...");
+    logger.trace("Sending message " + msgId + " on connection " + connId + "...");
 
     if (needReceipt) {
         if (typeof pendingMsgs[connId] != "undefined") {
@@ -409,45 +445,45 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
     //
     var socket = clientConns[connId].socket;
     var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
-    if (TRACK_SOCKET) log("[SOCKET] write to client " + clientAddress + ": " + msgStr);
+    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": " + msgStr);
     socket.write(/*protocol.PNTP_FLAG+*/msgStr);
     db.redisPool.acquire(function (err, redis) {
         if (err) {
-            log("Process will exit: " + err);
+            logger.fatal("Process will exit: " + err);
             process.exit(13);
         } else {
             db.recordMessageSentTime(redis, connId, msgId, new Date(), needReceipt, function (err) {
                 if (err) {
-                    log("Process will exit: " + err);
+                    logger.fatal("Process will exit: " + err);
                     process.exit(14);
                 }
-                log("Message " + msgId + " on connection " + connId + " sent");
+                logger.trace("Message " + msgId + " on connection " + connId + " sent");
                 if (needReceipt) {
                     db.recordLatestActivity(redis, connId, "已发送一条消息，等待确认...", function (err) {
                         if (err) {
                             db.redisPool.release(redis);
-                            log("Process will exit: " + err);
+                            logger.fatal("Process will exit: " + err);
                             process.exit(15);
                         }
                         setTimeout(function () {
                             var pendingMsg = pendingMsgs[connId];
                             if (typeof pendingMsg != "undefined") {
-                                log("Send message " + msgId + " on connection " + connId + " timeout");
+                                logger.trace("Send message " + msgId + " on connection " + connId + " timeout");
                                 if (typeof clientConns[connId] != "undefined") {
                                     db.removeLoginInfo(redis, connId, function (err) {
                                         db.redisPool.release(redis);
                                         if (err) {
-                                            log("Process will exit: " + err);
+                                            logger.fatal("Process will exit: " + err);
                                             process.exit(16);
                                         }
                                         var socket = clientConns[connId].socket;
                                         var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
                                         clientConns.splice(clientConns.indexOf(connId), 1);
                                         try {
-                                            if (TRACK_SOCKET) log("[SOCKET] end client " + clientAddress + ": " + protocol.INACTIVE_TIMEOUT_MSG);
+                                            if (TRACK_SOCKET) logger.trace("[SOCKET] end client " + clientAddress + ": " + protocol.INACTIVE_TIMEOUT_MSG);
                                             socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
                                         } catch (err) {
-                                            log(err);
+                                            logger.error(err);
                                         }
                                     });
                                 }
@@ -458,7 +494,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                     db.recordLatestActivity(redis, connId, "已发送一条不需要确认的消息", function (err) {
                         db.redisPool.release(redis);
                         if (err) {
-                            log("Process will exit: " + err);
+                            logger.fatal("Process will exit: " + err);
                             process.exit(17);
                         }
                     });
@@ -475,7 +511,7 @@ function aboutExit() {
 
     exitTimer = setTimeout(function () {
 
-        log('Notify process will exit...');
+        logger.info('Notify process will exit...');
 
         process.exit(0);
 
@@ -502,28 +538,28 @@ void main(function () {
 
         db.redisPool.acquire(function (err, redis) {
             if (err) {
-                log("Process will exit: " + err);
+                logger.fatal("Process will exit: " + err);
                 process.exit(18);
             }
             async.forEachSeries(inactiveConnIds, function (connId, callback) {
                 var clientAddress = clientConns[connId].clientAddress;
-                log("Client " + clientAddress + "[" + clientConns[connId].accountName + "] inactive timeout");
+                logger.warn("Client " + clientAddress + "[" + clientConns[connId].accountName + "] inactive timeout");
                 db.removeLoginInfo(redis, connId, function (err) {
                     if (err) return callback(err);
                     var socket = clientConns[connId].socket;
                     clientConns.splice(clientConns.indexOf(connId), 1);
                     try {
-                        if (TRACK_SOCKET) log("[SOCKET] end client " + clientAddress + ": " + protocol.INACTIVE_TIMEOUT_MSG);
+                        if (TRACK_SOCKET) logger.trace("[SOCKET] end client " + clientAddress + ": " + protocol.INACTIVE_TIMEOUT_MSG);
                         socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
                     } catch (err) {
-                        log(err);
+                        logger.error(err);
                     }
                     callback();
                 });
             }, function (err) {
                 db.redisPool.release(redis);
                 if (err) {
-                    log("Process will exit: " + err);
+                    logger.fatal("Process will exit: " + err);
                     process.exit(19);
                 }
             });
