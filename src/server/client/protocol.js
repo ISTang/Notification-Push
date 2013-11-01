@@ -957,6 +957,16 @@ exports.SET_ALIVE_ACK = SET_ALIVE_ACK;
 exports.PUSH_MSG_CMD = PUSH_MSG_CMD;
 exports.PUSH_MSG_ACK = PUSH_MSG_ACK;
 
+exports.SEND_MSG_REQ = SEND_MSG_REQ;
+
+exports.QUERY_PUBLIC_REQ = QUERY_PUBLIC_REQ;
+
+exports.FOLLOW_PUBLIC_REQ = FOLLOW_PUBLIC_REQ;
+
+exports.UNFOLLOW_PUBLIC_REQ = UNFOLLOW_PUBLIC_REQ;
+
+exports.GET_FOLLOWED_REQ = GET_FOLLOWED_REQ;
+
 exports.handleClientConnection = handleClientConnection;
 exports.handleClientConnection2 = handleClientConnection2;
 exports.handleServerConnection = handleServerConnection;
