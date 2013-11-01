@@ -315,7 +315,7 @@ function getAppInfo() {
  * 格式化消息
  * @param receiver 消息接收者
  * @param msgId 消息ID
- * @param body 消息内容
+ * @param body 消息内容(JSON)
  * @param secure 消息是否已加密
  * @returns {string}
  */
@@ -589,12 +589,14 @@ void main(function () {
             case 'FOLLOWED_EVENT':
                 // 关注事件
                 var follower = msgObj.body;
-                socket.write(formatMessage(follower, "WELCOME_MSG", "欢迎您！", false));
+                var bodyText = JSON.stringify({body: '欢迎您！', generate_time: new Date()});
+                socket.write(formatMessage(follower, "WELCOME_MSG", bodyText, false));
                 break;
             case 'UNFOLLOWED_EVENT':
                 // 取消关注事件
                 var unfollower = msgObj.body;
-                socket.write(formatMessage(unfollower, "THANKS_MSG", "谢谢您的关注！", false));
+                var bodyText = JSON.stringify({body: '谢谢您的关注！', generate_time: new Date()});
+                socket.write(formatMessage(unfollower, "THANKS_MSG", bodyText, false));
                 break;
         }
     });
