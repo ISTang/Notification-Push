@@ -713,7 +713,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 socket.write(/*PNTP_FLAG+*/err ? FOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
 
-                var PUBLIC_ACCOUNT_FOLLOWED_EVENT = JSON.stringify({title: 'EVENT', body: 'FOLLOWED', generate_time: new Date(), need_receipt: false});
+                var PUBLIC_ACCOUNT_FOLLOWED_EVENT = JSON.stringify({title: 'FOLLOWED_EVENT', body: accountName, generate_time: new Date()});
                 forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", callback);
             });
         } else if (action == "UNFOLLOW" && target == "PUBLIC") {
@@ -727,7 +727,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 socket.write(/*PNTP_FLAG+*/err ? UNFOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
 
-                var PUBLIC_ACCOUNT_UNFOLLOWED_EVENT = JSON.stringify({title: 'EVENT', body: 'UNFOLLOWED', generate_time: new Date(), need_receipt: false});
+                var PUBLIC_ACCOUNT_UNFOLLOWED_EVENT = JSON.stringify({title: 'UNFOLLOWED_EVENT', body: accountName, generate_time: new Date()});
                 forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", callback);
             });
         } else if (action == "GET" && target == "FOLLOWED") {
