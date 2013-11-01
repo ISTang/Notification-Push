@@ -41,6 +41,8 @@ const HTTPD_PORT = config.HTTPD_PORT;
 
 const IMAGE_URL_NOT_CONATINS = config.IMAGE_URL_NOT_CONATINS;
 
+const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
+
 var webapp = express();
 
 // 定义共享环境
@@ -309,6 +311,19 @@ function getAppInfo() {
     return {id: APP_ID, password: APP_PASSWORD, protectKey: APP_PROTECTKEY};
 }
 
+/**
+ * 格式化消息
+ * @param receiver 消息接收者
+ * @param msgId 消息ID
+ * @param body 消息内容
+ * @param secure 消息是否已加密
+ * @returns {string}
+ */
+function formatMessage(receiver, msgId, body, secure) {
+
+    return protocol.SEND_MSG_REQ.format(receiver, msgId, secure ? "true" : "false", BODY_BYTE_LENGTH ? Buffer.byteLength(body) : body.length, body);
+}
+
 function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
 
     var socket;
@@ -335,7 +350,7 @@ function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
     }
 
     function setLogon() {
-        onConnected();
+        onConnected(socket);
 
         clientLogon = true;
         clientLogging = false;
@@ -380,12 +395,12 @@ function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
             crypt.desDecrypt(msg, msgKey, function (err, data) {
                 if (err) return logger.error("[" + clientId + "] " + err);
                 var msgObj = JSON.parse(data);
-                onNewMessage(msgObj);
+                onNewMessage(socket, msgObj);
                 logger.debug("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
             });
         } else {
             var msgObj = JSON.parse(msg);
-            onNewMessage(msgObj);
+            onNewMessage(socket, msgObj);
             logger.debug("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
         }
     }
@@ -562,12 +577,25 @@ void main(function () {
     logger.debug('服务器正在监听端口 ' + HTTPD_PORT + '...');
 
     // 启动消息推送客户端
-    startWorker(PLATFORM_USERNAME, PLATFORM_PASSWORD, function () {
+    startWorker(PLATFORM_USERNAME, PLATFORM_PASSWORD, function (socket) {
 
         // 定时获取文章并推送
         getAllArticlesAndPush();
-    }, function (msgObj) {
+
+    }, function (socket, msgObj) {
 
         // 处理新消息
+        switch (msgObj.title) {
+            case 'FOLLOWED_EVENT':
+                // 关注事件
+                var follower = msgObj.body;
+                socket.write(formatMessage(follower, "WELCOME_MSG", "欢迎您！", false));
+                break;
+            case 'UNFOLLOWED_EVENT':
+                // 取消关注事件
+                var unfollower = msgObj.body;
+                socket.write(formatMessage(unfollower, "THANKS_MSG", "谢谢您的关注！", false));
+                break;
+        }
     });
 });
