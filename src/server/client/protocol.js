@@ -713,12 +713,14 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                     return callback();
                 }
 
+                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + publicAccount + " OK");
+                socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
+
                 var PUBLIC_ACCOUNT_FOLLOWED_EVENT = JSON.stringify({title: 'FOLLOWED_EVENT', body: accountName, generate_time: new Date()});
                 forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
                     if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR" : "OK"));
-                    socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
                     callback();
                 });
             });
@@ -736,12 +738,14 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                     return callback();
                 }
 
+                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + publicAccount + " OK");
+                socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
+
                 var PUBLIC_ACCOUNT_UNFOLLOWED_EVENT = JSON.stringify({title: 'UNFOLLOWED_EVENT', body: accountName, generate_time: new Date()});
                 forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
                     if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR" : "OK"));
-                    socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
                     callback();
                 });
             });
