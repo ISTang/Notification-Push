@@ -28,16 +28,13 @@ const FIELD_BODY_LENGTH = "Length";
 const FIELD_ACTION_SUCCESS = "Success";
 const FIELD_LOGIN_SECURE = "Secure";
 const FIELD_LOGIN_PASSWORD = "Password";
-const FIELD_MSG_ACCOUNT = "Account";
-const FIELD_MSG_ID = "Id";
 const FIELD_MSG_SECURE = "Secure";
 const FIELD_MSG_RECEIPT = "Receipt";
-//
-const FIELD_REQ_ID = "Id";
-const FIELD_PUBLIC_ACCOUNT = "Account";
+const FIELD_ACTION_ID = "Id";
+const FIELD_ACTION_ACCOUNT = "Account";
 
 // 错误消息
-const INVALID_PROTOCOL_FLAG_MSG = "Invalid protocol flag or not exists";
+//const INVALID_PROTOCOL_FLAG_MSG = "Invalid protocol flag or not exists";
 const INVALID_ACTION_LINE_MSG = "Invalid action line";
 const INVALID_FIELD_LINE_MSG = "Invalid field line";
 const INVALID_LENGTH_VALUE_MSG = "Invalid length value";
@@ -385,7 +382,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
     socket.on("close", handleClose);
 }
 
-// 处理同客户端的连接
+// 处理同客户端的连接(登录阶段)
 function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, handleError, handleClose, logger) {
 
     var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
@@ -647,7 +644,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
     }
 }
 
-// 处理同客户端的连接#2
+// 处理同客户端的连接#2(推送阶段)
 function handleClientConnection2(socket, appId, accountId, accountName, msgKey, keepAlive, msgConfirmed, forwardMsg, queryPublicAccounts, followPublicAccount, unfollowPublicAccount, getFollowedPublicAccounts, handleError, handleClose, logger) {
 
     var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
@@ -672,8 +669,8 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
         } else if (action == "SEND" && target == "MSG") {
 
             // 收到发送消息请求
-            var receiver = fields[FIELD_MSG_ACCOUNT.toUpperCase()];
-            var sendId = fields[FIELD_MSG_ID.toUpperCase()];
+            var receiver = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
+            var sendId = fields[FIELD_ACTION_ID.toUpperCase()];
             var msgSecure = (fields[FIELD_MSG_SECURE.toUpperCase()].toUpperCase() == "TRUE");
             var msgText = body;
             if (msgSecure) {
@@ -692,7 +689,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
         } else if (action == "QUERY" && target == "PUBLIC") {
 
             // 收到查询公众号请求
-            var reqId = fields[FIELD_REQ_ID.toUpperCase()];
+            var reqId = fields[FIELD_ACTION_ID.toUpperCase()];
             var publicAccount = body;
             queryPublicAccounts(publicAccount, function (err, publicAccounts) {
 
@@ -705,7 +702,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
         } else if (action == "FOLLOW" && target == "PUBLIC") {
 
             // 收到关注公众号请求
-            var publicAccount = fields[FIELD_PUBLIC_ACCOUNT.toUpperCase()];
+            var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
             followPublicAccount(accountId, publicAccount, function (err) {
 
                 var ss = (err ? "0," + err : "");
@@ -719,7 +716,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
         } else if (action == "UNFOLLOW" && target == "PUBLIC") {
 
             // 收到取消关注公众号请求
-            var publicAccount = fields[FIELD_PUBLIC_ACCOUNT.toUpperCase()];
+            var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
             unfollowPublicAccount(accountId, publicAccount, function (err) {
 
                 var ss = (err ? "0," + err : "");
@@ -888,7 +885,27 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             callback();
         } else if (action == "SEND" && target == "MSG") {
 
-            // TODO 收到发送消息回复
+            // 收到消息回复
+            var msgId = fields[FIELD_ACTION_ID.toUpperCase()];
+            var success = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
+            logger.info("[" + clientId + "] message " + msgId + (success ? "sent." : " send failed: " + body));
+            callback();
+        } else if (action == "QUERY" && target == "PUBLIC") {
+
+            // 收到公众号查询回复
+            callback();
+        } else if (action == "FOLLOW" && target == "PUBLIC") {
+
+            // 收到公众号关注回复
+            callback();
+        } else if (action == "UNFOLLOW" && target == "PUBLIC") {
+
+            // 收到公众号取消关注回复
+            callback();
+        } else if (action == "GET" && target == "FOLLOWED") {
+
+            // 收到获取已关注公众号回复
+            callback();
         } else if (action == "CLOSE" && target == "CONN") {
 
             // 服务器主动断开连接
@@ -913,10 +930,10 @@ exports.FIELD_BODY_LENGTH = FIELD_BODY_LENGTH;
 exports.FIELD_ACTION_SUCCESS = FIELD_ACTION_SUCCESS;
 exports.FIELD_LOGIN_SECURE = FIELD_LOGIN_SECURE;
 exports.FIELD_LOGIN_PASSWORD = FIELD_LOGIN_PASSWORD;
-exports.FIELD_MSG_ACCOUNT = FIELD_MSG_ACCOUNT;
-exports.FIELD_MSG_ID = FIELD_MSG_ID;
 exports.FIELD_MSG_SECURE = FIELD_MSG_SECURE;
 exports.FIELD_MSG_RECEIPT = FIELD_MSG_RECEIPT;
+exports.FIELD_ACTION_ID = FIELD_ACTION_ID;
+exports.FIELD_ACTION_ACCOUNT = FIELD_ACTION_ACCOUNT;
 
 exports.INVALID_ACTION_LINE_MSG = INVALID_ACTION_LINE_MSG;
 exports.INVALID_FIELD_LINE_MSG = INVALID_FIELD_LINE_MSG;
@@ -961,14 +978,10 @@ exports.PUSH_MSG_CMD = PUSH_MSG_CMD;
 exports.PUSH_MSG_ACK = PUSH_MSG_ACK;
 
 exports.SEND_MSG_REQ = SEND_MSG_REQ;
-
-exports.QUERY_PUBLIC_REQ = QUERY_PUBLIC_REQ;
-
-exports.FOLLOW_PUBLIC_REQ = FOLLOW_PUBLIC_REQ;
-
-exports.UNFOLLOW_PUBLIC_REQ = UNFOLLOW_PUBLIC_REQ;
-
-exports.GET_FOLLOWED_REQ = GET_FOLLOWED_REQ;
+//exports.QUERY_PUBLIC_REQ = QUERY_PUBLIC_REQ;
+//exports.FOLLOW_PUBLIC_REQ = FOLLOW_PUBLIC_REQ;
+//exports.UNFOLLOW_PUBLIC_REQ = UNFOLLOW_PUBLIC_REQ;
+//exports.GET_FOLLOWED_REQ = GET_FOLLOWED_REQ;
 
 exports.handleClientConnection = handleClientConnection;
 exports.handleClientConnection2 = handleClientConnection2;

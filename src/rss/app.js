@@ -589,14 +589,14 @@ void main(function () {
             case 'FOLLOWED_EVENT':
                 // 关注事件
                 var follower = msgObj.body;
-                var bodyText = JSON.stringify({body: '欢迎您！', generate_time: new Date()});
-                socket.write(formatMessage(follower, "WELCOME_MSG", bodyText, false));
+                var bodyText = JSON.stringify({body: '您已关注我，精彩资讯马上来！', generate_time: new Date()});
+                socket.write(formatMessage(follower, "FOLLOWED_MSG", bodyText, false));
                 break;
             case 'UNFOLLOWED_EVENT':
                 // 取消关注事件
                 var unfollower = msgObj.body;
-                var bodyText = JSON.stringify({body: '谢谢您的关注！', generate_time: new Date()});
-                socket.write(formatMessage(unfollower, "THANKS_MSG", bodyText, false));
+                var bodyText = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
+                socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", bodyText, false));
                 break;
         }
     });
