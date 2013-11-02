@@ -895,15 +895,15 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             var secure = (fields[FIELD_MSG_SECURE.toUpperCase()].toUpperCase() == "TRUE");
             var receipt = (fields[FIELD_MSG_RECEIPT.toUpperCase()].toUpperCase() == "TRUE");
             var msg = body;
-
-            //logger.debug("[" + clientId + "] One message received");
-            msgReceived(msg, secure);
             if (receipt) {
 
                 // 确认已收到消息
                 logger.debug("[" + clientId + "] " + PUSH_MSG_ACK);
                 socket.write(/*PNTP_FLAG+*/PUSH_MSG_ACK);
             }
+
+            //logger.debug("[" + clientId + "] One message received");
+            msgReceived(msg, secure);
             callback();
         } else if (action == "SEND" && target == "MSG") {
 
