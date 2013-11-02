@@ -225,7 +225,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
     socket.on("data", function (data) {
 
         var newInput = data.toString();
-        if (!isClient && TRACK_SOCKET) logger.trace("[SOCKET] read from client " + clientAddress + ": " + newInput);
+        if (TRACK_SOCKET) logger.trace("[SOCKET] read from client " + clientAddress + ": " + newInput);
 
         var starr = [];
 
@@ -273,7 +273,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
                     if (starr.length != 2) {
 
                         // 格式不对
-                        if (!isClient && TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Invalid action line(" + line + ")");
+                        if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Invalid action line(" + line + ")");
                         socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_ACTION_LINE_MSG) : INVALID_ACTION_LINE_MSG.length, INVALID_ACTION_LINE_MSG));
                         return;
                     }
@@ -291,7 +291,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
                     if (starr.length != 2) {
 
                         // 格式不对
-                        if (!isClient && TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Invalid field line(" + line + ")");
+                        if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Invalid field line(" + line + ")");
                         socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_FIELD_LINE_MSG) : INVALID_FIELD_LINE_MSG.length, INVALID_FIELD_LINE_MSG));
                         return;
                     }
@@ -326,7 +326,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
                 if (isNaN(bodyLength) || bodyLength < 0) {
 
                     // 体部长度字段值无效
-                    if (!isClient && TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": " + INVALID_LENGTH_VALUE_MSG);
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": " + INVALID_LENGTH_VALUE_MSG);
                     socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_LENGTH_VALUE_MSG) : INVALID_LENGTH_VALUE_MSG.length, INVALID_LENGTH_VALUE_MSG));
                     return;
                 }
@@ -705,13 +705,22 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
             var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
             followPublicAccount(accountId, publicAccount, function (err) {
 
-                var ss = (err ? "0," + err : "");
-                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + (err ? "ERROR" : "OK"));
-                socket.write(/*PNTP_FLAG+*/err ? FOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
-                    FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
+                if (err) {
+
+                    var ss = "0," + err;
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + publicAccount + " ERROR");
+                    socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err));
+                    return callback();
+                }
 
                 var PUBLIC_ACCOUNT_FOLLOWED_EVENT = JSON.stringify({title: 'FOLLOWED_EVENT', body: accountName, generate_time: new Date()});
-                forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", callback);
+                forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
+
+                    var ss = (err ? "0," + err : "");
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR" : "OK"));
+                    socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
+                    callback();
+                });
             });
         } else if (action == "UNFOLLOW" && target == "PUBLIC") {
 
@@ -719,13 +728,22 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
             var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
             unfollowPublicAccount(accountId, publicAccount, function (err) {
 
-                var ss = (err ? "0," + err : "");
-                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + (err ? "ERROR" : "OK"));
-                socket.write(/*PNTP_FLAG+*/err ? UNFOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
-                    UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
+                if (err) {
+
+                    var ss = "0," + err;
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + publicAccount + " ERROR");
+                    socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err));
+                    return callback();
+                }
 
                 var PUBLIC_ACCOUNT_UNFOLLOWED_EVENT = JSON.stringify({title: 'UNFOLLOWED_EVENT', body: accountName, generate_time: new Date()});
-                forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", callback);
+                forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
+
+                    var ss = (err ? "0," + err : "");
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR" : "OK"));
+                    socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
+                    callback();
+                });
             });
         } else if (action == "GET" && target == "FOLLOWED") {
 
@@ -888,7 +906,7 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             // 收到消息回复
             var msgId = fields[FIELD_ACTION_ID.toUpperCase()];
             var success = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
-            logger.info("[" + clientId + "] message " + msgId + (success?"sent.":" send failed: "+body));
+            logger.info("[" + clientId + "] message " + msgId + (success ? " sent." : " send failed: " + body));
             callback();
         } else if (action == "QUERY" && target == "PUBLIC") {
 
