@@ -86,7 +86,8 @@
                 { "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
                 { "sName": "body", "sDefaultContent": "", "fnRender": function (obj) {
                     var body = obj.aData[ obj.iDataColumn ];
-                    return (obj.aData[7] ? "<a href='" + obj.aData[7] + "' target='blank'>" + (body == null || body == '' || body == 'null' ? '_' : body) + "</a>" : body);
+                    var ss = '<pre>' + body + '</pre>';
+                    return (obj.aData[7] ? "<a href='" + obj.aData[7] + "' target='blank'>" + (body == null || body == '' || body == 'null' ? '_' : ss) + "</a>" : ss);
                 }
                 },
                 { "sName": "url", "sDefaultContent": "", "bVisible": false },
