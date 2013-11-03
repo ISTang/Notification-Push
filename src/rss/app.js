@@ -599,6 +599,16 @@ void main(function () {
         if (msgObj.title == null || "" == msgObj.title) {
             // 消息无标题
             switch (msgObj.body) {
+                case 'FOLLOWED_EVENT':
+                    // 关注事件
+                    var followMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<b>您已关注我，精彩资讯马上来！</b><p/>回复"订阅"可以定制感兴趣的频道。'}), generate_time: new Date()});
+                    socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
+                    break;
+                case 'UNFOLLOWED_EVENT':
+                    // 取消关注事件
+                    var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
+                    socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
+                    break;
                 case "订阅":
                     // 订阅频道
                     db.getAllChannels(function (err, channels) {
@@ -612,7 +622,7 @@ void main(function () {
                             checkItems += checkItem;
                         }
                         var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: checkItems}), generate_time: new Date()});
-                        socket.write(formatMessage(follower, "CHANNELS_MSG", channelsMsg, false));
+                        socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
                     });
                     break;
                 default:
@@ -620,22 +630,6 @@ void main(function () {
             }
         } else {
             // 消息有标题
-            switch (msgObj.title) {
-                case 'FOLLOWED_EVENT':
-                    // 关注事件
-                    var follower = msgObj.body;
-                    var followMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<b>您已关注我，精彩资讯马上来！</b><br/>回复"订阅"可以定制感兴趣的频道。'}), generate_time: new Date()});
-                    socket.write(formatMessage(follower, "FOLLOWED_MSG", followMsg, false));
-                    break;
-                case 'UNFOLLOWED_EVENT':
-                    // 取消关注事件
-                    var unfollower = msgObj.body;
-                    var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
-                    socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", unfollowMsg, false));
-                    break;
-                default:
-                    break;
-            }
         }
     });
 });
