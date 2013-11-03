@@ -610,7 +610,7 @@ void main(function () {
                     socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
                     break;
                 case "订阅":
-                    // 订阅频道
+                    // 订阅请求
                     db.getAllChannels(function (err, channels) {
 
                         if (err) return logger.error(err);
@@ -622,7 +622,9 @@ void main(function () {
                             + "        if (result!=\"\") result += \",\";"
                             + "        result += document.form.channelIds[i].value;"
                             + "      }"
-                            + "      window.android.sendMessage(result);" + +"    }" + +"</script>";
+                            + "      window.android.sendMessage(result);"
+                            + "    }"
+                            + "</script>";
                         //
                         var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
                         for (var i in channels) {
