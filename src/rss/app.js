@@ -595,6 +595,7 @@ void main(function () {
     }, function (socket, msgObj) {
 
         // 处理新消息
+        logger.debug(JSON.stringify(msgObj));
         if (msgObj.title == null || "" == msgObj.title) {
             // 消息无标题
             switch (msgObj.body) {
