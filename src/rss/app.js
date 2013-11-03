@@ -98,7 +98,7 @@ function pushMessage(channel, msgTitle, msgBody, msgUrl, pubDate, logoUrl, image
             attachments.push({title: "image" + imageIndex, type: 'image/xxx', filename: 'image' + imageIndex, url: imageUrl});
         }
     }
-    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, type: TEXT_ARTICLE ? "text" : "html", title: (!msgTitle || msgTitle == "" ? channel : msgTitle), body: (msgBody == "" ? msgTitle : msgBody),
+    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, type: TEXT_ARTICLE ? "text" : "html", title: (!msgTitle || msgTitle == "" ? channel : msgTitle), body: (msgBody == "" ? msgTitle : TEXT_ARTICLE ? msgBody : makeHtml({head: '', body: msgBody})),
         attachments: attachments, url: msgUrl, generate_time: pubDate, need_receipt: true});
 
     var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
