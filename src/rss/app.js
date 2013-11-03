@@ -596,56 +596,67 @@ void main(function () {
 
         // 处理新消息
         logger.debug(JSON.stringify(msgObj));
-        if (msgObj.title == null || "" == msgObj.title) {
-            // 消息无标题
-            switch (msgObj.body) {
-                case 'FOLLOWED_EVENT':
-                    // 关注事件
-                    var followMsg = JSON.stringify({body: 'Hi，您已关注我，精彩资讯马上来！\r\n回复"订阅"可以定制感兴趣的频道。', generate_time: new Date()});
-                    socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
-                    break;
-                case 'UNFOLLOWED_EVENT':
-                    // 取消关注事件
-                    var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
-                    socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
-                    break;
-                case "订阅":
-                    // 订阅请求
-                    db.getAllChannels(function (err, channels) {
+        switch (msgObj.title) {
+            case "EVENT":
+                switch (msgObj.body) {
+                    case 'FOLLOWED':
+                        // 关注事件
+                        var followMsg = JSON.stringify({body: 'Hi，您已关注我，精彩资讯马上来！\r\n回复"订阅"可以定制感兴趣的频道。', generate_time: new Date()});
+                        socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
+                        break;
+                    case 'UNFOLLOWED':
+                        // 取消关注事件
+                        var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
+                        socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
+                        break;
+                    default:
+                        logger.warn("UNKNOWN EVENT: " + msgObj.body);
+                        break;
+                }
+                break;
+            case null:
+            case "":
+                switch (msgObj.body) {
+                    case "订阅":
+                        // 订阅请求
+                        db.getAllChannels(function (err, channels) {
 
-                        if (err) return logger.error(err);
+                            if (err) return logger.error(err);
 
-                        var scripts = "<script language=\"javascript\">"
-                            + "    function doSubmit() {"
-                            + "      var result = \"\";"
-                            + "      for(var i=0;i<document.form.channelIds.length;i++){"
-                            + "          if(document.form.channelIds[i].checked){"
-                            + "              if (result!=\"\") result += \",\";"
-                            + "              result += document.form.channelIds[i].value;"
-                            + "          }"
-                            + "      }"
-                            + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
-                            + "    }"
-                            + "</script>";
-                        //
-                        var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
-                        for (var i = 0; i < channels.length; i++) {
-                            var channel = channels[i];
-                            var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/>"
-                                + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
-                            checkItems += checkItem;
-                        }
-                        checkItems += "<br/>&nbsp;&nbsp;<input type=\"button\" value=\"立即订阅\" onClick=\"doSubmit()\"/></form>";
-                        //
-                        var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
-                        socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
-                    });
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            // 消息有标题
+                            var scripts = "<script language=\"javascript\">"
+                                + "    function doSubmit() {"
+                                + "      var result = \"\";"
+                                + "      for(var i=0;i<document.form.channelIds.length;i++){"
+                                + "          if(document.form.channelIds[i].checked){"
+                                + "              if (result!=\"\") result += \",\";"
+                                + "              result += document.form.channelIds[i].value;"
+                                + "          }"
+                                + "      }"
+                                + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
+                                + "    }"
+                                + "</script>";
+                            //
+                            var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
+                            for (var i = 0; i < channels.length; i++) {
+                                var channel = channels[i];
+                                var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/>"
+                                    + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
+                                checkItems += checkItem;
+                            }
+                            checkItems += "<br/>&nbsp;&nbsp;<input type=\"button\" value=\"立即订阅\" onClick=\"doSubmit()\"/></form>";
+                            //
+                            var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
+                            socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
+                        });
+                        break;
+                    default:
+                        logger.warn("UNKNOWN BODY: " + msgObj.body);
+                        break;
+                }
+                break;
+            default:
+                logger.warn("UNKNOWN TITLE/BODY: " + msgObj.title + "/" + msgObj.body);
+                break;
         }
     });
 });
