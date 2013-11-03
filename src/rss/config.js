@@ -40,3 +40,5 @@ exports.TRACK_SOCKET = true;
 exports.SHOW_PACKET = true;
 
 exports.BODY_BYTE_LENGTH = false;
+
+exports.HTML_TEMPLATE = "<head><meta charset=\"UTF-8\">{{=it.head}}</head><body>{{it.body}}</body>";

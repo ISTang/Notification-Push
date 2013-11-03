@@ -15,6 +15,7 @@ var request = require('request');
 var feedparser = require('feedparser');
 var async = require('async');
 var htmlparser = require("htmlparser");
+var doT = require("dot");
 //
 var BufferHelper = require('bufferhelper');//用于拼接BUffer，防止中文单词断裂
 var iconv = require('iconv-lite');  //用于转码
@@ -42,6 +43,9 @@ const HTTPD_PORT = config.HTTPD_PORT;
 const IMAGE_URL_NOT_CONATINS = config.IMAGE_URL_NOT_CONATINS;
 
 const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
+
+const HTML_TEMPLATE = config.HTML_TEMPLATE;
+const makeHtml = doT.template(HTML_TEMPLATE);
 
 var webapp = express();
 
@@ -589,14 +593,14 @@ void main(function () {
             case 'FOLLOWED_EVENT':
                 // 关注事件
                 var follower = msgObj.body;
-                var bodyText = JSON.stringify({body: '您已关注我，精彩资讯马上来！', generate_time: new Date()});
-                socket.write(formatMessage(follower, "FOLLOWED_MSG", bodyText, false));
+                var followMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<B>您已关注我，精彩资讯马上来！</B>'}), generate_time: new Date()});
+                socket.write(formatMessage(follower, "FOLLOWED_MSG", followMsg, false));
                 break;
             case 'UNFOLLOWED_EVENT':
                 // 取消关注事件
                 var unfollower = msgObj.body;
-                var bodyText = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
-                socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", bodyText, false));
+                var unfollowMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<B>您已取消关注，祝您生活愉快！</B>'}), generate_time: new Date()});
+                socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", unfollowMsg, false));
                 break;
         }
     });
