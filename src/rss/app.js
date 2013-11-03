@@ -619,11 +619,12 @@ void main(function () {
                             + "    function doSubmit() {"
                             + "      var result = \"\";"
                             + "      for(var i=0;i<document.form.channelIds.length;i++){"
-                            + "      if(document.form.channelIds[i].checked){"
-                            + "        if (result!=\"\") result += \",\";"
-                            + "        result += document.form.channelIds[i].value;"
+                            + "          if(document.form.channelIds[i].checked){"
+                            + "              if (result!=\"\") result += \",\";"
+                            + "              result += document.form.channelIds[i].value;"
+                            + "          }"
                             + "      }"
-                            + "      alert(result);android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
+                            + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
                             + "    }"
                             + "</script>";
                         //
@@ -634,7 +635,7 @@ void main(function () {
                                 + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
                             checkItems += checkItem;
                         }
-                        checkItems += "<br/>&nbsp;&nbsp;<a onClick=\"doSubmit()\">立即订阅</a></form>";
+                        checkItems += "<br/>&nbsp;&nbsp;<input type=\"button\" value=\"立即订阅\" onClick=\"doSubmit()\"/></form>";
                         //
                         var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
                         socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
