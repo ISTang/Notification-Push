@@ -614,6 +614,9 @@ void main(function () {
                         break;
                 }
                 break;
+            case "SUBSCRIBE":
+                logger.info("User " + msgObj.sender_name + " subscribe: " + msgObj.body);
+                break;
             case undefined:
             case null:
             case "":
@@ -633,7 +636,7 @@ void main(function () {
                                 + "              result += document.form.channelIds[i].value;"
                                 + "          }"
                                 + "      }"
-                                + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
+                                + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\", \"SUBSCRIBE\", result);"
                                 + "    }"
                                 + "</script>";
                             //
