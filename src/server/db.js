@@ -746,7 +746,7 @@ function getMessageById(redis, msgId, handleResult) {
 
     async.series([
         function (callback) {
-            redis.hmget("message:" + msgId, "title", "body", "body_type", "url", "callback",
+            redis.hmget("message:" + msgId, "title", "body", "body:type", "url", "callback",
                 "generate_time", "send_time", "expiration", "need_receipt", "sender_id", function (err, arr) {
                     if (err) return callback(err);
                     if (arr[0]) message.title = arr[0];
@@ -797,7 +797,7 @@ function getMessageAllById(redis, msgId, handleResult) {
 
     async.series([
         function (callback) {
-            redis.hmget("message:" + msgId, "title", "body", "body_type", "url", "callback",
+            redis.hmget("message:" + msgId, "title", "body", "body:type", "url", "callback",
                 "generate_time", "send_time", "expiration", "need_receipt", "sender_id", function (err, arr) {
                     if (err) return callback(err);
                     if (arr[0]) message.title = arr[0];
