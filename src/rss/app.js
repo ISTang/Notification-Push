@@ -601,7 +601,7 @@ void main(function () {
             switch (msgObj.body) {
                 case 'FOLLOWED_EVENT':
                     // 关注事件
-                    var followMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<b>您已关注我，精彩资讯马上来！</b><p/>回复"订阅"可以定制感兴趣的频道。'}), generate_time: new Date()});
+                    var followMsg = JSON.stringify({body: 'Hi，您已关注我，精彩资讯马上来！\r\n回复"订阅"可以定制感兴趣的频道。', generate_time: new Date()});
                     socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
                     break;
                 case 'UNFOLLOWED_EVENT':
@@ -634,7 +634,7 @@ void main(function () {
                                 + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
                             checkItems += checkItem;
                         }
-                        checkItems += "&nbsp;&nbsp;<a onClick=\"doSubmit()\">立即订阅</a></form>";
+                        checkItems += "<br/>&nbsp;&nbsp;<a onClick=\"doSubmit()\">立即订阅</a></form>";
                         //
                         var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
                         socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
