@@ -616,7 +616,8 @@ void main(function () {
                         if (err) return logger.error(err);
 
                         var scripts = "<script language=\"javascript\">"
-                            + "    function doSubmit() {" + +"      var result = \"\";"
+                            + "    function doSubmit() {"
+                            + "      var result = \"\";"
                             + "      for(var i=0;i<document.form.channelIds.length;i++){"
                             + "      if(document.form.channelIds[i].checked){"
                             + "        if (result!=\"\") result += \",\";"
@@ -629,8 +630,8 @@ void main(function () {
                         var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
                         for (var i in channels) {
                             var channel = channels[i];
-                            var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/><br/>"
-                                + "<label for=\"" + i + "\">" + channel.name + "</label>";
+                            var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/>"
+                                + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
                             checkItems += checkItem;
                         }
                         checkItems += "<a onClick=\"doSubmit()\">立即订阅</a></form>";
