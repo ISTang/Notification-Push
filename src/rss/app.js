@@ -623,7 +623,7 @@ void main(function () {
                             + "        if (result!=\"\") result += \",\";"
                             + "        result += document.form.channelIds[i].value;"
                             + "      }"
-                            + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
+                            + "      alert(result);android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
                             + "    }"
                             + "</script>";
                         //
