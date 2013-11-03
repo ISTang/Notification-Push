@@ -595,19 +595,46 @@ void main(function () {
     }, function (socket, msgObj) {
 
         // 处理新消息
-        switch (msgObj.title) {
-            case 'FOLLOWED_EVENT':
-                // 关注事件
-                var follower = msgObj.body;
-                var followMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<B>您已关注我，精彩资讯马上来！</B>'}), generate_time: new Date()});
-                socket.write(formatMessage(follower, "FOLLOWED_MSG", followMsg, false));
-                break;
-            case 'UNFOLLOWED_EVENT':
-                // 取消关注事件
-                var unfollower = msgObj.body;
-                var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
-                socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", unfollowMsg, false));
-                break;
+        if (msgObj.title == null || "" == msgObj.title) {
+            // 消息无标题
+            switch (msgObj.body) {
+                case "订阅":
+                    // 订阅频道
+                    db.getAllChannels(function (err, channels) {
+
+                        if (err) return logger.error(err);
+
+                        var checkItems = "";
+                        for (var channel in channels) {
+                            var checkItem = "<label for=\"" + channel.id + "\">" + channel.name + "</label>"
+                                + "<input id=\"" + channel.id + "\" type=\"checkbox\"/><br/>";
+                            checkItems += checkItem;
+                        }
+                        var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: checkItems}), generate_time: new Date()});
+                        socket.write(formatMessage(follower, "CHANNELS_MSG", channelsMsg, false));
+                    });
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            // 消息有标题
+            switch (msgObj.title) {
+                case 'FOLLOWED_EVENT':
+                    // 关注事件
+                    var follower = msgObj.body;
+                    var followMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<b>您已关注我，精彩资讯马上来！</b><br/>回复"订阅"可以定制感兴趣的频道。'}), generate_time: new Date()});
+                    socket.write(formatMessage(follower, "FOLLOWED_MSG", followMsg, false));
+                    break;
+                case 'UNFOLLOWED_EVENT':
+                    // 取消关注事件
+                    var unfollower = msgObj.body;
+                    var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
+                    socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", unfollowMsg, false));
+                    break;
+                default:
+                    break;
+            }
         }
     });
 });
