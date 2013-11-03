@@ -43,4 +43,4 @@ exports.BODY_BYTE_LENGTH = false;
 
 exports.HTML_TEMPLATE = "<head><meta charset=\"UTF-8\">{{=it.head}}</head><body style=\"margin:0\">{{=it.body}}</body>";
 
-exports.TEXT_ARTICLE = false;
+exports.TEXT_ARTICLE = true;
