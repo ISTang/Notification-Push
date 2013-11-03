@@ -614,6 +614,7 @@ void main(function () {
                         break;
                 }
                 break;
+            case undefined:
             case null:
             case "":
                 switch (msgObj.body) {
