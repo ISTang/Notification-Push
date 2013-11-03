@@ -623,18 +623,18 @@ void main(function () {
                             + "        if (result!=\"\") result += \",\";"
                             + "        result += document.form.channelIds[i].value;"
                             + "      }"
-                            + "      window.android.sendMessage(result);"
+                            + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\",result);"
                             + "    }"
                             + "</script>";
                         //
                         var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
-                        for (var i in channels) {
+                        for (var i = 0; i < channels.length; i++) {
                             var channel = channels[i];
                             var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/>"
                                 + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
                             checkItems += checkItem;
                         }
-                        checkItems += "<a onClick=\"doSubmit()\">立即订阅</a></form>";
+                        checkItems += "&nbsp;&nbsp;<a onClick=\"doSubmit()\">立即订阅</a></form>";
                         //
                         var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
                         socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
