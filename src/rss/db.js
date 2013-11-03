@@ -15,6 +15,13 @@ exports.getAllChannels = getAllChannels;
 exports.existsArticle = existsArticle;
 exports.saveArticle = saveArticle;
 exports.updateFetchTime = updateFetchTime;
+//
+exports.followMe = followMe;
+exports.unfollowMe = unfollowMe;
+exports.getFollowers = getFollowers;
+exports.subscribeChannels = subscribeChannels;
+exports.getSubscribedChannelIds = getSubscribedChannelIds;
+exports.isChannelSubscribed = isChannelSubscribed;
 
 var config = require(__dirname + '/config');
 var utils = require(__dirname + '/utils');
@@ -287,6 +294,116 @@ function updateFetchTime(channel, since, callback) {
 			callback();
 		}
 	});
+}
+
+function followMe(accountName, callback) {
+    redisPool.acquire(function (err, redis) {
+        if (err) {
+            callback(err);
+        } else {
+            redis.sadd("rss:followers", accountName);
+            redisPool.release(redis);
+            callback();
+        }
+    });
+}
+
+function unfollowMe(accountName, callback) {
+    redisPool.acquire(function (err, redis) {
+        if (err) {
+            callback(err);
+        } else {
+            redis.srem("rss:followers", accountName);
+            redisPool.release(redis);
+            callback();
+        }
+    });
+}
+
+function getFollowers(callback) {
+    redisPool.acquire(function (err, redis) {
+        if (err) {
+            callback(err);
+        } else {
+            redis.smembers("rss:followers", function (err, followers) {
+                redisPool.release(redis);
+                callback(err, followers);
+            });
+        }
+    });
+}
+
+function subscribeChannels(accountName, channelIds, callback) {
+    redisPool.acquire(function (err, redis) {
+        if (err) {
+            callback(err);
+        } else {
+            async.series([
+                function (callback) {
+                    redis.smembers("rss:follower:" + accountName + ":channels", function (err, members) {
+                        if (err) return callback(err);
+                        for (var i in members) {
+                            var member = members[i];
+                            var memberReserved = false;
+                            for (var channelId in channelIds) {
+                                if (channelId == member) {
+                                    memberReserved = true;
+                                    break;
+                                }
+                            }
+                            if (!memberReserved) {
+                                redis.srem("rss:follower:" + accountName + ":channels", member);
+                            }
+                        }
+                        callback();
+                    });
+                },
+                function (callback) {
+                    async.forEachSeries(channelIds, function (channelId, callback) {
+                        redis.sismember("rss:follower:" + accountName + ":channels", channelId, function (err, exists) {
+                            if (err) return callback(err);
+                            if (!exists) {
+                                redis.sadd("rss:follower:" + accountName + ":channels", channelId);
+                            }
+                            callback();
+                        });
+                    }, function (err) {
+                        callback(err);
+                    });
+                }
+            ], function (err) {
+
+                redisPool.release(redis);
+                callback(err);
+            });
+        }
+    });
+}
+
+function getSubscribedChannelIds(accountName, callback) {
+    redisPool.acquire(function (err, redis) {
+        if (err) {
+            callback(err);
+        } else {
+            redis.smembers("rss:follower:" + accountName + ":channels", function (err, channelIds) {
+                redisPool.release(redis);
+                callback(err, channelIds);
+            });
+        }
+    });
+}
+
+function isChannelSubscribed(accountName, channelId, callback) {
+    redisPool.acquire(function (err, redis) {
+        if (err) {
+            callback(err);
+        } else {
+            redis.sismember("rss:follower:" + accountName + ":channels", channelId, function (err, subscribed) {
+                redisPool.release(redis);
+                callback(err, subscribed);
+            });
+        }
+    });
 }
 
 function main(fn) {

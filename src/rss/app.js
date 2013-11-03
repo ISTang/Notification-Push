@@ -601,13 +601,21 @@ void main(function () {
                 switch (msgObj.body) {
                     case 'FOLLOWED':
                         // 关注事件
-                        var followMsg = JSON.stringify({body: 'Hi，您已关注我，精彩资讯马上来！\r\n回复"订阅"可以定制感兴趣的频道。', generate_time: new Date()});
-                        socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
+                        db.followMe(msgObj.sender_name, function (err) {
+
+                            if (err) return logger.error(err);
+                            var followMsg = JSON.stringify({body: 'Hi，您已关注我，精彩资讯马上来！\r\n回复"订阅"可以定制感兴趣的频道。', generate_time: new Date()});
+                            socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
+                        });
                         break;
                     case 'UNFOLLOWED':
                         // 取消关注事件
-                        var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
-                        socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
+                        db.unfollowMe(msgObj.sender_name, function (err) {
+
+                            if (err) return logger.error(err);
+                            var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
+                            socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
+                        });
                         break;
                     default:
                         logger.warn("UNKNOWN EVENT: " + msgObj.body);
@@ -616,6 +624,10 @@ void main(function () {
                 break;
             case "SUBSCRIBE":
                 logger.info("User " + msgObj.sender_name + " subscribe: " + msgObj.body);
+                db.subscribeChannels(msgObj.sender_name, msgObj.body.split(","), function (err) {
+                    var subscribeMsg = JSON.stringify({body: err ? "频道订阅失败:" + err : "频道订阅成功。", generate_time: new Date()});
+                    socket.write(formatMessage(msgObj.sender_name, "SUBSCRIBE_MSG", subscribeMsg, false));
+                });
                 break;
             case undefined:
             case null:
@@ -627,30 +639,33 @@ void main(function () {
 
                             if (err) return logger.error(err);
 
-                            var scripts = "<script language=\"javascript\">"
-                                + "    function doSubmit() {"
-                                + "      var result = \"\";"
-                                + "      for(var i=0;i<document.form.channelIds.length;i++){"
-                                + "          if(document.form.channelIds[i].checked){"
-                                + "              if (result!=\"\") result += \",\";"
-                                + "              result += document.form.channelIds[i].value;"
-                                + "          }"
-                                + "      }"
-                                + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\", \"SUBSCRIBE\", result);"
-                                + "    }"
-                                + "</script>";
-                            //
                             var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
-                            for (var i = 0; i < channels.length; i++) {
-                                var channel = channels[i];
-                                var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/>"
-                                    + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
-                                checkItems += checkItem;
-                            }
-                            checkItems += "<br/>&nbsp;&nbsp;<input type=\"button\" value=\"立即订阅\" onClick=\"doSubmit()\"/></form>";
-                            //
-                            var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
-                            socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
+                            async.forEachSeries(channels, function (channel, callback) {
+                                db.isChannelSubscribed(msgObj.sender_name, channel.id, function (err, subscribed) {
+                                    if (err) return callback(err);
+                                    var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"" + (subscribed ? " checked" : "") + "/>"
+                                        + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
+                                    checkItems += checkItem;
+                                    callback();
+                                });
+                            }, function (err) {
+                                if (err) return logger.error(err);
+                                checkItems += "<br/>&nbsp;&nbsp;<input type=\"button\" value=\"立即订阅\" onClick=\"doSubmit()\"/></form>";
+                                var scripts = "<script language=\"javascript\">"
+                                    + "    function doSubmit() {"
+                                    + "      var result = \"\";"
+                                    + "      for(var i=0;i<document.form.channelIds.length;i++){"
+                                    + "          if(document.form.channelIds[i].checked){"
+                                    + "              if (result!=\"\") result += \",\";"
+                                    + "              result += document.form.channelIds[i].value;"
+                                    + "          }"
+                                    + "      }"
+                                    + "      window.android.sendMessage(\"" + PLATFORM_USERNAME + "\", \"SUBSCRIBE\", result);"
+                                    + "    }"
+                                    + "</script>";
+                                var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
+                                socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
+                            });
                         });
                         break;
                     default:
