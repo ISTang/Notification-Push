@@ -41,6 +41,6 @@ exports.SHOW_PACKET = true;
 
 exports.BODY_BYTE_LENGTH = false;
 
-exports.HTML_TEMPLATE = "<head><meta charset=\"UTF-8\">{{=it.head}}</head><body>{{=it.body}}</body>";
+exports.HTML_TEMPLATE = "<head><meta charset=\"UTF-8\">{{=it.head}}</head><body style=\"margin:0\">{{=it.body}}</body>";
 
 exports.TEXT_ARTICLE = false;
