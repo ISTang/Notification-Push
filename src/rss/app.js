@@ -615,13 +615,25 @@ void main(function () {
 
                         if (err) return logger.error(err);
 
-                        var checkItems = "";
-                        for (var channel in channels) {
-                            var checkItem = "<label for=\"" + channel.id + "\">" + channel.name + "</label>"
-                                + "<input id=\"" + channel.id + "\" type=\"checkbox\"/><br/>";
+                        var scripts = "<script language=\"javascript\">"
+                            + "    function doSubmit() {" + +"      var result = \"\";"
+                            + "      for(var i=0;i<document.form.channelIds.length;i++){"
+                            + "      if(document.form.channelIds[i].checked){"
+                            + "        if (result!=\"\") result += \",\";"
+                            + "        result += document.form.channelIds[i].value;"
+                            + "      }"
+                            + "      window.android.sendMessage(result);" + +"    }" + +"</script>";
+                        //
+                        var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
+                        for (var i in channels) {
+                            var channel = channels[i];
+                            var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"/><br/>"
+                                + "<label for=\"" + i + "\">" + channel.name + "</label>";
                             checkItems += checkItem;
                         }
-                        var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: checkItems}), generate_time: new Date()});
+                        checkItems += "<a onClick=\"doSubmit()\">立即订阅</a></form>";
+                        //
+                        var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
                         socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
                     });
                     break;
