@@ -47,6 +47,8 @@ const BODY_BYTE_LENGTH = config.BODY_BYTE_LENGTH;
 const HTML_TEMPLATE = config.HTML_TEMPLATE;
 const makeHtml = doT.template(HTML_TEMPLATE);
 
+const TEXT_ARTICLE = config.TEXT_ARTICLE;
+
 var webapp = express();
 
 // 定义共享环境
@@ -96,7 +98,7 @@ function pushMessage(channel, msgTitle, msgBody, msgUrl, pubDate, logoUrl, image
             attachments.push({title: "image" + imageIndex, type: 'image/xxx', filename: 'image' + imageIndex, url: imageUrl});
         }
     }
-    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, title: (!msgTitle || msgTitle == "" ? channel : msgTitle), body: (msgBody == "" ? msgTitle : msgBody),
+    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, type: TEXT_ARTICLE ? "text" : "html", title: (!msgTitle || msgTitle == "" ? channel : msgTitle), body: (msgBody == "" ? msgTitle : msgBody),
         attachments: attachments, url: msgUrl, generate_time: pubDate, need_receipt: true});
 
     var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
@@ -176,51 +178,55 @@ function getArticles(channel, url, since, handleResult) {
                     article.images = [];
                     result.push(article);
 
-                    var handler = new htmlparser.DefaultHandler(function (error, dom) {
-                        if (!error) {
-                            article.description = "";
-                            for (var i in dom) {
-                                if (dom[i].type == "text") {
-                                    article.description += (dom[i].data || "");
-                                } else if (dom[i].type == "tag" && dom[i].name == "img") {
-                                    var imageSrc = dom[i].attribs.src;
-                                    if (imageSrc && checkImageUrl(imageSrc)) {
-                                        article.images.push(dom[i].attribs.src);
-                                    }
-                                }
-                                if (dom[i].children) {
-                                    getImagesFromChildren(dom[i].children, article.images);
-                                }
-                            }
-                            function getImagesFromChildren(children, images) {
-                                for (var i in children) {
-                                    if (children[i].type == "tag" && children[i].name == "img") {
-                                        var imageSrc = children[i].attribs.src;
+                    if (TEXT_ARTICLE) {
+                        var handler = new htmlparser.DefaultHandler(function (error, dom) {
+                            if (!error) {
+                                article.description = "";
+                                for (var i in dom) {
+                                    if (dom[i].type == "text") {
+                                        article.description += (dom[i].data || "");
+                                    } else if (dom[i].type == "tag" && dom[i].name == "img") {
+                                        var imageSrc = dom[i].attribs.src;
                                         if (imageSrc && checkImageUrl(imageSrc)) {
-                                            images.push(children[i].attribs.src);
+                                            article.images.push(dom[i].attribs.src);
                                         }
                                     }
-                                    if (children[i].children) {
-                                        getImagesFromChildren(children[i].children, images);
+                                    if (dom[i].children) {
+                                        getImagesFromChildren(dom[i].children, article.images);
                                     }
                                 }
-                            }
-
-                            function checkImageUrl(url) {
-                                for (var i in IMAGE_URL_NOT_CONATINS) {
-                                    var word = IMAGE_URL_NOT_CONATINS[i];
-                                    if (url.indexOf(word) != -1) return false;
+                                function getImagesFromChildren(children, images) {
+                                    for (var i in children) {
+                                        if (children[i].type == "tag" && children[i].name == "img") {
+                                            var imageSrc = children[i].attribs.src;
+                                            if (imageSrc && checkImageUrl(imageSrc)) {
+                                                images.push(children[i].attribs.src);
+                                            }
+                                        }
+                                        if (children[i].children) {
+                                            getImagesFromChildren(children[i].children, images);
+                                        }
+                                    }
                                 }
-                                return true;
-                            }
 
-                            article.description = (article.description || "").trim();
-                            if (article.description == "null") article.description = "";
-                            callback();
-                        }
-                    });
-                    var parser = new htmlparser.Parser(handler);
-                    parser.parseComplete(article.description);
+                                function checkImageUrl(url) {
+                                    for (var i in IMAGE_URL_NOT_CONATINS) {
+                                        var word = IMAGE_URL_NOT_CONATINS[i];
+                                        if (url.indexOf(word) != -1) return false;
+                                    }
+                                    return true;
+                                }
+
+                                article.description = (article.description || "").trim();
+                                if (article.description == "null") article.description = "";
+                                callback();
+                            }
+                        });
+                        var parser = new htmlparser.Parser(handler);
+                        parser.parseComplete(article.description);
+                    } else {
+                        callback();
+                    }
                 }, function (err) {
 
                     handleResult(err, result);
@@ -599,7 +605,7 @@ void main(function () {
             case 'UNFOLLOWED_EVENT':
                 // 取消关注事件
                 var unfollower = msgObj.body;
-                var unfollowMsg = JSON.stringify({type: 'html', body: makeHtml({head: '', body: 'Hi，<B>您已取消关注，祝您生活愉快！</B>'}), generate_time: new Date()});
+                var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
                 socket.write(formatMessage(unfollower, "UNFOLLOWED_MSG", unfollowMsg, false));
                 break;
         }
