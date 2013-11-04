@@ -141,7 +141,8 @@ function pushArticle(article, callback) {
         }
     }
 
-    db.getFollowers(function (followers) {
+    db.getFollowers(function (err, followers) {
+        if (err) return callback(err);
         async.forEachSeries(followers, function (follower, callback) {
             db.isChannelSubscribed(follower, channelId, function (err, subscribed) {
                 if (err) return callback(err);
