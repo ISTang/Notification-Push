@@ -640,11 +640,13 @@ void main(function () {
                             if (err) return logger.error(err);
 
                             var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
+                            var channelIndex = 1;
                             async.forEachSeries(channels, function (channel, callback) {
                                 db.isChannelSubscribed(msgObj.sender_name, channel.id, function (err, subscribed) {
                                     if (err) return callback(err);
-                                    var checkItem = "<input id=\"" + i + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"" + (subscribed ? " checked" : "") + "/>"
-                                        + "<label for=\"" + i + "\">" + channel.title + "</label><br/>";
+                                    var checkItem = "<input id=\"" + channelIndex + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"" + (subscribed ? " checked" : "") + "/>"
+                                        + "<label for=\"" + channelIndex + "\">" + channel.title + "</label><br/>";
+                                    channelIndex++;
                                     checkItems += checkItem;
                                     callback();
                                 });
