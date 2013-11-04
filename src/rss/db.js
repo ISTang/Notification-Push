@@ -259,16 +259,17 @@ function existsArticle(article, handleResult) {
 function saveArticle(article, callback) {
     //log("保存文章 "+article.link+"...");
     var id = uuid.v4().toUpperCase();
+    article.id = id;
 
-	redisPool.acquire(function(err, redis) {
+    redisPool.acquire(function(err, redis) {
 		if (err) {
 			callback(err);  
 		} else {
 			if (article.title) redis.hset("rss:article:"+id, "title", article.title);
 			redis.hset("rss:article:"+id, "description", (article.description?article.description:""));
 			redis.hset("rss:article:"+id, "link", article.link);
-                        redis.hset("rss:article:"+id, "pubDate", article.pubDate);
-			if (article.logo) redis.hset("article:"+id, "logo", article.logo);
+            redis.hset("rss:article:" + id, "pubDate", article.pubDate);
+            if (article.logo) redis.hset("article:"+id, "logo", article.logo);
 			redis.hset("rss:article:"+id, "timestamp", new Date().Format("yyyyMMddhhmmss"));
 
 			redis.sadd("rss:article:set", id);
