@@ -86,20 +86,13 @@ String.prototype.format = utils.StringFormat;
 var logger = config.log4js.getLogger('app');
 logger.setLevel(config.LOG_LEVEL);
 
-function pushMessage(channel, msgTitle, msgBody, msgUrl, pubDate, logoUrl, imageUrls, callback) {
+var socket;
+var clientLogon = false; // 是否登录成功
 
-    var attachments = [];
-    if (logoUrl) {
-        attachments.push({title: "logo", type: 'image/xxx', filename: 'logo', url: logoUrl});
-    }
-    for (var imageIndex in imageUrls) {
-        if (imageIndex != "each") {
-            var imageUrl = imageUrls[imageIndex];
-            attachments.push({title: "image" + imageIndex, type: 'image/xxx', filename: 'image' + imageIndex, url: imageUrl});
-        }
-    }
-    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, type: TEXT_ARTICLE ? "text" : "html", title: (!msgTitle || msgTitle == "" ? channel : msgTitle), body: (msgBody == "" ? msgTitle : TEXT_ARTICLE ? msgBody : makeHtml({head: '', body: msgBody})),
-        attachments: attachments, url: msgUrl, generate_time: pubDate, need_receipt: true});
+function broadcast(title, body, callback) {
+
+    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, title: title, body: body,
+        generate_time: new Date(), need_receipt: false});
 
     var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
     options.method = "POST";
@@ -127,16 +120,53 @@ function pushMessage(channel, msgTitle, msgBody, msgUrl, pubDate, logoUrl, image
     req.end();
 }
 
-function getArticles(channel, url, since, handleResult) {
+function pushArticle(article, callback) {
 
-    if (!since) {
+    var channelId = article.channelId;
+    var msgTitle = article.title;
+    var msgBody = article.description;
+    var msgUrl = article.link;
+    var pubDate = article.pubDate;
+    var logoUrl = article.logo;
+    var imageUrls = article.images;
 
-        since = utils.DateAdd("d", -7, new Date());
+    var attachments = [];
+    if (logoUrl) {
+        attachments.push({title: "logo", type: 'image/xxx', filename: 'logo', url: logoUrl});
     }
+    for (var imageIndex in imageUrls) {
+        if (imageIndex != "each") {
+            var imageUrl = imageUrls[imageIndex];
+            attachments.push({title: "image" + imageIndex, type: 'image/xxx', filename: 'image' + imageIndex, url: imageUrl});
+        }
+    }
+
+    db.getFollowers(function (followers) {
+        async.forEachSeries(followers, function (follower, callback) {
+            db.isChannelSubscribed(follower, channelId, function (err, subscribed) {
+                if (err) return callback(err);
+                if (subscribed) {
+                    logger.debug("Send article " + articel.id + " to follower " + followe + "...");
+                    var articleMsg = JSON.stringify({title: msgTitle, body: msgBody, url: msgUrl, attachments: attachments, generate_time: pubDate, need_receipt: false});
+                    socket.write(formatMessage(follower, article.id, articleMsg, false));
+                }
+                callback();
+            });
+        });
+    });
+}
+
+function getArticles(channel, handleResult) {
+
+    //var since = channel.since;
+    //if (!since) {
+    //
+    //    since = utils.DateAdd("d", -7, new Date());
+    //}
     //var reqObj = {'uri': url,
     //    'headers': {'If-Modified-Since' : since.toString()/*,
     //     'If-None-Match' : <your cached 'etag' value>*/}};
-    http.get(url,function (res) {
+    http.get(channel.url,function (res) {
 
         if (res.statusCode != 200) {
 
@@ -173,7 +203,7 @@ function getArticles(channel, url, since, handleResult) {
                 var logo = (meta.image.url ? meta.image.url : null);
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
-                    article.channel = channel;
+                    article.channelId = channel.id;
                     article.logo = logo;
                     article.images = [];
                     result.push(article);
@@ -242,14 +272,14 @@ function getArticles(channel, url, since, handleResult) {
 function getAllArticles(handleResult) {
 
     var now = new Date();
-    db.getAllChannels(function (err, channles) {
+    db.getAllChannels(function (err, channels) {
 
         if (err) return handleResult(err);
         var result = [];
-        async.forEachSeries(channles, function (channel, callback) {
+        async.forEachSeries(channels, function (channel, callback) {
 
             logger.trace("获取频道 " + channel.title + "(" + channel.url + ")上的文章...");
-            getArticles(channel.title, channel.url, channel.since, function (err, articles) {
+            getArticles(channel, function (err, articles) {
                 if (err) {
 
                     logger.warn(err);
@@ -306,7 +336,7 @@ function getAllArticlesAndPush() {
         logger.trace("本次共获取到 " + articles.length + " 篇新文章。");
         async.forEachSeries(articles, function (article, callback) {
 
-            pushMessage(article.channel, article.title, article.description, article.link, article.pubDate, article.logo, article.images, callback);
+            pushArticle(article, callback);
         }, function (err) {
 
             if (err) logger.error(err);
@@ -335,9 +365,6 @@ function formatMessage(receiver, msgId, body, secure) {
 }
 
 function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
-
-    var socket;
-    var clientLogon = false; // 是否登录成功
 
     var clientLogging = false;
 
