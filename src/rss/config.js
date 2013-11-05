@@ -8,7 +8,7 @@ log4js.configure({
     ]
 });
 exports.log4js = log4js;
-exports.LOG_LEVEL = 'DEBUG';
+exports.LOG_LEVEL = 'INFO';
 
 exports.REDIS_SERVER = 'localhost';
 exports.REDIS_PORT = 7379;
@@ -36,8 +36,8 @@ exports.IMAGE_URL_NOT_CONATINS = ['email','facebook','linkedin','googleplus','tw
 
 exports.MAX_INACTIVE_TIME = 1000 * 60 * 60 * 24; // 心跳检测最长时间(ms)
 
-exports.TRACK_SOCKET = true;
-exports.SHOW_PACKET = true;
+exports.TRACK_SOCKET = false;
+exports.SHOW_PACKET = false;
 
 exports.BODY_BYTE_LENGTH = false;
 

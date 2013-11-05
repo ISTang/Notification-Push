@@ -92,7 +92,7 @@ var clientLogon = false; // 是否登录成功
 function broadcast(title, body, callback) {
 
     var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, title: title, body: body,
-        generate_time: new Date(), need_receipt: false});
+        generate_time: new Date(), need_receipt: true});
 
     var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
     options.method = "POST";
@@ -122,6 +122,8 @@ function broadcast(title, body, callback) {
 
 function pushArticle(article, callback) {
 
+    logger.trace("Pushing article "+article.id+"...");
+
     var channelId = article.channelId;
     var msgTitle = article.title;
     var msgBody = article.description;
@@ -141,18 +143,23 @@ function pushArticle(article, callback) {
         }
     }
 
+    logger.trace("Search for followers...");
     db.getFollowers(function (err, followers) {
         if (err) return callback(err);
+        logger.trace("Total "+followers.length+" follower(s).");
         async.forEachSeries(followers, function (follower, callback) {
+            logger.trace("Follower "+follower+" found. Checking channel "+channelId+"...");
             db.isChannelSubscribed(follower, channelId, function (err, subscribed) {
                 if (err) return callback(err);
                 if (subscribed) {
-                    logger.debug("Send article " + articel.id + " to follower " + followe + "...");
-                    var articleMsg = JSON.stringify({title: msgTitle, body: msgBody, url: msgUrl, attachments: attachments, generate_time: pubDate, need_receipt: false});
+                    logger.debug("Send article " + article.id + " to follower " + follower + "...");
+                    var articleMsg = JSON.stringify({title: msgTitle, body: msgBody, url: msgUrl, attachments: attachments, generate_time: pubDate, need_receipt: true});
                     socket.write(formatMessage(follower, article.id, articleMsg, false));
                 }
                 callback();
             });
+        }, function(err) {
+            callback(err);
         });
     });
 }
@@ -205,6 +212,7 @@ function getArticles(channel, handleResult) {
                 var result = [];
                 async.forEachSeries(articles, function (article, callback) {
                     article.channelId = channel.id;
+                    article.title = '['+channel.title+']'+article.title;
                     article.logo = logo;
                     article.images = [];
                     result.push(article);
@@ -388,7 +396,7 @@ function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
     }
 
     function setLogon() {
-        onConnected(socket);
+        onConnected();
 
         clientLogon = true;
         clientLogging = false;
@@ -433,12 +441,12 @@ function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
             crypt.desDecrypt(msg, msgKey, function (err, data) {
                 if (err) return logger.error("[" + clientId + "] " + err);
                 var msgObj = JSON.parse(data);
-                onNewMessage(socket, msgObj);
+                onNewMessage(msgObj);
                 logger.debug("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
             });
         } else {
             var msgObj = JSON.parse(msg);
-            onNewMessage(socket, msgObj);
+            onNewMessage(msgObj);
             logger.debug("[" + clientId + "] " + msgObj.generate_time + " " + (msgObj.title != null ? msgObj.title : "---") + ": " + msgObj.body);
         }
     }
@@ -615,12 +623,12 @@ void main(function () {
     logger.debug('服务器正在监听端口 ' + HTTPD_PORT + '...');
 
     // 启动消息推送客户端
-    startWorker(PLATFORM_USERNAME, PLATFORM_PASSWORD, function (socket) {
+    startWorker(PLATFORM_USERNAME, PLATFORM_PASSWORD, function() {
 
         // 定时获取文章并推送
         getAllArticlesAndPush();
 
-    }, function (socket, msgObj) {
+    }, function (msgObj) {
 
         // 处理新消息
         logger.debug(JSON.stringify(msgObj));
@@ -667,13 +675,14 @@ void main(function () {
 
                             if (err) return logger.error(err);
 
+                            channels.sort(function(a,b){return a.description.localeCompare(b.description)});
                             var checkItems = "<form name=\"form\">请选择感兴趣的频道：<br/>";
                             var channelIndex = 1;
                             async.forEachSeries(channels, function (channel, callback) {
                                 db.isChannelSubscribed(msgObj.sender_name, channel.id, function (err, subscribed) {
                                     if (err) return callback(err);
                                     var checkItem = "<input id=\"" + channelIndex + "\" type=\"checkbox\" name=\"channelIds\" value=\"" + channel.id + "\"" + (subscribed ? " checked" : "") + "/>"
-                                        + "<label for=\"" + channelIndex + "\">" + channel.title + "</label><br/>";
+                                        + "<label for=\"" + channelIndex + "\">" + channel.description + "</label><br/>";
                                     channelIndex++;
                                     checkItems += checkItem;
                                     callback();
