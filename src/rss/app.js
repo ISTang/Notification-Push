@@ -641,7 +641,7 @@ void main(function () {
 
                             if (err) return logger.error(err);
                             var followMsg = JSON.stringify({body: 'Hi，您已关注我，精彩资讯马上来！\r\n回复"订阅"可以定制感兴趣的频道。', generate_time: new Date()});
-                            socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG", followMsg, false));
+                            socket.write(formatMessage(msgObj.sender_name, "FOLLOWED_MSG" + new Date().getTime(), followMsg, false));
                         });
                         break;
                     case 'UNFOLLOWED':
@@ -650,7 +650,7 @@ void main(function () {
 
                             if (err) return logger.error(err);
                             var unfollowMsg = JSON.stringify({body: '您已取消关注，祝您生活愉快！', generate_time: new Date()});
-                            socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG", unfollowMsg, false));
+                            socket.write(formatMessage(msgObj.sender_name, "UNFOLLOWED_MSG" + new Date().getTime(), unfollowMsg, false));
                         });
                         break;
                     default:
@@ -662,7 +662,7 @@ void main(function () {
                 logger.info("User " + msgObj.sender_name + " subscribe: " + msgObj.body);
                 db.subscribeChannels(msgObj.sender_name, msgObj.body.split(","), function (err) {
                     var subscribeMsg = JSON.stringify({body: err ? "频道订阅失败:" + err : "频道订阅成功。", generate_time: new Date()});
-                    socket.write(formatMessage(msgObj.sender_name, "SUBSCRIBE_MSG", subscribeMsg, false));
+                    socket.write(formatMessage(msgObj.sender_name, "SUBSCRIBE_MSG" + new Date().getTime(), subscribeMsg, false));
                 });
                 break;
             case undefined:
@@ -703,7 +703,7 @@ void main(function () {
                                     + "    }"
                                     + "</script>";
                                 var channelsMsg = JSON.stringify({type: 'html', body: makeHtml({head: scripts, body: checkItems}), generate_time: new Date()});
-                                socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG", channelsMsg, false));
+                                socket.write(formatMessage(msgObj.sender_name, "CHANNELS_MSG" + new Date().getTime(), channelsMsg, false));
                             });
                         });
                         break;
