@@ -63,7 +63,7 @@ exports.PHONE_NUMBER_FORMAT = /^1\d{10}$/i;
 exports.IMAGE_MIME_REGEX = /^image\/.*$/i;
 
 exports.AUTO_START_HTTPD = true;
-exports.RECEIVE_RECEIPT_TIMEOUT = 1000 * 60;
+exports.RECEIVE_RECEIPT_TIMEOUT = 1000 * 30;
 
 exports.MIN_EXPIRATION_TIME = 1000 * 60 * 1;
 

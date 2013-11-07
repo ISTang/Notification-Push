@@ -8,7 +8,7 @@ log4js.configure({
     ]
 });
 exports.log4js = log4js;
-exports.LOG_LEVEL = 'INFO';
+exports.LOG_LEVEL = 'TRACE';
 
 exports.REDIS_SERVER = 'localhost';
 exports.REDIS_PORT = 7379;
@@ -34,7 +34,7 @@ exports.GRACE_EXIT_TIME = 1500;
 
 exports.IMAGE_URL_NOT_CONATINS = ['email','facebook','linkedin','googleplus','twitter','mf','a2','a2t', 'emailthis2', 'bookmark'];
 
-exports.MAX_INACTIVE_TIME = 1000 * 60 * 60 * 24; // 心跳检测最长时间(ms)
+exports.MAX_INACTIVE_TIME = 1000 * 60 * 5 * 1; // 心跳检测最长时间(ms)
 
 exports.TRACK_SOCKET = false;
 exports.SHOW_PACKET = false;

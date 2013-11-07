@@ -86,7 +86,7 @@
                 { "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
                 { "sName": "body", "sDefaultContent": "", "fnRender": function (obj) {
                     var body = obj.aData[ obj.iDataColumn ];
-                    var ss = '<pre>' + body + '</pre>';
+                    var ss = (obj.aData[4]=='html'?'HTML代码':body);
                     return (obj.aData[7] ? "<a href='" + obj.aData[7] + "' target='blank'>" + (body == null || body == '' || body == 'null' ? '_' : ss) + "</a>" : ss);
                 }
                 },

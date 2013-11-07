@@ -703,7 +703,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
 
             // 收到关注公众号请求
             var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
-            followPublicAccount(accountId, publicAccount, function (err) {
+            followPublicAccount(publicAccount, function (err) {
 
                 if (err) {
 
@@ -728,7 +728,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
 
             // 收到取消关注公众号请求
             var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
-            unfollowPublicAccount(accountId, publicAccount, function (err) {
+            unfollowPublicAccount(publicAccount, function (err) {
 
                 if (err) {
 
@@ -752,7 +752,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
         } else if (action == "GET" && target == "FOLLOWED") {
 
             // 收到获取已关注的公众号请求
-            getFollowedPublicAccounts(accountId, function (err, publicAccounts) {
+            getFollowedPublicAccounts(function (err, publicAccounts) {
 
                 var ss = (err ? "0," + err : JSON.stringify(publicAccounts));
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Get fellowed public accounts " + (err ? "ERROR" : "OK"));

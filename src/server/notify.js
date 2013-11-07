@@ -156,11 +156,12 @@ process.on('message', function (m, socket) {
         function msgConfirmed() {
 
             // 收到客户端消息确认信号
+            var now = new Date();
+            clientConns[connId].lastActiveTime = now; // 表明客户端仍然活跃
+
             var pendingMsg = pendingMsgs[connId];
             if (typeof pendingMsg != "undefined") {
 
-                var now = new Date();
-                clientConns[connId].lastActiveTime = now;
 
                 logger.debug("Client " + clientConns[connId].clientAddress + "[" + accountName + "] received message " + pendingMsg.msgId);
                 delete pendingMsgs[connId];
@@ -177,9 +178,9 @@ process.on('message', function (m, socket) {
                                 process.exit(7);
                             }
 
-                            db.recordLatestActivity(redis, connId, "已确认一条消息", function (err) {
+                            db.recordLatestActivity(redis, connId, "已确认消息"+pendingMsg.msgId, function (err) {
+                                db.redisPool.release(redis);
                                 if (err) {
-                                    db.redisPool.release(redis);
                                     logger.fatal("Process will exit: " + err);
                                     process.exit(8);
                                 }
@@ -191,11 +192,9 @@ process.on('message', function (m, socket) {
                                             delete queuedMsgs[connId];
                                         }
                                         sendMessage(connId, nextMsg.msgId, nextMsg.message, nextMsg.msgKey, true);
-                                        db.redisPool.release(redis);
                                         return;
                                     }
                                 }
-                                db.redisPool.release(redis);
                                 logger.debug("Client " + clientConns[connId].clientAddress + ": no more message(s) to send");
                             });
                         });
@@ -225,6 +224,9 @@ process.on('message', function (m, socket) {
         function forwardMsg(appId, senderId, senderName, receiver, msgText, sendId, handleResult) {
 
             var now = new Date();
+
+            clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
+
             var message = JSON.parse(msgText);
             message.generate_time = now.Format("yyyyMMddHHmmss");
             message.sender_id = senderId; // 不会发送到客户端
@@ -315,6 +317,8 @@ process.on('message', function (m, socket) {
         }
 
         function queryPublicAccounts(publicAccount, callback) {
+            clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
+
             logger.trace("Query public account matches " + publicAccount);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
@@ -325,7 +329,9 @@ process.on('message', function (m, socket) {
             });
         }
 
-        function followPublicAccount(accountId, publicAccount, callback) {
+        function followPublicAccount(publicAccount, callback) {
+            clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
+
             logger.trace("Follow public account: " + accountId + "@" + publicAccount);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
@@ -336,7 +342,9 @@ process.on('message', function (m, socket) {
             });
         }
 
-        function unfollowPublicAccount(accountId, publicAccount, callback) {
+        function unfollowPublicAccount(publicAccount, callback) {
+            clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
+
             logger.trace("Unfollow public account: " + accountId + "!@" + publicAccount);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
@@ -347,7 +355,9 @@ process.on('message', function (m, socket) {
             });
         }
 
-        function getFollowedPublicAccounts(accountId, callback) {
+        function getFollowedPublicAccounts(callback) {
+            clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
+
             logger.trace("Get followed public account for " + accountId);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
@@ -459,7 +469,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                 }
                 logger.trace("Message " + msgId + " on connection " + connId + " sent");
                 if (needReceipt) {
-                    db.recordLatestActivity(redis, connId, "已发送一条消息，等待确认...", function (err) {
+                    db.recordLatestActivity(redis, connId, "消息"+msgId+"已发送，等待确认", function (err) {
                         if (err) {
                             db.redisPool.release(redis);
                             logger.fatal("Process will exit: " + err);
@@ -469,29 +479,31 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                             var pendingMsg = pendingMsgs[connId];
                             if (typeof pendingMsg != "undefined") {
                                 logger.trace("Send message " + msgId + " on connection " + connId + " timeout");
-                                if (typeof clientConns[connId] != "undefined") {
-                                    db.removeLoginInfo(redis, connId, function (err) {
-                                        db.redisPool.release(redis);
-                                        if (err) {
-                                            logger.fatal("Process will exit: " + err);
-                                            process.exit(16);
+                                db.recordLatestActivity(redis, connId, "消息"+msgId+"确认超时", function (err) {
+                                    db.redisPool.release(redis);
+                                    if (err) {
+                                        logger.fatal("Process will exit: " + err);
+                                        process.exit(16);
+                                    }
+                                    // 不继续等待确认，继续发送下一条消息(如果有的话)
+                                    var msgs = queuedMsgs[connId];
+                                    if (typeof msgs != "undefined") {
+                                        var nextMsg = msgs.shift();
+                                        if (nextMsg) {
+                                            if (msgs.length == 0) {
+                                                delete queuedMsgs[connId];
+                                            }
+                                            sendMessage(connId, nextMsg.msgId, nextMsg.message, nextMsg.msgKey, true);
+                                            return;
                                         }
-                                        var socket = clientConns[connId].socket;
-                                        var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
-                                        clientConns.splice(clientConns.indexOf(connId), 1);
-                                        try {
-                                            if (TRACK_SOCKET) logger.trace("[SOCKET] end client " + clientAddress + ": " + protocol.INACTIVE_TIMEOUT_MSG);
-                                            socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
-                                        } catch (err) {
-                                            logger.error(err);
-                                        }
-                                    });
-                                }
+                                    }
+                                    logger.debug("Client " + clientConns[connId].clientAddress + ": no more message(s) to send");
+                                 });
                             }
                         }, RECEIVE_RECEIPT_TIMEOUT);
                     });
                 } else {
-                    db.recordLatestActivity(redis, connId, "已发送一条不需要确认的消息", function (err) {
+                    db.recordLatestActivity(redis, connId, "消息"+msgId+"已发送，不需要确认", function (err) {
                         db.redisPool.release(redis);
                         if (err) {
                             logger.fatal("Process will exit: " + err);
