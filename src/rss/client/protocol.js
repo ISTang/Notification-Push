@@ -32,6 +32,7 @@ const FIELD_MSG_SECURE = "Secure";
 const FIELD_MSG_RECEIPT = "Receipt";
 const FIELD_ACTION_ID = "Id";
 const FIELD_ACTION_ACCOUNT = "Account";
+const FIELD_ACTION_ACCOUNTS = "Accounts";
 
 // 错误消息
 //const INVALID_PROTOCOL_FLAG_MSG = "Invalid protocol flag or not exists";
@@ -139,6 +140,32 @@ const PUSH_MSG_CMD = "PUSH MSG\r\nSecure: {0}\r\nReceipt: {1}\r\n" +
     "Length: {2}\r\n\r\n{3}"; // 体部: 消息JSON对象(已包含)
 // (2)确认 (C-->P)
 const PUSH_MSG_ACK = "PUSH MSG\r\n\r\n"; // 不需要体部
+//
+// :广播消息(客户端发起)
+//
+// (1)请求 ({0}-发送标识[回传用] {1}-消息是否加密, {2}-{3}的长度, {3}-消息JSON对象)(C-->P)
+const BROADCAST_MSG_REQ = "BROADCAST MSG\r\nId: {0}\r\nSecure: {1}\r\n" +
+    (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+    "Length: {2}\r\n\r\n{3}"; // 体部: 消息JSON对象(已包含)
+// (2)成功响应 ({0}-发送标识)(P-->C)
+const BROADCAST_MSG_SUCCESS_RES = "BROADCAST MSG\r\nId: {0}\r\nSuccess: true\r\n\r\n"; // 无体部
+// (3)失败响应 ({0}-发送标识 {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
+const BROADCAST_MSG_FAILED_RES = "BROADCAST MSG\r\nId: {0}\r\nSuccess: false\r\n" +
+    (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+    "Length: {1}\r\n\r\n{2},{3}"; // 体部: 错误代码及解释(已包含)
+//
+// :群发消息(客户端发起)
+//
+// (1)请求 ({0}-接收者账号[逗号分隔] {1}-发送标识[回传用] {2}-消息是否加密, {3}-{4}的长度, {4}-消息JSON对象)(C-->P)
+const MULTICAST_MSG_REQ = "MULTICAST MSG\r\nAccounts: {0}\r\nId: {1}\r\nSecure: {2}\r\n" +
+    (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+    "Length: {3}\r\n\r\n{4}"; // 体部: 消息JSON对象(已包含)
+// (2)成功响应 ({0}-发送标识)(P-->C)
+const MULTICAST_MSG_SUCCESS_RES = "MULTICAST MSG\r\nId: {0}\r\nSuccess: true\r\n\r\n"; // 无体部
+// (3)失败响应 ({0}-发送标识 {1}-{2}和{3}的长度和加1,{2}-错误代码,{3}-错误原因)(P-->C)
+const MULTICAST_MSG_FAILED_RES = "MULTICAST MSG\r\nId: {0}\r\nSuccess: false\r\n" +
+    (BODY_BYTE_LENGTH ? FIELD_BODY_BYTE_LENGTH + ":true\r\n" : "") +
+    "Length: {1}\r\n\r\n{2},{3}"; // 体部: 错误代码及解释(已包含)
 //
 // :发消息(客户端发起)
 //
@@ -666,6 +693,45 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
             // 收到消息确认信号
             msgConfirmed();
             callback();
+        } else if (action == "BROADCAST" && target == "MSG") {
+
+            // 收到广播消息请求
+            var sendId = fields[FIELD_ACTION_ID.toUpperCase()];
+            var msgSecure = (fields[FIELD_MSG_SECURE.toUpperCase()].toUpperCase() == "TRUE");
+            var msgText = body;
+            if (msgSecure) {
+
+                // 解密体部内容
+                msgText = crypt.desDecrypt(body, msgKey);
+            }
+            forwardMsg(null, msgText, sendId, function (err) {
+
+                var ss = (err ? "0," + err : "");
+                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Broadcast message " + (err ? "ERROR" : "OK"));
+                socket.write(/*PNTP_FLAG+*/err ? BROADCAST_MSG_FAILED_RES.format(sendId, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
+                    BROADCAST_MSG_SUCCESS_RES.format(sendId));
+                callback();
+            });
+        } else if (action == "MULTICAST" && target == "MSG") {
+
+            // 收到群发消息请求
+            var receivers = fields[FIELD_ACTION_ACCOUNTS.toUpperCase()].split(",");
+            var sendId = fields[FIELD_ACTION_ID.toUpperCase()];
+            var msgSecure = (fields[FIELD_MSG_SECURE.toUpperCase()].toUpperCase() == "TRUE");
+            var msgText = body;
+            if (msgSecure) {
+
+                // 解密体部内容
+                msgText = crypt.desDecrypt(body, msgKey);
+            }
+            forwardMsg(receivers, msgText, sendId, function (err) {
+
+                var ss = (err ? "0," + err : "");
+                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Multicast message " + (err ? "ERROR" : "OK"));
+                socket.write(/*PNTP_FLAG+*/err ? MULTICAST_MSG_FAILED_RES.format(sendId, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
+                    MULTICAST_MSG_SUCCESS_RES.format(sendId));
+                callback();
+            });
         } else if (action == "SEND" && target == "MSG") {
 
             // 收到发送消息请求
@@ -678,7 +744,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 // 解密体部内容
                 msgText = crypt.desDecrypt(body, msgKey);
             }
-            forwardMsg(appId, accountId, accountName, receiver, msgText, sendId, function (err) {
+            forwardMsg([receiver], msgText, sendId, function (err) {
 
                 var ss = (err ? "0," + err : "");
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Send message " + (err ? "ERROR" : "OK"));
@@ -717,7 +783,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
 
                 var PUBLIC_ACCOUNT_FOLLOWED_EVENT = JSON.stringify({title: 'EVENT', body: "FOLLOWED", generate_time: new Date()});
-                forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
+                forwardMsg(publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
                     if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR" : "OK"));
@@ -742,7 +808,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
 
                 var PUBLIC_ACCOUNT_UNFOLLOWED_EVENT = JSON.stringify({title: 'EVENT', body: "UNFOLLOWED", generate_time: new Date()});
-                forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
+                forwardMsg(publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
                     if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR" : "OK"));
@@ -905,9 +971,23 @@ function handleServerConnection(socket, clientId, getAppInfo, getUserInfo, setMs
             //logger.debug("[" + clientId + "] One message received");
             msgReceived(msg, secure);
             callback();
+        } else if (action == "BROADCAST" && target == "MSG") {
+
+            // 收到消息广播回复
+            var msgId = fields[FIELD_ACTION_ID.toUpperCase()];
+            var success = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
+            logger.info("[" + clientId + "] message " + msgId + (success ? " broadcasted." : " broadcast failed: " + body));
+            callback();
+        } else if (action == "MULTICAST" && target == "MSG") {
+
+            // 收到消息群发回复
+            var msgId = fields[FIELD_ACTION_ID.toUpperCase()];
+            var success = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
+            logger.info("[" + clientId + "] message " + msgId + (success ? " multicasted." : " multicast failed: " + body));
+            callback();
         } else if (action == "SEND" && target == "MSG") {
 
-            // 收到消息回复
+            // 收到消息发送回复
             var msgId = fields[FIELD_ACTION_ID.toUpperCase()];
             var success = (fields[FIELD_ACTION_SUCCESS.toUpperCase()].toUpperCase() == "TRUE");
             logger.info("[" + clientId + "] message " + msgId + (success ? " sent." : " send failed: " + body));
@@ -956,6 +1036,7 @@ exports.FIELD_MSG_SECURE = FIELD_MSG_SECURE;
 exports.FIELD_MSG_RECEIPT = FIELD_MSG_RECEIPT;
 exports.FIELD_ACTION_ID = FIELD_ACTION_ID;
 exports.FIELD_ACTION_ACCOUNT = FIELD_ACTION_ACCOUNT;
+exports.FIELD_ACTION_ACCOUNTS = FIELD_ACTION_ACCOUNTS;
 
 exports.INVALID_ACTION_LINE_MSG = INVALID_ACTION_LINE_MSG;
 exports.INVALID_FIELD_LINE_MSG = INVALID_FIELD_LINE_MSG;
@@ -999,6 +1080,8 @@ exports.SET_ALIVE_ACK = SET_ALIVE_ACK;
 exports.PUSH_MSG_CMD = PUSH_MSG_CMD;
 exports.PUSH_MSG_ACK = PUSH_MSG_ACK;
 
+exports.BROADCAST_MSG_REQ = BROADCAST_MSG_REQ;
+exports.MULTICAST_MSG_REQ = MULTICAST_MSG_REQ;
 exports.SEND_MSG_REQ = SEND_MSG_REQ;
 //exports.QUERY_PUBLIC_REQ = QUERY_PUBLIC_REQ;
 //exports.FOLLOW_PUBLIC_REQ = FOLLOW_PUBLIC_REQ;

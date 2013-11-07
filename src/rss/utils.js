@@ -14,6 +14,7 @@ exports.StringFormat = StringFormat;
 exports.StringTrim = StringTrim;
 exports.parseXmlEncoding = parseXmlEncoding;
 exports.md5 = md5;
+exports.mergeObjects = mergeObjects;
 
 // 对Date的扩展，将 Date 转化为指定格式的String
 // 月(M)、日(d)、小时(h)、分(m)、秒(s)、季度(q) 可以用 1-2 个占位符，
@@ -131,6 +132,27 @@ function md5(str) {
     md5sum.update(str);
     str = md5sum.digest('hex').toUpperCase();
     return str;
+}
+
+function mergeObjects(src, dest) {
+    var i, v, result = dest || {};
+
+    for (i in src) {
+        v = src[i];
+        if (v && typeof(v) === 'object') {
+            if (v.constructor === Array) {
+                result[i] = this._.clone(v);
+            } else if (v.constructor !== RegExp && !this._.isElement(v)) {
+                result[i] = merge(v, (dest ? dest[i] : undefined));
+            } else {
+                result[i] = v;
+            }
+        } else {
+            result[i] = v;
+        }
+    }
+
+    return result;
 }
 
 function main(fn) {

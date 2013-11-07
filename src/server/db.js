@@ -75,6 +75,7 @@ exports.clearMessages = clearMessages;
 exports.cleanData = cleanData;
 
 exports.getAccountPermissions = getAccountPermissions;
+exports.getAccountType = getAccountType;
 
 const REDIS_SERVER = config.REDIS_SERVER;
 const REDIS_PORT = config.REDIS_PORT;
@@ -833,7 +834,7 @@ function getMessageAllById(redis, msgId, handleResult) {
                     callback();
                 }
             });
-        },
+        }
     ], function (err) {
         handleResult(err, message);
     });
@@ -2104,7 +2105,7 @@ function getAccountPermissions(redis, accountId, callback) {
                     permissions.view_messages = (value.view_messages == 1);
                     permissions.list_applications = (value.list_applications == 1);
                     permissions.list_accounts = (value.list_accounts == 1);
-                    permissions.push_message = (value.push_message == 1);
+                    permissions.push_message = !(value.push_message == 0);
                     permissions.clear_messages = (value.clear_messages == 1);
                 } else {
                     permissions.view_connections = false;
@@ -2113,7 +2114,7 @@ function getAccountPermissions(redis, accountId, callback) {
                     permissions.view_messages = false;
                     permissions.list_applications = false;
                     permissions.list_accounts = false;
-                    permissions.push_message = false;
+                    permissions.push_message = true;
                     permissions.clear_messages = false;
                 }
                 callback();
@@ -2133,7 +2134,7 @@ function getAccountPermissions(redis, accountId, callback) {
                             permissions.applications[app.id] = {
                                 broadcast: (value.broadcast == 1),
                                 multicast: (value.multicast == 1),
-                                send: (value.send == 1)
+                                send: !(value.send == 0)
                             };
                         } else {
                             permissions.applications[app.id] = {
@@ -2154,6 +2155,11 @@ function getAccountPermissions(redis, accountId, callback) {
             callback(err, permissions);
         }
     );
+}
+
+function getAccountType(redis, accountId, callback) {
+
+    redis.get("account:" + accountId + ":type", callback)
 }
 
 function main(fn) {

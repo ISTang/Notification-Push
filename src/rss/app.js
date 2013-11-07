@@ -89,12 +89,19 @@ logger.setLevel(config.LOG_LEVEL);
 var socket;
 var clientLogon = false; // 是否登录成功
 
-function broadcast(title, body, callback) {
+function pushMessage(message, receivers, callback) {
 
-    var bodyText = JSON.stringify({user: {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)}, title: title, body: body,
-        generate_time: new Date(), need_receipt: true});
+    var user = {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)};
+    var accounts = [];
+    if (!receivers || receivers.length < 2) {
+        for (var receiver in receivers) {
+            accounts.push({name: receiver});
+        }
+    }
+    var bodyText = JSON.stringify((!receivers || receivers.length < 2) ? utils.mergeObjects({user: user}, message) : {user: user, accounts: accounts, message: message});
 
-    var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + "/message");
+    var options = url.parse("http://" + PLATFORM_SERVER + ":" + PLATFORM_PORT + "/application/" + APP_ID + (!receivers ? "" : (receivers.length < 2 ? "/account/" + receivers[0] : "/accounts")) + "/message");
+
     options.method = "POST";
     options.headers = {
         'Content-Type': 'application/json;charset=utf-8',
@@ -145,21 +152,64 @@ function pushArticle(article, callback) {
 
     logger.trace("Search for followers...");
     db.getFollowers(function (err, followers) {
+
         if (err) return callback(err);
-        logger.trace("Total "+followers.length+" follower(s).");
-        async.forEachSeries(followers, function (follower, callback) {
-            logger.trace("Follower "+follower+" found. Checking channel "+channelId+"...");
-            db.isChannelSubscribed(follower, channelId, function (err, subscribed) {
-                if (err) return callback(err);
-                if (subscribed) {
+
+        var subscribedFollowers = [];
+        async.series([
+            function (callback) {
+
+                logger.trace("Total " + followers.length + " follower(s).");
+                async.forEachSeries(followers, function (follower, callback) {
+
+                    logger.trace("Follower " + follower + " found. Checking channel " + channelId + "...");
+                    db.isChannelSubscribed(follower, channelId, function (err, subscribed) {
+
+                        if (err) return callback(err);
+
+                        if (subscribed) {
+
+                            subscribedFollowers.push(follower);
+                        }
+                        callback();
+                    });
+                }, function (err) {
+
+                    callback(err);
+                });
+            }
+        ], function (err) {
+
+            if (err) return callback(err);
+
+            if (subscribedFollowers.length == 0) return callback();
+
+            var message = {title: msgTitle, body: msgBody, url: msgUrl, attachments: attachments, generate_time: pubDate, need_receipt: true};
+
+            if (clientLogon) {
+
+                // 客户端已经登录
+                if (subscribedFollowers.length > 1) {
+
+                    // 群发(不支持广播--避免新关注者未订阅时也收到此消息)
+                    var followers = subscribedFollowers.join(",");
+                    logger.debug("Send article " + article.id + " to followers " + follower + "...");
+                    var articleMsg = JSON.stringify(message);
+                    socket.write(formatMessage(followers, article.id, articleMsg, false));
+                } else /*if (subscribedFollowers.length==1)*/{
+
+                    // 发送
+                    var follower = subscribedFollowers[0];
                     logger.debug("Send article " + article.id + " to follower " + follower + "...");
-                    var articleMsg = JSON.stringify({title: msgTitle, body: msgBody, url: msgUrl, attachments: attachments, generate_time: pubDate, need_receipt: true});
+                    var articleMsg = JSON.stringify(message);
                     socket.write(formatMessage(follower, article.id, articleMsg, false));
                 }
                 callback();
-            });
-        }, function(err) {
-            callback(err);
+            } else {
+
+                // 客户端尚未登录
+                pushMessage(message, subscribedFollowers, callback);
+            }
         });
     });
 }

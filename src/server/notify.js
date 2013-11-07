@@ -221,7 +221,7 @@ process.on('message', function (m, socket) {
             }
         }
 
-        function forwardMsg(appId, senderId, senderName, receiver, msgText, sendId, handleResult) {
+        function forwardMsg(receivers, msgText, sendId, handleResult) {
 
             var now = new Date();
 
@@ -229,17 +229,62 @@ process.on('message', function (m, socket) {
 
             var message = JSON.parse(msgText);
             message.generate_time = now.Format("yyyyMMddHHmmss");
-            message.sender_id = senderId; // 不会发送到客户端
-            message.sender_name = senderName;
+            message.sender_id = accountId; // 不会发送到客户端
+            message.sender_name = accountName;
 
-            logger.trace("Saving message for application " + appId);
+            var isPublicAccount = false;
+            var receiverIds = null;
             db.redisPool.acquire(function (err, redis) {
                 if (err) {
+
                     handleResult(err);
                 } else {
+
                     async.series([
                         function (callback) {
-                            db.getUserAvatar(redis, senderId, function (err, avatar) {
+                            db.getAccountType(redis, accountId, function (err, accountType) {
+                                if (err) return callback(err);
+                                isPublicAccount = accountType||false;
+                                callback();
+                            });
+                        },
+                        function (callback) {
+                            if (!receivers) return callback();
+                            async.forEachSeries(receivers, function (receiver, callback) {
+                                db.getAccountIdByName(redis, receiver, function (err, receiverId) {
+                                    if (err) return callback(err);
+                                    if (!receiverId) return callback("Receiver " + receiver + " not exists");
+                                    receiverIds.push(receiverId);
+                                    callback();
+                                });
+                            }, function (err) {
+                                callback(err);
+                            });
+                        },
+                        function (callback) {
+                            db.getAccountPermissions(redis, accountId, function (err, permissions) {
+                                if (err) return callback(err);
+                                if (!permissions.push_message && !isPublicAccount) {
+                                    return callback("No permission to push message(s)!");
+                                }
+                                if (!receivers) {
+                                    if (!permissions[appId].broadcast && !isPublicAccount) {
+                                        return callback("No permission to broadcast messages!");
+                                    }
+                                } else if (receivers.length>1) {
+                                    if (!permissions[appId].multicast && !isPublicAccount) {
+                                        return callback("No permission to multicast messages!");
+                                    }
+                                } else {
+                                    if (!permissions[appId].send && !isPublicAccount) {
+                                        return callback("No permission to send message!");
+                                    }
+                                }
+                                callback();
+                            });
+                        },
+                        function (callback) {
+                            db.getUserAvatar(redis, accountId, function (err, avatar) {
                                 if (err) return callback(err);
                                 if (!message.attachments) message.attachments = [];
                                 message.attachments.push({title: "sender-avatar", type: "image/xxx", filename: "sender-avatar", url: (avatar || USER_AVATAR)});
@@ -247,65 +292,56 @@ process.on('message', function (m, socket) {
                             });
                         },
                         function (callback) {
-                            db.getAccountIdByName(redis, receiver, function (err, receiverId) {
+                            db.saveMessage(redis, appId, isPublicAccount, message, receiverIds, function (err, msgId) {
+
                                 if (err) return callback(err);
-                                if (!receiverId) return callback("Receiver " + receiver + " not exists");
 
-                                db.saveMessage(redis, appId, null, message, (senderId == receiverId ? [receiverId] : [senderId, receiverId]), function (err, msgId) {
-                                    if (err) return callback(err);
-                                    logger.trace("Message id: " + msgId);
-                                    delete message.sender_id;
-                                    async.series([
-                                        function (callback) {
-                                            db.getActiveConnections(redis, appId, null, receiverId, function (err, connectionInfos) {
-                                                if (err) {
-                                                    return callback(err);
-                                                }
+                                logger.trace("Message id: " + msgId);
+                                delete message.sender_id;
 
-                                                for (var i in connectionInfos) {
-                                                    var connectionInfo = connectionInfos[i];
-                                                    if (connectionInfo.connId != connId) {
-                                                        logger.trace("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                                                        publishMessage(connectionInfo, msgId, message, sendId);
-                                                    }
-                                                }
+                                if (receiverIds==null) {
 
-                                                callback();
-                                            });
-                                        },
-                                        function (callback) {
-                                            if (senderId == receiverId) return callback();
-                                            db.getActiveConnections(redis, appId, null, senderId, function (err, connectionInfos) {
-                                                if (err) {
-                                                    return callback(err);
-                                                }
+                                    // 广播
+                                    pushMessageToReceiver(null, callback);
+                                } else {
 
-                                                for (var i in connectionInfos) {
-                                                    var connectionInfo = connectionInfos[i];
-                                                    if (connectionInfo.connId != connId) {
-                                                        logger.trace("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
-                                                        publishMessage(connectionInfo, msgId, message, sendId);
-                                                    }
-                                                }
+                                    // 群播/发送
+                                    async.forEachSeries(receiverIds, function (receiverId, callback) {
 
-                                                callback();
-                                            });
-                                        }],
-                                        function (err) {
-                                            callback(err);
-                                        });
+                                        pushMessageToReceiver(receiverId, callback);
+                                    }, function (err) {
 
-                                    function publishMessage(connectionInfo, msgId, message, sendId) {
-                                        var o = {
-                                            connId: connectionInfo.connId,
-                                            msgId: msgId,
-                                            message: message,
-                                            msgKey: connectionInfo.msgKey,
-                                            sendId: sendId,
-                                            needReceipt: true };
-                                        redis.publish(connectionInfo.channelId, JSON.stringify(o));
-                                    }
-                                });
+                                        callback(err);
+                                    });
+                                }
+
+                                function pushMessageToReceiver(receiverId, callback) {
+
+                                    db.getActiveConnections(redis, appId, isPublicAccount, receiverId, function (err, connectionInfos) {
+                                        if (err) return callback(err);
+
+                                        for (var i in connectionInfos) {
+                                            var connectionInfo = connectionInfos[i];
+                                            if (connectionInfo.connId != connId) {
+                                                logger.trace("Sending message " + msgId + " to connection " + connectionInfo.connId + "[" + connectionInfo.channelId + "]...");
+                                                publishMessage(connectionInfo, msgId, message, sendId);
+                                            }
+                                        }
+
+                                        callback();
+                                    });
+                                }
+
+                                function publishMessage(connectionInfo, msgId, message, sendId) {
+                                    var o = {
+                                        connId: connectionInfo.connId,
+                                        msgId: msgId,
+                                        message: message,
+                                        msgKey: connectionInfo.msgKey,
+                                        sendId: sendId,
+                                        needReceipt: true };
+                                    redis.publish(connectionInfo.channelId, JSON.stringify(o));
+                                }
                             });
                         }],
                         function (err) {
