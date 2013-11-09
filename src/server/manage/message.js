@@ -518,15 +518,6 @@ function getMessages(req, res) {
 
 function uploadFiles(req, res) {
     logger.trace("Uploading files...");
-    if (req.files.length == 0) {
-    	logger.warn("No files to upload.");
-        return res.json({
-                success: false,
-                errcode: 1,
-                errmsg: err.toString()
-            });
-    }
-    
     var downloadUrls = [];
     async.forEachSeries(req.files, function (name, callback) {
     	var file = req.files[name];
@@ -566,7 +557,7 @@ function uploadFiles(req, res) {
         if (err) {
             res.json({
                 success: false,
-                errcode: 2,
+                errcode: 1,
                 errmsg: err.toString()
             });
         } else {
