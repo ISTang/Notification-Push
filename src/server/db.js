@@ -2129,9 +2129,9 @@ function getAccountPermissions(redis, accountId, callback) {
                     logger.trace("Getting application permissions of account " + accountId + " and application " + app.id + "...");
                     redis.hgetall('account:' + accountId + ':application:' + app.id + ':permissions', function (err, value) {
                         if (err) return callback(err);
-                        logger.trace("value: " + JSON.stringify(value));
                         if (value) {
-                            permissions.applications[app.id] = {
+                          logger.trace("value: " + JSON.stringify(value));
+                          permissions.applications[app.id] = {
                                 broadcast: (value.broadcast == 1),
                                 multicast: (value.multicast == 1),
                                 send: !(value.send == 0)
