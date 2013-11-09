@@ -381,7 +381,7 @@ void main(function () {
 
     // 上传文件
     // curl --header "Content-Type:application/json;charset=utf-8" -d "..." http://localhost:4567/uploadFiles
-    webapp.post('/uploadFiles/', msgpush.uploadFiles);
+    webapp.post('/uploadFiles', msgpush.uploadFiles);
 
     webapp.listen(HTTPD_PORT);
     logger.info('HTTPD process is running at port ' + HTTPD_PORT + '...');
