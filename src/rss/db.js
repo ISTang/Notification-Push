@@ -1,9 +1,7 @@
 /**
- * Created with JetBrains WebStorm.
  * User: joebin
  * Date: 13-6-5
  * Time: 下午8:42
- * To change this template use File | Settings | File Templates.
  */
 
 exports.addChannel = addChannel;
@@ -35,31 +33,18 @@ var poolModule = require('generic-pool');
 const REDIS_SERVER = config.REDIS_SERVER;
 const REDIS_PORT = config.REDIS_PORT;
 
-const LOG_ENABLED = config.LOG_ENABLED;
-
-var logStream = fs.createWriteStream("logs/db.log", {"flags": "a"});
-
 var redisPool;
 
 Date.prototype.Format = utils.DateFormat;
 String.prototype.trim = utils.StringTrim;
 String.prototype.format = utils.StringFormat;
 
-/*
- * Print log
- */
-function log(msg) {
-
-    var now = new Date();
-    var strDatetime = now.Format("yyyy-MM-dd HH:mm:ss");
-    var buffer = "[" + strDatetime + "] " + msg + "[db]";
-    if (logStream != null) logStream.write(buffer + "\r\n");
-    if (LOG_ENABLED) console.log(buffer);
-}
+var logger = config.log4js.getLogger('db');
+logger.setLevel(config.LOG_LEVEL);
 
 function addChannel(channel, callback) {
 
-    log("保存频道 "+channel.title+" \""+channel.url+"\"...");
+    logger.info("保存频道 "+channel.title+" \""+channel.url+"\"...");
 	redisPool.acquire(function(err, redis) {
 		if (err) {
 			callback(err);  
@@ -73,7 +58,7 @@ function addChannel(channel, callback) {
 
 				if (exists) {
 
-					log("频道 "+channel.title+" \""+channel.url+"\" 已经存在。");
+					logger.warn("频道 "+channel.title+" \""+channel.url+"\" 已经存在。");
 					redisPool.release(redis);
 					return callback();
 				}
@@ -116,7 +101,7 @@ function addChannels(channels, callback) {
 
 function removeChannel(channelId, callback) {
 
-    log("删除频道 "+channelId+"...");
+    logger.info("删除频道 "+channelId+"...");
 	redisPool.acquire(function(err, redis) {
 		if (err) {
 			callback(err);  
@@ -143,7 +128,7 @@ function removeChannel(channelId, callback) {
 
 function updateChannel(channelId, channel, callback) {
 
-    log("修改频道 "+channelId+"...");
+    logger.info("修改频道 "+channelId+"...");
 	redisPool.acquire(function(err, redis) {
 		if (err) {
 			callback(err);  
@@ -157,7 +142,7 @@ function updateChannel(channelId, channel, callback) {
 
 				if (!exists) {
 
-					log("频道 "+channelId+" 不存在!");
+					logger.warn("频道 "+channelId+" 不存在!");
 					redisPool.release(redis);
 					return callback("该频道ID不存在");
 				}
@@ -197,7 +182,7 @@ function updateChannel(channelId, channel, callback) {
 
 function getAllChannels(handleResult) {
 
-    //log("获取所有频道的 ID...");
+    	logger.trace("获取所有频道的 ID...");
 	redisPool.acquire(function(err, redis) {
 		if (err) {
 			handleResult(err);  
@@ -209,16 +194,16 @@ function getAllChannels(handleResult) {
 					return handleResult(err);
 				}
 
-				//log("总共获取到 "+channelIds.length+" 个频道 ID。");
+				logger.trace("总共获取到 "+channelIds.length+" 个频道 ID。");
 				var channels = [];
 				async.forEachSeries(channelIds, function (channelId, callback) {
 
-					//log("获 ID 为 "+channelId+" 的频道信息...");
+					logger.trace("获 ID 为 "+channelId+" 的频道信息...");
 					redis.hgetall("rss:channel:"+channelId, function (err, channel) {
 
 						if (err) return callback(err);
 
-						//log("频道 ID: "+channelId+"\r\n标题: "+channel.title+"\r\n描述: "+(channel.description?channel.description:"(无)")+"\r\nURL: "+channel.url);
+						logger.trace("频道 ID: "+channelId+"\r\n标题: "+channel.title+"\r\n描述: "+(channel.description?channel.description:"(无)")+"\r\nURL: "+channel.url);
 						channel.id = channelId;
 						channels.push(channel);
 
@@ -420,7 +405,7 @@ void main(function () {
 				callback(null, redis);
 			});
 			redis.on("error", function (err) {
-				log(err);
+				logger.error(err);
 				callback(err, null);
 			});
 		},

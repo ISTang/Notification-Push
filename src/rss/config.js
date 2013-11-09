@@ -4,7 +4,8 @@ log4js.clearAppenders();
 log4js.loadAppender('file');
 log4js.configure({
     appenders: [
-        { type: 'file', filename: 'logs/app.log', "maxLogSize": 10485760, category: 'app' }
+        { type: 'file', filename: 'logs/app.log', "maxLogSize": 10485760, category: 'app' },
+        { type: 'file', filename: 'logs/db.log', "maxLogSize": 10485760, category: 'app' }
     ]
 });
 exports.log4js = log4js;
