@@ -517,7 +517,9 @@ function getMessages(req, res) {
 }
 
 function uploadFiles(req, res) {
+    logger.trace("Uploading files...");
     if (req.files.length == 0) {
+    	logger.warn("No files to upload.");
         return res.json({
                 success: false,
                 errcode: 1,
@@ -526,9 +528,12 @@ function uploadFiles(req, res) {
     }
     
     var downloadUrls = [];
-    async.forEach(req.files, function (file, callback) {
+    async.forEachSeries(req.files, function (name, callback) {
+    	var file = req.files[name];
+    	logger.trace("Found "+name+"("+file.type+"): "+file.name);
         // 检查MIME类型
         if (!IMAGE_MIME_REGEX.test(file.type)) {
+            logger.warn("Unsupported file type: "+file.type);
             return callback("不支持的文件类型 '" + file.type + "'");
         }
         // 确定原始文件的基本名和扩展名
@@ -550,6 +555,7 @@ function uploadFiles(req, res) {
         var filename = tmpPathFields[tmpPathFields.length - 1] + "." + extName;
         // 生成下载URL
         var downloadUrl = DOWNLOAD_URL_BASE + filename;
+        logger.trace("Download url: "+downloadUrl);
         // 确定文件上传后的路径并移动文件
         var targetPath = path.join(UPLOAD_DIR, filename);
         fs.writeFileSync(targetPath, fs.readFileSync(tmpPath, ''));
