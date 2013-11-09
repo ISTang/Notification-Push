@@ -19,6 +19,7 @@ exports.send = sendMessage;
 exports.pushMessage = pushMessage;
 exports.getMessages = getMessages;
 exports.clearMessages = clearMessages;
+exports.uploadFiles = uploadFiles;
 
 // 定义常量
 const UPLOAD_DIR = config.UPLOAD_DIR;
@@ -513,6 +514,62 @@ function getMessages(req, res) {
         if (sSortDir_0 == 'asc') return (i1 < i2 ? 0 : 1);
         else return (i1 > i2 ? 0 : 1);
     }
+}
+
+function uploadFiles(req, res) {
+    if (req.files.length == 0) {
+        return res.json({
+                success: false,
+                errcode: 1,
+                errmsg: err.toString()
+            });
+    }
+    
+    var downloadUrls = [];
+    async.forEach(req.files, function (file, callback) {
+        // 检查MIME类型
+        if (!IMAGE_MIME_REGEX.test(file.type)) {
+            return callback("不支持的文件类型 '" + file.type + "'");
+        }
+        // 确定原始文件的基本名和扩展名
+        var baseName, extName;
+        var filenameFields = file.name.split(".");
+        if (filenameFields.length > 1) {
+            // 有扩展名
+            extName = filenameFields.pop();
+            baseName = filenameFields.join(".");
+        } else {
+            // 无扩展名
+            extName = "";
+            baseName = filenameFields[0];
+        }
+        // 获得文件的临时路径
+        var tmpPath = file.path;
+        var tmpPathFields = tmpPath.split(path.sep);
+        // 确定保存后的文件名
+        var filename = tmpPathFields[tmpPathFields.length - 1] + "." + extName;
+        // 生成下载URL
+        var downloadUrl = DOWNLOAD_URL_BASE + filename;
+        // 确定文件上传后的路径并移动文件
+        var targetPath = path.join(UPLOAD_DIR, filename);
+        fs.writeFileSync(targetPath, fs.readFileSync(tmpPath, ''));
+        fs.unlinkSync(tmpPath);
+        downloadUrls.push(downloadUrl);
+        callback();
+    }, function (err) {
+        if (err) {
+            res.json({
+                success: false,
+                errcode: 2,
+                errmsg: err.toString()
+            });
+        } else {
+            res.json({
+                success: true,
+                urls: downloadUrls
+            });
+        }
+    });
 }
 
 function pushMessageByBroadcast(message, appId, publicAccountId, res) {
