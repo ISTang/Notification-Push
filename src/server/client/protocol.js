@@ -774,7 +774,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 if (err) {
 
                     var ss = "0," + err;
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + publicAccount + " ERROR");
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + publicAccount + " ERROR:"+err);
                     socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err));
                     return callback();
                 }
@@ -786,7 +786,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR" : "OK"));
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR:"+err : "OK"));
                     callback();
                 });
             });
@@ -799,7 +799,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 if (err) {
 
                     var ss = "0," + err;
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + publicAccount + " ERROR");
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + publicAccount + " ERROR:"+err);
                     socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err));
                     return callback();
                 }
@@ -811,7 +811,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 forwardMsg(appId, accountId, accountName, publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR" : "OK"));
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR:"+err : "OK"));
                     callback();
                 });
             });
@@ -821,7 +821,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
             getFollowedPublicAccounts(accountId, function (err, publicAccounts) {
 
                 var ss = (err ? "0," + err : JSON.stringify(publicAccounts));
-                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Get fellowed public accounts " + (err ? "ERROR" : "OK"));
+                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Get fellowed public accounts " + (err ? "ERROR:"+err : "OK"));
                 socket.write(/*PNTP_FLAG+*/err ? GET_FOLLOWED_FAILED_RES.format(2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     GET_FOLLOWED_SUCCESS_RES.format((BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length), ss));
                 callback();
