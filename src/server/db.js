@@ -2128,7 +2128,7 @@ function getAccountPermissions(redis, accountId, callback) {
                 async.forEachSeries(result.list, function (app, callback) {
                     logger.trace("Getting application permissions of account " + accountId + " and application " + app.id + "...");
                     redis.hgetall('account:' + accountId + ':application:' + app.id + ':permissions', function (err, value) {
-                        if (err) return callback();
+                        if (err) return callback(err);
                         logger.trace("value: " + JSON.stringify(value));
                         if (value) {
                             permissions.applications[app.id] = {
