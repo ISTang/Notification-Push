@@ -517,9 +517,9 @@ function getMessages(req, res) {
 }
 
 function uploadFiles(req, res) {
-    logger.trace("Uploading files..."+JSON.stringify(req.files));
+    logger.trace("Uploading files..."/*+JSON.stringify(req.files)*/);
     var downloadUrls = [];
-    async.forEachSeries(req.files, function (name, callback) {
+    async.forEachSeries(Object.keys(req.files), function (name, callback) {
     	var file = req.files[name];
     	logger.trace("Found "+name+"("+file.type+"): "+file.name);
         // 检查MIME类型
