@@ -231,6 +231,7 @@ process.on('message', function (m, socket) {
             message.generate_time = now.Format("yyyyMMddHHmmss");
             message.sender_id = senderId; // 不会发送到客户端
             message.sender_name = senderName;
+            message.need_receipt = true;
 
             var isPublicAccount = false;
             var receiverIds = null;
