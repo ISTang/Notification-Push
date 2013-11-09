@@ -704,7 +704,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 // 解密体部内容
                 msgText = crypt.desDecrypt(body, msgKey);
             }
-            forwardMsg(null, msgText, sendId, function (err) {
+            forwardMsg(appId, accountId, accountName, null, msgText, sendId, function (err) {
 
                 var ss = (err ? "0," + err : "");
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Broadcast message " + (err ? "ERROR" : "OK"));
@@ -724,7 +724,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 // 解密体部内容
                 msgText = crypt.desDecrypt(body, msgKey);
             }
-            forwardMsg(receivers, msgText, sendId, function (err) {
+            forwardMsg(appId, accountId, accountName, receivers, msgText, sendId, function (err) {
 
                 var ss = (err ? "0," + err : "");
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Multicast message " + (err ? "ERROR" : "OK"));
@@ -744,7 +744,7 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 // 解密体部内容
                 msgText = crypt.desDecrypt(body, msgKey);
             }
-            forwardMsg([receiver], msgText, sendId, function (err) {
+            forwardMsg(appId, accountId, accountName, [receiver], msgText, sendId, function (err) {
 
                 var ss = (err ? "0," + err : "");
                 if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Send message " + (err ? "ERROR" : "OK"));
@@ -769,12 +769,12 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
 
             // 收到关注公众号请求
             var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
-            followPublicAccount(publicAccount, function (err) {
+            followPublicAccount(accountId, publicAccount, function (err) {
 
                 if (err) {
 
                     var ss = "0," + err;
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + publicAccount + " ERROR");
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Follow public account " + publicAccount + " ERROR:"+err);
                     socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err));
                     return callback();
                 }
@@ -783,10 +783,10 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 socket.write(/*PNTP_FLAG+*/FOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
 
                 var PUBLIC_ACCOUNT_FOLLOWED_EVENT = JSON.stringify({title: 'EVENT', body: "FOLLOWED", generate_time: new Date()});
-                forwardMsg(publicAccount, PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
+                forwardMsg(appId, accountId, accountName, [publicAccount], PUBLIC_ACCOUNT_FOLLOWED_EVENT, "followPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR" : "OK"));
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward follow event " + (err ? "ERROR:"+err : "OK"));
                     callback();
                 });
             });
@@ -794,12 +794,12 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
 
             // 收到取消关注公众号请求
             var publicAccount = fields[FIELD_ACTION_ACCOUNT.toUpperCase()];
-            unfollowPublicAccount(publicAccount, function (err) {
+            unfollowPublicAccount(accountId, publicAccount, function (err) {
 
                 if (err) {
 
                     var ss = "0," + err;
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + publicAccount + " ERROR");
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Unfollow public account " + publicAccount + " ERROR:"+err);
                     socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_FAILED_RES.format(publicAccount, 2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err));
                     return callback();
                 }
@@ -808,20 +808,20 @@ function handleClientConnection2(socket, appId, accountId, accountName, msgKey, 
                 socket.write(/*PNTP_FLAG+*/UNFOLLOW_PUBLIC_SUCCESS_RES.format(publicAccount));
 
                 var PUBLIC_ACCOUNT_UNFOLLOWED_EVENT = JSON.stringify({title: 'EVENT', body: "UNFOLLOWED", generate_time: new Date()});
-                forwardMsg(publicAccount, PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
+                forwardMsg(appId, accountId, accountName, [publicAccount], PUBLIC_ACCOUNT_UNFOLLOWED_EVENT, "unfollowPublicAccount", function (err) {
 
                     var ss = (err ? "0," + err : "");
-                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR" : "OK"));
+                    if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": forward unfollow event " + (err ? "ERROR:"+err : "OK"));
                     callback();
                 });
             });
         } else if (action == "GET" && target == "FOLLOWED") {
 
             // 收到获取已关注的公众号请求
-            getFollowedPublicAccounts(function (err, publicAccounts) {
+            getFollowedPublicAccounts(accountId, function (err, publicAccounts) {
 
                 var ss = (err ? "0," + err : JSON.stringify(publicAccounts));
-                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Get fellowed public accounts " + (err ? "ERROR" : "OK"));
+                if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Get fellowed public accounts " + (err ? "ERROR:"+err : "OK"));
                 socket.write(/*PNTP_FLAG+*/err ? GET_FOLLOWED_FAILED_RES.format(2 + (BODY_BYTE_LENGTH ? Buffer.byteLength(err) : err.length), 0, err) :
                     GET_FOLLOWED_SUCCESS_RES.format((BODY_BYTE_LENGTH ? Buffer.byteLength(ss) : ss.length), ss));
                 callback();

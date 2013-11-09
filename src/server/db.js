@@ -2092,7 +2092,7 @@ function cleanData(redis, callback) {
 }
 
 function getAccountPermissions(redis, accountId, callback) {
-    var permissions = {applications: []};
+    var permissions = {applications:{}};
     async.series([
         function (callback) {
             logger.trace("Getting basic permissions of account " + accountId + "...");
@@ -2141,7 +2141,7 @@ function getAccountPermissions(redis, accountId, callback) {
                             permissions.applications[app.id] = {
                                 broadcast: false,
                                 multicast: false,
-                                send: false
+                                send: true
                             };
                         }
                         callback();

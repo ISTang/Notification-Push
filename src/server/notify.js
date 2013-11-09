@@ -265,19 +265,20 @@ process.on('message', function (m, socket) {
                         function (callback) {
                             db.getAccountPermissions(redis, senderId, function (err, permissions) {
                                 if (err) return callback(err);
+                                logger.debug("Permissions: "+JSON.stringify(permissions));
                                 if (!permissions.push_message && !isPublicAccount) {
                                     return callback("No permission to push message(s)!");
                                 }
                                 if (!receivers) {
-                                    if (!permissions[appId].broadcast && !isPublicAccount) {
+                                    if (!permissions.applications[appId].broadcast && !isPublicAccount) {
                                         return callback("No permission to broadcast messages!");
                                     }
                                 } else if (receivers.length>1) {
-                                    if (!permissions[appId].multicast && !isPublicAccount) {
+                                    if (!permissions.applications[appId].multicast && !isPublicAccount) {
                                         return callback("No permission to multicast messages!");
                                     }
                                 } else {
-                                    if (!permissions[appId].send && !isPublicAccount) {
+                                    if (!permissions.applications[appId].send && !isPublicAccount) {
                                         return callback("No permission to send message!");
                                     }
                                 }
@@ -340,7 +341,7 @@ process.on('message', function (m, socket) {
                                         message: message,
                                         msgKey: connectionInfo.msgKey,
                                         sendId: sendId,
-                                        needReceipt: true };
+                                        needReceipt: message.receipt };
                                     redis.publish(connectionInfo.channelId, JSON.stringify(o));
                                 }
                             });

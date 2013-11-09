@@ -40,7 +40,7 @@ exports.CLIENT_OFFLINE_MSG = "Are you offline?";
 exports.BROARDCAST_MSG = "You have a new message.";
 exports.SERVER_ERROR_MSG = "Server error!";
 
-exports.LOG_LEVEL = 'DEBUG';
+exports.LOG_LEVEL = 'TRACE';
 exports.TRACK_SOCKET = true;
 
 exports.REDIS_SERVER = "localhost";
