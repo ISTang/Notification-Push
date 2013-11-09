@@ -2143,7 +2143,6 @@ function getAccountPermissions(redis, accountId, callback) {
                                 send: false
                             };
                         }
-                        logger.trace("permissions: " + JSON.stringify(permissions));
                         callback();
                     });
                 }, function (err) {
@@ -2152,6 +2151,7 @@ function getAccountPermissions(redis, accountId, callback) {
             });
         }],
         function (err) {
+            if (!err) logger.trace("permissions: " + JSON.stringify(permissions));
             callback(err, permissions);
         }
     );
