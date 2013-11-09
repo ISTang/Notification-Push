@@ -342,7 +342,7 @@ process.on('message', function (m, socket) {
                                         message: message,
                                         msgKey: connectionInfo.msgKey,
                                         sendId: sendId,
-                                        needReceipt: message.receipt };
+                                        needReceipt: message.need_receipt };
                                     redis.publish(connectionInfo.channelId, JSON.stringify(o));
                                 }
                             });
