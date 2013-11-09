@@ -2127,14 +2127,14 @@ function getAccountPermissions(redis, accountId, callback) {
                 logger.trace("application infos: " + JSON.stringify(result));
                 async.forEachSeries(result.list, function (app, callback) {
                     logger.trace("Getting application permissions of account " + accountId + " and application " + app.id + "...");
-                    redis.hgetall('account:' + accountId + ':application:' + app.id + ':permissions', function (err, value) {
+                    redis.hgetall('account:' + accountId + ':application:' + app.id + ':permissions', function (err, appPermissions) {
                         if (err) return callback(err);
-                        if (value) {
-                          logger.trace("value: " + JSON.stringify(value));
+                        if (appPermissions) {
+                          logger.trace("value: " + JSON.stringify(appPermissions));
                           permissions.applications[app.id] = {
-                                broadcast: (value.broadcast == 1),
-                                multicast: (value.multicast == 1),
-                                send: !(value.send == 0)
+                                broadcast: (appPermissions.broadcast == 1),
+                                multicast: (appPermissions.multicast == 1),
+                                send: !(appPermissions.send == 0)
                             };
                         } else {
                             permissions.applications[app.id] = {
