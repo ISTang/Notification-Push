@@ -193,7 +193,7 @@ function pushArticle(article, callback) {
 
                     // 群发(不支持广播--避免新关注者未订阅时也收到此消息)
                     var followers = subscribedFollowers.join(",");
-                    logger.debug("Send article " + article.id + " to followers " + follower + "...");
+                    logger.debug("Send article " + article.id + " to followers " + followers + "...");
                     var articleMsg = JSON.stringify(message);
                     socket.write(formatMessage(followers, article.id, articleMsg, false));
                 } else /*if (subscribedFollowers.length==1)*/{
@@ -420,7 +420,10 @@ function getAppInfo() {
  */
 function formatMessage(receiver, msgId, body, secure) {
 
-    return protocol.SEND_MSG_REQ.format(receiver, msgId, secure ? "true" : "false", BODY_BYTE_LENGTH ? Buffer.byteLength(body) : body.length, body);
+    if (receiver instanceof Array)
+        return protocol.SEND_MSG_REQ.format(receiver, msgId, secure ? "true" : "false", BODY_BYTE_LENGTH ? Buffer.byteLength(body) : body.length, body);
+    else
+        return protocol.MULTICAST_MSG_REQ.format(receiver, msgId, secure ? "true" : "false", BODY_BYTE_LENGTH ? Buffer.byteLength(body) : body.length, body);
 }
 
 function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
