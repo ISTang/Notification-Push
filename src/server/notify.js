@@ -221,7 +221,7 @@ process.on('message', function (m, socket) {
             }
         }
 
-        function forwardMsg(receivers, msgText, sendId, handleResult) {
+        function forwardMsg(appId, senderId, senderName, receivers, msgText, sendId, handleResult) {
 
             var now = new Date();
 
@@ -229,8 +229,8 @@ process.on('message', function (m, socket) {
 
             var message = JSON.parse(msgText);
             message.generate_time = now.Format("yyyyMMddHHmmss");
-            message.sender_id = accountId; // 不会发送到客户端
-            message.sender_name = accountName;
+            message.sender_id = senderId; // 不会发送到客户端
+            message.sender_name = senderName;
 
             var isPublicAccount = false;
             var receiverIds = null;
@@ -242,7 +242,7 @@ process.on('message', function (m, socket) {
 
                     async.series([
                         function (callback) {
-                            db.getAccountType(redis, accountId, function (err, accountType) {
+                            db.getAccountType(redis, senderId, function (err, accountType) {
                                 if (err) return callback(err);
                                 isPublicAccount = accountType||false;
                                 callback();
@@ -263,7 +263,7 @@ process.on('message', function (m, socket) {
                             });
                         },
                         function (callback) {
-                            db.getAccountPermissions(redis, accountId, function (err, permissions) {
+                            db.getAccountPermissions(redis, senderId, function (err, permissions) {
                                 if (err) return callback(err);
                                 if (!permissions.push_message && !isPublicAccount) {
                                     return callback("No permission to push message(s)!");
@@ -285,7 +285,7 @@ process.on('message', function (m, socket) {
                             });
                         },
                         function (callback) {
-                            db.getUserAvatar(redis, accountId, function (err, avatar) {
+                            db.getUserAvatar(redis, senderId, function (err, avatar) {
                                 if (err) return callback(err);
                                 if (!message.attachments) message.attachments = [];
                                 message.attachments.push({title: "sender-avatar", type: "image/xxx", filename: "sender-avatar", url: (avatar || USER_AVATAR)});
@@ -366,39 +366,39 @@ process.on('message', function (m, socket) {
             });
         }
 
-        function followPublicAccount(publicAccount, callback) {
+        function followPublicAccount(senderId, publicAccount, callback) {
             clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
 
-            logger.trace("Follow public account: " + accountId + "@" + publicAccount);
+            logger.trace("Follow public account: " + senderId + "@" + publicAccount);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
-                db.followPublicAccount(redis, accountId, publicAccount, function (err) {
+                db.followPublicAccount(redis, senderId, publicAccount, function (err) {
                     db.redisPool.release(redis);
                     callback(err);
                 });
             });
         }
 
-        function unfollowPublicAccount(publicAccount, callback) {
+        function unfollowPublicAccount(senderId, publicAccount, callback) {
             clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
 
-            logger.trace("Unfollow public account: " + accountId + "!@" + publicAccount);
+            logger.trace("Unfollow public account: " + senderId + "!@" + publicAccount);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
-                db.unfollowPublicAccount(redis, accountId, publicAccount, function (err) {
+                db.unfollowPublicAccount(redis, senderId, publicAccount, function (err) {
                     db.redisPool.release(redis);
                     callback(err);
                 });
             });
         }
 
-        function getFollowedPublicAccounts(callback) {
+        function getFollowedPublicAccounts(senderId, callback) {
             clientConns[connId].lastActiveTime = new Date(); // 表明客户端仍然活跃
 
-            logger.trace("Get followed public account for " + accountId);
+            logger.trace("Get followed public account for " + senderId);
             db.redisPool.acquire(function (err, redis) {
                 if (err) return callback(err);
-                db.getFollowedPublicAccounts(redis, accountId, function (err, publicAccounts) {
+                db.getFollowedPublicAccounts(redis, senderId, function (err, publicAccounts) {
                     db.redisPool.release(redis);
                     callback(err, publicAccounts);
                 });
