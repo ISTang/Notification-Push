@@ -236,7 +236,7 @@ function getAllChannels(handleResult) {
 
 function existsArticle(article, handleResult) {
 
-    //log("检查文章链接 "+article.link+" 是否已存在...");
+    	logger.trace("检查文章链接 "+article.link+" 是否已存在...");
 	redisPool.acquire(function(err, redis) {
 		if (err) {
 			handleResult(err);  
@@ -248,7 +248,7 @@ function existsArticle(article, handleResult) {
 					return handleResult(err);
 				}
 
-				//log("文章链接 "+article.link+" "+(ismember?"已经":"不")+"存在。");
+				logger.trace("文章链接 "+article.link+" "+(ismember?"已经":"不")+"存在。");
 				redisPool.release(redis);
 				handleResult(null, ismember);
 			});
@@ -257,7 +257,7 @@ function existsArticle(article, handleResult) {
 }
 
 function saveArticle(article, callback) {
-    //log("保存文章 "+article.link+"...");
+    logger.trace("保存文章 "+article.link+"...");
     var id = uuid.v4().toUpperCase();
     article.id = id;
 
@@ -268,15 +268,15 @@ function saveArticle(article, callback) {
 			if (article.title) redis.hset("rss:article:"+id, "title", article.title);
 			redis.hset("rss:article:"+id, "description", (article.description?article.description:""));
 			redis.hset("rss:article:"+id, "link", article.link);
-            redis.hset("rss:article:" + id, "pubDate", article.pubDate);
-            if (article.logo) redis.hset("article:"+id, "logo", article.logo);
+            		redis.hset("rss:article:" + id, "pubDate", article.pubDate);
+            		if (article.logo) redis.hset("article:"+id, "logo", article.logo);
 			redis.hset("rss:article:"+id, "timestamp", new Date().Format("yyyyMMddhhmmss"));
 
 			redis.sadd("rss:article:set", id);
 
 			redis.sadd("rss:article:links", article.link);
 
-			//log("已保存文章 "+article.link+"。");
+			logger.trace("已保存文章 "+article.link+"。");
 
 			redisPool.release(redis);
 			
