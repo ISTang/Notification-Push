@@ -250,6 +250,7 @@ process.on('message', function (m, socket) {
                         },
                         function (callback) {
                             if (!receivers) return callback();
+                            receiverIds = [];
                             async.forEachSeries(receivers, function (receiver, callback) {
                                 db.getAccountIdByName(redis, receiver, function (err, receiverId) {
                                     if (err) return callback(err);
