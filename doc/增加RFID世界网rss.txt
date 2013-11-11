@@ -1,0 +1,11 @@
+ curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"\",\"title\":\"\",\"description\":\"\",\"url\":\"\"}" http://localhost:4568/channel
+ 
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"新闻\",\"description\":\"[RFID世界网]新闻\",\"url\":\"http://news.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"企业\",\"description\":\"[RFID世界网]企业\",\"url\":\"http://company.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"产品\",\"description\":\"[RFID世界网]产品\",\"url\":\"http://product.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"供求合作\",\"description\":\"[RFID世界网]供求合作\",\"url\":\"http://biz.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"展会培训\",\"description\":\"[RFID世界网]展会培训\",\"url\":\"http://expo.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"技术文章\",\"description\":\"[RFID世界网]技术文章\",\"url\":\"http://tech.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"解决方案\",\"description\":\"[RFID世界网]解决方案\",\"url\":\"http://solution.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+  curl --header "Content-Type:application/json;charset=utf-8" -d "{\"group\":\"RFID世界网\",\"title\":\"应用案例\",\"description\":\"[RFID世界网]应用案例\",\"url\":\"http://success.rfidworld.com.cn/rss.xml\"}" http://localhost:4568/channel
+
