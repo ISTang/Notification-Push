@@ -258,7 +258,7 @@ function pushMessage(req, res) {
     }
     // 初始化消息
     var message = {
-        type: "text",
+        type: "html",
         body: req.body.msgBody,
         need_receipt: true,
         sender_id: req.user.id,
@@ -517,9 +517,9 @@ function getMessages(req, res) {
 }
 
 function uploadFiles(req, res) {
-    logger.trace("Uploading files...");
+    logger.trace("Uploading files..."/*+JSON.stringify(req.files)*/);
     var downloadUrls = [];
-    async.forEachSeries(req.files, function (name, callback) {
+    async.forEachSeries(Object.keys(req.files), function (name, callback) {
     	var file = req.files[name];
     	logger.trace("Found "+name+"("+file.type+"): "+file.name);
         // 检查MIME类型
