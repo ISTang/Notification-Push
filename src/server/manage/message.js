@@ -258,7 +258,7 @@ function pushMessage(req, res) {
     }
     // 初始化消息
     var message = {
-        type: "text",
+        type: "html",
         body: req.body.msgBody,
         need_receipt: true,
         sender_id: req.user.id,
