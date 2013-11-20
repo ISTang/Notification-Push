@@ -254,43 +254,43 @@ public class PushNotificationClient {
 						switch (code) {
 						case NotifyPushService.STATUS_CONNECT_CONNECTING: // 连接服务器...
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 1, "连接服务器 "
+								listener.onLoginStatus(1, "连接服务器 "
 										+ params + "...");
 							break;
 						case NotifyPushService.STATUS_CONNECT_CONNECTED: // 已经连接到服务器
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 2, "已连接到服务器。");
+								listener.onLoginStatus(2, "已连接到服务器。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_APP_CERTIFICATING: // 应用认证...
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 3,
+								listener.onLoginStatus(3,
 										"校验应用ID和接入密码...");
 							break;
 						case NotifyPushService.STATUS_CONNECT_APP_CERTIFICATED: // 应用认证通过
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 4, "应用认证通过。");
+								listener.onLoginStatus(4, "应用认证通过。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_USER_CERTIFICATING: // 用户认证...
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 5, "校验用户名和密码...");
+								listener.onLoginStatus(5, "校验用户名和密码...");
 							break;
 						case NotifyPushService.STATUS_CONNECT_USER_CERTIFICATED: // 用户认证通过
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 6, "用户认证通过。");
+								listener.onLoginStatus(6, "用户认证通过。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_MSGKEY_RECEIVED: // 收到消息密钥
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 7, "收到消息密钥。");
+								listener.onLoginStatus(7, "收到消息密钥。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_KEEPALIVEINTERVAL_RECEIVED: // 收到心跳周期
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(true, 8, "收到心跳周期: "
+								listener.onLoginStatus(8, "收到心跳周期: "
 										+ Integer.parseInt(params) / 1000
 										+ "秒。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_LOGON: // 登录成功
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, 0, "登录成功。");
+								listener.onLoginStatus(0, "登录成功。");
 							clientLogon = true;
 							break;
 						case NotifyPushService.STATUS_CONNECT_KEEPALIVE: // 发送心跳信号
@@ -301,42 +301,42 @@ public class PushNotificationClient {
 							break;
 						case NotifyPushService.ERROR_CONNECT_NETWORK_UNAVAILABLE: // 网络不可用
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -1, "网络不可用！");
+								listener.onLoginStatus(-1, "网络不可用！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_BROKEN: // 连接已中断
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -2, "连接已中断！");
+								listener.onLoginStatus(-2, "连接已中断！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_SERVER_UNAVAILABLE: // 服务器不可用
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -3, "服务器不可用！");
+								listener.onLoginStatus(-3, "服务器不可用！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_LOGIN_TIMEOUT: // 登录超时
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -4, "登录超时！");
+								listener.onLoginStatus(-4, "登录超时！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_IO_FAULT: // 网络IO故障
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -5, "网络IO故障！");
+								listener.onLoginStatus(-5, "网络IO故障！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_APP_CERTIFICATE: // 应用认证失败
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -6, "应用认证失败！");
+								listener.onLoginStatus(-6, "应用认证失败！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_USER_CERTIFICATE: // 用户认证失败
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -7, "用户认证失败！");
+								listener.onLoginStatus(-7, "用户认证失败！");
 							clientLogon = false;
 							break;
 						case NotifyPushService.ERROR_CONNECT_SERVER: // 服务器错误
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(false, -8, "服务器错误！");
+								listener.onLoginStatus(-8, "服务器错误！");
 							clientLogon = false;
 							break;
 						default:
@@ -482,8 +482,7 @@ public class PushNotificationClient {
 					boolean logining = intent
 							.getBooleanExtra("logining", false);
 					for (MessageTransceiverListener listener : listeners)
-						listener.onLoginStatus(logining, 0,
-								logining ? "正在登录..." : "登录结束。");
+						listener.onLogining(logining);
 				} else {
 					// 未知动作
 				}

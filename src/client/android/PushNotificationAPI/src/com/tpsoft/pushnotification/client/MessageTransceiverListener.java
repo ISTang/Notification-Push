@@ -20,16 +20,22 @@ public interface MessageTransceiverListener {
 	public void onTransceiverStatus(boolean started);
 
 	/**
-	 * 登录状态通知
+	 * 登录通知
 	 * 
 	 * @param logining
 	 *            是否正在登录
+	 */
+	public void onLogining(boolean logining);
+
+	/**
+	 * 登录状态通知
+	 * 
 	 * @param code
 	 *            登录阶段或未登录原因代码
 	 * @param text
 	 *            登录阶段或未登录原因文本
 	 */
-	public void onLoginStatus(boolean logining, int code, String text);
+	public void onLoginStatus(int code, String text);
 
 	/**
 	 * 消息发送状态通知
