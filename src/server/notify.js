@@ -255,7 +255,7 @@ process.on('message', function (m, socket) {
                             async.forEachSeries(receivers, function (receiver, callback) {
                                 db.getAccountIdByName(redis, receiver, function (err, receiverId) {
                                     if (err) return callback(err);
-                                    if (!receiverId) return callback("Receiver " + receiver + " not exists");
+                                    if (!receiverId) return callback("接收方 " + receiver + " 不存在");
                                     receiverIds.push(receiverId);
                                     callback();
                                 });
@@ -268,19 +268,19 @@ process.on('message', function (m, socket) {
                                 if (err) return callback(err);
                                 logger.debug("Permissions: "+JSON.stringify(permissions));
                                 if (!permissions.push_message && !isPublicAccount) {
-                                    return callback("No permission to push message(s)!");
+                                    return callback("没有推消息的权限");
                                 }
                                 if (!receivers) {
                                     if (!permissions.applications[appId].broadcast && !isPublicAccount) {
-                                        return callback("No permission to broadcast messages!");
+                                        return callback("没有广播消息的权限");
                                     }
                                 } else if (receivers.length>1) {
                                     if (!permissions.applications[appId].multicast && !isPublicAccount) {
-                                        return callback("No permission to multicast messages!");
+                                        return callback("没有多播消息的权限");
                                     }
                                 } else {
                                     if (!permissions.applications[appId].send && !isPublicAccount) {
-                                        return callback("No permission to send message!");
+                                        return callback("没有发送消息的权限");
                                     }
                                 }
                                 callback();

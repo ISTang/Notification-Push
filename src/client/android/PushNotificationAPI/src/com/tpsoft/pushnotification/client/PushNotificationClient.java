@@ -358,7 +358,7 @@ public class PushNotificationClient {
 						case NotifyPushService.STATUS_SENDMSG_OK: // 收到消息确认
 							for (MessageTransceiverListener listener : listeners)
 								listener.onMessageSendStatus(
-										Integer.parseInt(params), 3, "已确认");
+										Integer.parseInt(params), 0, "已确认");
 							break;
 						case NotifyPushService.ERROR_SENDMSG_NOT_LOGON: // 尚未登录成功
 							for (MessageTransceiverListener listener : listeners)

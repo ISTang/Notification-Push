@@ -6,7 +6,7 @@ var channel = require(__dirname + '/channel');
 var protocol = require(__dirname + '/client/protocol');
 var crypt = require(__dirname + '/client/crypt');
 
-//var $ = require('jquery');
+var $ = require('jquery');
 var fs = require('fs');
 var url = require("url");
 var http = require("http");
@@ -306,7 +306,8 @@ function getArticles(channel, handleResult) {
                                     return true;
                                 }
 
-                                article.description = (article.description || "").trim();
+                                article.description = (article.description || "");
+                                if (article.description!="") article.description = $('<div />').html(article.description).text();
                                 if (article.description == "null") article.description = "";
                                 callback();
                             }
