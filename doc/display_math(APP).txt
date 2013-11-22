@@ -1,0 +1,24 @@
+		// 测试数学公式
+		MyMessageSupportSave mms = new MyMessageSupportSave();
+		mms.setSender("me");
+		mms.setReceiver("me");
+		mms.setType("html");
+		mms.setTitle("测试数学公式");
+		mms.setBody("<!DOCTYPE html>\r\n<html lang=\"en\" xmlns:m=\"http://www.w3.org/1998/Math/MathML\">\r\n"
+				+ "<head><meta charset=\"utf-8\">\r\n"
+				+ "<link rel=\"stylesheet\" href=\"mathscribe/jqmath-0.4.0.css\">\r\n"
+				+ "<script src=\"jquery/jquery-2.0.3.min.js\"></script>\r\n"
+				+ "<script src=\"mathscribe/jqmath-etc-0.4.1.min.js\"></script>\r\n"
+				+ "<script>M.MathPlayer = false;</script>\r\n"
+				+ "</head><body>"
+				+ "<h1>jqMath - Put Math on the Web</h1>\r\n\r\n"
+				+ "<p>jqMath is a JavaScript module that makes it easy to put formatted\r\n"
+				+ "mathematical expressions in web pages. For example, the html source:</p>\r\n\r\n"
+				+ "<blockquote>If \\$ax^2+bx+c=0\\$ with \\$a≠0\\$, then: \\$\\$x={-b±√{b^2-4ac}}/{2a}\\$\\$</blockquote>\r\n\r\n"
+				+ "<p>produces the following:</p>\r\n\r\n"
+				+ "<blockquote>If $ax^2+bx+c=0$ with $a≠0$, then: $$x={-b±√{b^2-4ac}}/{2a}$$</blockquote>\r\n"
+				+ "</body>");
+		mms.setGenerateTime(new Date());
+		showMsg(mms, BitmapFactory.decodeResource(
+				MainActivity.this.getResources(), R.drawable.ic_launcher), null);
+

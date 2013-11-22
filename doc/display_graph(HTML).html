@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:m="http://www.w3.org/1998/Math/MathML">
+
+<head>
+	<meta charset="utf-8">
+	
+<script type='text/javascript' src='jquery/jquery-2.0.3.min.js'></script>
+<script type='text/javascript' src='jsxgraph/jsxgraphcore.js'></script>
+
+<link rel='stylesheet' type='text/css' href='jsxgraph/jsxgraph.css' media='screen' />
+
+<script type="text/javascript">
+	jQuery.noConflict();
+</script>
+
+</head>
+<body>
+
+<div id='box' class='jxgbox' style='width:240px; height:200px;'></div>
+
+<script type='text/javascript'>/* <![CDATA[ */
+ 
+var addPoint = function(x) {
+  p.push(brd.create('point',
+              [x,(Math.random()-0.5)*3],{style:6}));
+  brd.update();
+};
+ 
+var brd = JXG.JSXGraph.initBoard('box',
+           {axis:true,originX: 120, originY: 100, unitX: 10, unitY: 10});
+brd.suspendUpdate();
+var p = [];
+p[0] = brd.create('point', [-4,2], {style:6});
+p[1] = brd.create('point', [3,-1], {style:6});
+addPoint(-2);
+addPoint(0.5);
+addPoint(1);
+var pol = JXG.Math.Numerics.lagrangePolynomial(p);
+var g = brd.create('functiongraph', [pol, -10, 10], {strokeWidth:3});
+var g2 = brd.create('functiongraph', [JXG.Math.Numerics.D(pol), -10, 10],
+                                      {dash:3, strokeColor:'#ff0000'});
+brd.unsuspendUpdate();
+
+/* ]]> */</script>
+
+
+</body>
+</html>
