@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:m="http://www.w3.org/1998/Math/MathML">
+
+<head>
+	<meta charset="utf-8">
+	
+	<link rel="stylesheet" href="mathscribe/jqmath-0.4.0.css">
+	
+	<script src="jquery/jquery-2.0.3.min.js"></script>
+	<script src="mathscribe/jqmath-etc-0.4.1.min.js"></script>
+	<script>M.MathPlayer = false;</script>
+</head>
+<body>
+
+<h1>jqMath - Put Math on the Web</h1>
+
+<p>jqMath is a JavaScript module that makes it easy to put formatted
+mathematical expressions in web pages. For example, the html source:</p>
+
+<blockquote>If \$ax^2+bx+c=0\$ with \$a¡Ù0\$, then: \$\$x={-b¡À¡Ì{b^2-4ac}}/{2a}\$\$</blockquote>
+
+<p>produces the following:</p>
+
+<blockquote>If $ax^2+bx+c=0$ with $a¡Ù0$, then: $$x={-b¡À¡Ì{b^2-4ac}}/{2a}$$</blockquote>
+
+</body>
+</html>

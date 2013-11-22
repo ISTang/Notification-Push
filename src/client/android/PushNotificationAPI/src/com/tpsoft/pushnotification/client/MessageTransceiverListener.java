@@ -36,7 +36,7 @@ public interface MessageTransceiverListener {
 	 *            登录阶段或未登录原因文本
 	 */
 	public void onLoginStatus(int code, String text);
-	
+
 	/**
 	 * 消息发送状态通知
 	 * 
