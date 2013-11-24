@@ -31,6 +31,11 @@ public class PushNotificationClient {
 
 		// 注册广播接收器
 		MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
+		try {
+			context.unregisterReceiver(myBroadcastReceiver);
+		} catch (Exception e) {
+			;
+		}
 		IntentFilter filter = new IntentFilter();
 		filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
 		context.registerReceiver(myBroadcastReceiver, filter);
@@ -254,8 +259,8 @@ public class PushNotificationClient {
 						switch (code) {
 						case NotifyPushService.STATUS_CONNECT_CONNECTING: // 连接服务器...
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(1, "连接服务器 "
-										+ params + "...");
+								listener.onLoginStatus(1, "连接服务器 " + params
+										+ "...");
 							break;
 						case NotifyPushService.STATUS_CONNECT_CONNECTED: // 已经连接到服务器
 							for (MessageTransceiverListener listener : listeners)
@@ -263,8 +268,7 @@ public class PushNotificationClient {
 							break;
 						case NotifyPushService.STATUS_CONNECT_APP_CERTIFICATING: // 应用认证...
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(3,
-										"校验应用ID和接入密码...");
+								listener.onLoginStatus(3, "校验应用ID和接入密码...");
 							break;
 						case NotifyPushService.STATUS_CONNECT_APP_CERTIFICATED: // 应用认证通过
 							for (MessageTransceiverListener listener : listeners)
@@ -284,9 +288,9 @@ public class PushNotificationClient {
 							break;
 						case NotifyPushService.STATUS_CONNECT_KEEPALIVEINTERVAL_RECEIVED: // 收到心跳周期
 							for (MessageTransceiverListener listener : listeners)
-								listener.onLoginStatus(8, "收到心跳周期: "
-										+ Integer.parseInt(params) / 1000
-										+ "秒。");
+								listener.onLoginStatus(8,
+										"收到心跳周期: " + Integer.parseInt(params)
+												/ 1000 + "秒。");
 							break;
 						case NotifyPushService.STATUS_CONNECT_LOGON: // 登录成功
 							for (MessageTransceiverListener listener : listeners)
