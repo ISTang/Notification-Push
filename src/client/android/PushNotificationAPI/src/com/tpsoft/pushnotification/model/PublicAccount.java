@@ -7,7 +7,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * 公共号
+ * 公众号
  * 
  * @author joebin
  * @since 2013-10-19
