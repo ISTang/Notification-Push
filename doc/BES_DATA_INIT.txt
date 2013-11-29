@@ -1,0 +1,40 @@
+数据库端口: 8379
+消息端口：  3457
+WEB端口：   4569
+
+1.创建应用
+
+curl --header "Content-Type:application/json;charset=utf-8" -d "{\"need_login\":true}" http://218.200.212.120:4569/application/BES测试
+
+{
+  "success": true,
+  "id": "5A6D032A-DB6C-43BF-98EE-A699FBCAA628",
+  "password": "THHgux8k",
+  "public_key": "cpuHCK9V",
+  "private_key": "cpuHCK9V"
+}
+
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:account:auto_create" 1
+
+
+2.创建管理账号
+
+curl --header "Content-Type:application/json;charset=utf-8" -d "{\"phone\":\"13808188051\"}" http://218.200.212.120:4569/account/唐教兵
+
+{
+  "success": true,
+  "id": "12420A30-7742-4FDA-B75E-D4D7186E0CF8"
+}
+
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_connections 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_applications 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_accounts 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_messages 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions list_applications 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions list_accounts 1
+//hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions push_message 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions clear_messages 1
+
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:permissions broadcast 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:permissions multicast 1
+//hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:permissions send 1
