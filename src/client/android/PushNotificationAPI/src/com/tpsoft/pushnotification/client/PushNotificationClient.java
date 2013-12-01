@@ -20,25 +20,29 @@ public class PushNotificationClient {
 
 	public static final String TAG_APILOG = "PushNotification-API";
 
-	private Context context;
-	private List<MessageTransceiverListener> listeners = new ArrayList<MessageTransceiverListener>();
-
 	private static boolean clientStarted = false;
 	private static boolean clientLogon = false;
+
+	private Context context;
+	private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
+	private List<MessageTransceiverListener> listeners = new ArrayList<MessageTransceiverListener>();
 
 	public PushNotificationClient(Context context) {
 		this.context = context;
 
 		// 注册广播接收器
-		MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
-		try {
-			context.unregisterReceiver(myBroadcastReceiver);
-		} catch (Exception e) {
-			;
-		}
 		IntentFilter filter = new IntentFilter();
 		filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
 		context.registerReceiver(myBroadcastReceiver, filter);
+	}
+
+	public void release() {
+		// 注销广播接收器
+		context.unregisterReceiver(myBroadcastReceiver);
+
+		for (MessageTransceiverListener listener : listeners) {
+			removeListener(listener);
+		}
 	}
 
 	/**
