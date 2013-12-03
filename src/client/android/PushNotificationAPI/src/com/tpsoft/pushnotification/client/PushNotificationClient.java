@@ -18,8 +18,11 @@ import com.tpsoft.pushnotification.service.NotifyPushService;
 
 public class PushNotificationClient {
 
-	public static final String TAG_APILOG = "PushNotification-API";
+	private static final String TAG_APILOG = "PushNotification-API";
+	private static final int WAIT_SERVICE_TIME = 2000; // ms
+	private static final int WAIT_SERVICE_INTERVAL = 10; // ms
 
+	private static boolean serviceStarted = false;
 	private static boolean clientStarted = false;
 	private static boolean clientLogon = false;
 
@@ -27,21 +30,74 @@ public class PushNotificationClient {
 	private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
 	private List<MessageTransceiverListener> listeners = new ArrayList<MessageTransceiverListener>();
 
+	/**
+	 * 构造客户端
+	 * 
+	 * 启动后台服务(如果尚未启动)并注册广播接收器(不显示状态栏图标)
+	 * 
+	 * @param contextO
+	 *            上下文
+	 */
 	public PushNotificationClient(Context context) {
 		this.context = context;
 
-		// 注册广播接收器
 		IntentFilter filter = new IntentFilter();
 		filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
 		context.registerReceiver(myBroadcastReceiver, filter);
+
+		if (!serviceStarted) {
+			startService(context, null, -1, null, null);
+		}
 	}
 
-	public void release() {
-		// 注销广播接收器
-		context.unregisterReceiver(myBroadcastReceiver);
+	/**
+	 * 构造客户端
+	 * 
+	 * 启动后台服务(如果尚未启动)并注册广播接收器(显示状态栏图标)
+	 * 
+	 * @param context
+	 *            上下文
+	 * @param mainActivityClassName
+	 *            主活动类名
+	 * @param notificationLogoResId
+	 *            状态栏图标资源ID
+	 * @param notificationTitle
+	 *            状态栏图标标题
+	 * @param notificationMessage
+	 *            状态栏图标消息
+	 */
+	public PushNotificationClient(Context context,
+			String mainActivityClassName, int notificationLogoResId,
+			String notificationTitle, String notificationMessage) {
+		this.context = context;
 
+		IntentFilter filter = new IntentFilter();
+		filter.addAction("com.tpsoft.pushnotification.NotifyPushService");
+		context.registerReceiver(myBroadcastReceiver, filter);
+
+		if (!serviceStarted) {
+			startService(context, mainActivityClassName, notificationLogoResId,
+					notificationTitle, notificationMessage);
+		}
+	}
+
+	/**
+	 * 释放客户端
+	 * 
+	 * 注销广播接收器、所有侦听器，并停止后台服务(如果需要)
+	 * 
+	 * @param stopService
+	 *            是否停止后台服务
+	 */
+	public void release(boolean stopService) {
 		for (MessageTransceiverListener listener : listeners) {
 			removeListener(listener);
+		}
+
+		context.unregisterReceiver(myBroadcastReceiver);
+
+		if (stopService) {
+			stopService();
 		}
 	}
 
@@ -75,25 +131,46 @@ public class PushNotificationClient {
 	 * @param networkParams
 	 *            网络参数
 	 */
-	public void startMessageTransceiver(AppParams appParams,
-			LoginParams loginParams, NetworkParams networkParams) {
+	public void startMessageTransceiver(final AppParams appParams,
+			final LoginParams loginParams, final NetworkParams networkParams) {
 		if (clientStarted) {
-			for (MessageTransceiverListener listener : listeners)
-				listener.onTransceiverStatus(true);
 			return; // 已经启动
 		}
 
-		Intent serviceIntent = new Intent();
-		serviceIntent
-				.setAction("com.tpsoft.pushnotification.ServiceController");
-		serviceIntent.putExtra("command", "start");
-		serviceIntent.putExtra("com.tpsoft.pushnotification.AppParams",
-				appParams.getBundle());
-		serviceIntent.putExtra("com.tpsoft.pushnotification.LoginParams",
-				loginParams.getBundle());
-		serviceIntent.putExtra("com.tpsoft.pushnotification.NetworkParams",
-				networkParams.getBundle());
-		context.sendBroadcast(serviceIntent); // 发送广播
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				int waitCount = 0, maxWaitCount = WAIT_SERVICE_TIME
+						/ WAIT_SERVICE_INTERVAL;
+				while (!serviceStarted) {
+					try {
+						Thread.sleep(WAIT_SERVICE_INTERVAL);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					maxWaitCount++;
+					if (waitCount > maxWaitCount) {
+						Log.e(TAG_APILOG, "NotifyPush Service not started yet!");
+						return;
+					}
+				}
+
+				Intent serviceIntent = new Intent();
+				serviceIntent
+						.setAction("com.tpsoft.pushnotification.ServiceController");
+				serviceIntent.putExtra("command", "start");
+				serviceIntent.putExtra("com.tpsoft.pushnotification.AppParams",
+						appParams.getBundle());
+				serviceIntent.putExtra(
+						"com.tpsoft.pushnotification.LoginParams",
+						loginParams.getBundle());
+				serviceIntent.putExtra(
+						"com.tpsoft.pushnotification.NetworkParams",
+						networkParams.getBundle());
+				context.sendBroadcast(serviceIntent); // 发送广播
+			}
+		}).start();
 	}
 
 	/**
@@ -101,8 +178,6 @@ public class PushNotificationClient {
 	 */
 	public void stopMessageTransceiver() {
 		if (!clientStarted) {
-			for (MessageTransceiverListener listener : listeners)
-				listener.onTransceiverStatus(false);
 			return; // 已经停止
 		}
 
@@ -121,9 +196,9 @@ public class PushNotificationClient {
 	 * @param msg
 	 *            消息
 	 */
-	public void sendMessage(int msgId, MyMessage msg) {
+	public void sendMessage(int msgId, MyMessage msg) throws RuntimeException {
 		if (!clientLogon)
-			return;
+			throw new RuntimeException("Not logon yet!");
 
 		Intent i = new Intent();
 		i.setAction("com.tpsoft.pushnotification.ServiceController");
@@ -142,9 +217,10 @@ public class PushNotificationClient {
 	 * @param condition
 	 *            查询条件:公众号(支持模糊匹配)
 	 */
-	public void queryPublic(int queryId, String condition) {
+	public void queryPublic(int queryId, String condition)
+			throws RuntimeException {
 		if (!clientLogon)
-			return;
+			throw new RuntimeException("Not logon yet!");
 
 		Intent i = new Intent();
 		i.setAction("com.tpsoft.pushnotification.ServiceController");
@@ -160,9 +236,9 @@ public class PushNotificationClient {
 	 * @param account
 	 *            公众号
 	 */
-	public void followPublic(String account) {
+	public void followPublic(String account) throws RuntimeException {
 		if (!clientLogon)
-			return;
+			throw new RuntimeException("Not logon yet!");
 
 		Intent i = new Intent();
 		i.setAction("com.tpsoft.pushnotification.ServiceController");
@@ -177,9 +253,9 @@ public class PushNotificationClient {
 	 * @param account
 	 *            公众号
 	 */
-	public void unfollowPublic(String account) {
+	public void unfollowPublic(String account) throws RuntimeException {
 		if (!clientLogon)
-			return;
+			throw new RuntimeException("Not logon yet!");
 
 		Intent i = new Intent();
 		i.setAction("com.tpsoft.pushnotification.ServiceController");
@@ -191,14 +267,52 @@ public class PushNotificationClient {
 	/**
 	 * 获取已关注公众号
 	 */
-	public void getFollowed() {
+	public void getFollowed() throws RuntimeException {
 		if (!clientLogon)
-			return;
+			throw new RuntimeException("Not logon yet!");
 
 		Intent i = new Intent();
 		i.setAction("com.tpsoft.pushnotification.ServiceController");
 		i.putExtra("command", "get_followed");
 		context.sendBroadcast(i);
+	}
+
+	/**
+	 * 启动后台服务
+	 * 
+	 * @param context
+	 *            应用
+	 * @param mainActivityClassName
+	 *            主活动类名
+	 * @param notificationLogoResId
+	 *            状态栏通知图标资源ID
+	 * @param notificationTitle
+	 *            状态栏通知图标标题
+	 * @param notificationMessage
+	 *            状态栏通知图标消息
+	 */
+	private void startService(Context context, String mainActivityClassName,
+			int notificationLogoResId, final String notificationTitle,
+			String notificationMessage) {
+		Intent intent = new Intent(context, NotifyPushService.class);
+		if (mainActivityClassName != null) {
+			// 需要显示状态栏通知图标
+			intent.putExtra("MainActivityClassName", mainActivityClassName);
+			intent.putExtra("notification_logo", notificationLogoResId);
+			intent.putExtra("notification_title", notificationTitle);
+			intent.putExtra("notification_message", notificationMessage);
+		}
+		context.startService(intent);
+	}
+
+	/**
+	 * 停止后台服务
+	 */
+	private void stopService() {
+		if (!serviceStarted) {
+			Intent serviceIntent = new Intent(context, NotifyPushService.class);
+			context.getApplicationContext().stopService(serviceIntent);
+		}
 	}
 
 	private class MyBroadcastReceiver extends BroadcastReceiver {
@@ -478,6 +592,12 @@ public class PushNotificationClient {
 					default:
 						break;
 					}
+				} else if (action.equals("logining")) {
+					// 登录状态通知
+					boolean logining = intent
+							.getBooleanExtra("logining", false);
+					for (MessageTransceiverListener listener : listeners)
+						listener.onLogining(logining);
 				} else if (action.equals("status")) {
 					// 消息接收器状态通知
 					clientStarted = intent.getBooleanExtra("started", false);
@@ -485,12 +605,13 @@ public class PushNotificationClient {
 						clientLogon = false;
 					for (MessageTransceiverListener listener : listeners)
 						listener.onTransceiverStatus(clientStarted);
-				} else if (action.equals("logining")) {
-					// 登录状态通知
-					boolean logining = intent
-							.getBooleanExtra("logining", false);
-					for (MessageTransceiverListener listener : listeners)
-						listener.onLogining(logining);
+				} else if (action.equals("service")) {
+					// 服务状态通知
+					serviceStarted = intent.getBooleanExtra("started", false);
+					if (!serviceStarted) {
+						clientStarted = false;
+						clientLogon = false;
+					}
 				} else {
 					// 未知动作
 				}

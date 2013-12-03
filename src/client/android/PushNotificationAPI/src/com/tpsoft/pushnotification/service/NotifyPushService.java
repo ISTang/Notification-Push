@@ -197,6 +197,14 @@ public class NotifyPushService extends Service {
 			}
 		}
 
+		// 通知主控方服务已停止
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "service");
+		activityIntent.putExtra("started", false);
+		sendBroadcast(activityIntent);
+
 		super.onDestroy();
 	}
 
@@ -208,25 +216,39 @@ public class NotifyPushService extends Service {
 	@SuppressWarnings("deprecation")
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		// 让服务前台运行
-		Notification notification = new Notification(intent.getIntExtra(
-				"notification_logo", R.drawable.ic_launcher),
-				intent.getStringExtra("ticker_text"),
-				System.currentTimeMillis());
-		Intent notificationIntent;
-		try {
-			notificationIntent = new Intent(this, Class.forName(intent
-					.getStringExtra("ActivityClassName")));
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			return 0;
+		if (intent.hasExtra("MainActivityClassName")) {
+			// 让服务前台运行
+			Notification notification = new Notification(intent.getIntExtra(
+					"notification_logo", intent.getIntExtra(
+							"notification_logo", R.drawable.ic_launcher)),
+					getText(R.string.ticker_text), System.currentTimeMillis());
+
+			Intent notificationIntent;
+			try {
+				notificationIntent = new Intent(this, Class.forName(intent
+						.getStringExtra("MainActivityClassName")));
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+				return 0;
+			}
+
+			PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+					notificationIntent, 0);
+
+			notification.setLatestEventInfo(this,
+					intent.getStringExtra("notification_title"),
+					intent.getStringExtra("notification_message"),
+					pendingIntent);
+			startForeground(ONGOING_NOTIFICATION, notification);
 		}
-		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
-				notificationIntent, 0);
-		notification.setLatestEventInfo(this,
-				intent.getStringExtra("notification_title"),
-				intent.getStringExtra("notification_message"), pendingIntent);
-		startForeground(ONGOING_NOTIFICATION, notification);
+
+		// 通知主控方服务已启动
+		Intent activityIntent = new Intent();
+		activityIntent
+				.setAction("com.tpsoft.pushnotification.NotifyPushService");
+		activityIntent.putExtra("action", "service");
+		activityIntent.putExtra("started", true);
+		sendBroadcast(activityIntent);
 
 		return Service.START_STICKY;
 	}

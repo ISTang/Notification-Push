@@ -13,6 +13,9 @@ public final class R {
     public static final class drawable {
         public static int ic_launcher=0x7f020000;
     }
+    public static final class string {
+        public static int ticker_text=0x7f030000;
+    }
     public static final class style {
         /** 
         Base application theme, dependent on API level. This theme is replaced
@@ -35,10 +38,10 @@ public final class R {
     
  API 14 theme customizations can go here. 
          */
-        public static int AppBaseTheme=0x7f030000;
+        public static int AppBaseTheme=0x7f040000;
         /**  Application theme. 
  All customizations that are NOT specific to a particular API-level can go here. 
          */
-        public static int AppTheme=0x7f030001;
+        public static int AppTheme=0x7f040001;
     }
 }

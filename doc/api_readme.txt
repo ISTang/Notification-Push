@@ -3,9 +3,19 @@
 1.初始化客户端
 
 private PushNotificationClient mClient;
+
 mClient = new PushNotificationClient(context); // context为Context实例，比如Activity
+或者(如果需要在状态栏显示通知图标)
+mClient = new PushNotificationClient(context, mainActivityClassName, notificationLogoResId,
+			notificationTitle, notificationMessage);
+
 mClient.addListener(listener); // listener为MessageTransceiverListener接口实例
 
+重要提示：必须在客户端APP的配置文件AndroidManifest.xml中(子元素application内)注册服务NotifyPushService，即：
+            <service android:name="com.tpsoft.pushnotification.service.NotifyPushService" />
+          并且添加以下权限设置(根元素下)：
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.INTERNET" />
 
 2.启动/停止消息收发器
 
@@ -112,7 +122,10 @@ C.响应接收到的新消息
 
 4.释放客户端
 
-mClient.release();
+mClient.release(stopService);
+
+参数:
+ stopService 是否停止后台服务
 
 注：在不再需要接收消息时，最好调用此方法，否则会导致资源浪费。
 

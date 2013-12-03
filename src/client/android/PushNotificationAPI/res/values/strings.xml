@@ -1,5 +1,5 @@
 <resources>
 
-    <!-- <string name="service_name">Push Notification API</string> -->
+    <string name="ticker_text">PushNotification</string>
 	
 </resources>
