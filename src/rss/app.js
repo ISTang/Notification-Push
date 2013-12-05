@@ -562,6 +562,10 @@ function startWorker(clientId, clientPassword, onConnected, onNewMessage) {
             logger.warn("[" + clientId + "] Server inactive timeout");
 
             socket.end(protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
+
+			clientLogon = false;
+            clientLogging = false;
+
             return;
         }
         ensureAliveId = setTimeout(ensureActive, maxInactiveTime);
