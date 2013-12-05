@@ -186,7 +186,7 @@ function pushArticle(article, callback) {
 
             var message = {title: msgTitle, body: msgBody, url: msgUrl, attachments: attachments, generate_time: pubDate, need_receipt: true};
 
-            /*if (clientLogon) {
+            if (clientLogon) {
 
                 // 客户端已经登录
                 if (subscribedFollowers.length > 1) {
@@ -196,7 +196,7 @@ function pushArticle(article, callback) {
                     logger.debug("Send article " + article.id + " to followers " + followers + "...");
                     var articleMsg = JSON.stringify(message);
                     socket.write(formatMessage(followers, article.id, articleMsg, false));
-                } else /{
+                } else {
 
                     // 发送
                     var follower = subscribedFollowers[0];
@@ -205,11 +205,11 @@ function pushArticle(article, callback) {
                     socket.write(formatMessage(follower, article.id, articleMsg, false));
                 }
                 callback();
-            } else {*/
+            } else {
 
                 // 客户端尚未登录
                 pushMessage(message, subscribedFollowers, callback);
-            /*}*/
+            }
         });
     });
 }

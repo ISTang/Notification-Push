@@ -37,8 +37,8 @@ exports.IMAGE_URL_NOT_CONATINS = ['email','facebook','linkedin','googleplus','tw
 
 exports.MAX_INACTIVE_TIME = 1000 * 60 * 5 * 1; // 心跳检测最长时间(ms)
 
-exports.TRACK_SOCKET = false;
-exports.SHOW_PACKET = false;
+exports.TRACK_SOCKET = true;
+exports.SHOW_PACKET = true;
 
 exports.BODY_BYTE_LENGTH = false;
 

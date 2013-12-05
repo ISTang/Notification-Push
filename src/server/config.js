@@ -69,4 +69,4 @@ exports.MIN_EXPIRATION_TIME = 1000 * 60 * 1;
 
 exports.BODY_BYTE_LENGTH = false;
 
-exports.USER_AVATAR = exports.DOWNLOAD_URL_BASE + "/user-avatar.jpg";
+exports.USER_AVATAR = exports.DOWNLOAD_URL_BASE + "/user-avatar.png";
