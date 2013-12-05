@@ -53,6 +53,7 @@ const INVALID_USERNAME_MSG = "Check username failed";
 const SERVER_ERROR_MSG = "Server error";
 const LOGIN_TIMEOUT_MSG = "Login timeout";
 const INACTIVE_TIMEOUT_MSG = "Inactive timeout";
+const CONFIRM_TIMEOUT_MSG = "Confirm timeout";
 
 // 心跳周期
 const KEEP_ALIVE_INTERVAL = config.MAX_INACTIVE_TIME;

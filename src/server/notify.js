@@ -517,27 +517,8 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                         setTimeout(function () {
                             var pendingMsg = pendingMsgs[connId];
                             if (typeof pendingMsg != "undefined") {
-                                logger.trace("Send message " + msgId + " on connection " + connId + " timeout");
-                                db.recordLatestActivity(redis, connId, "消息"+msgId+"确认超时", function (err) {
-                                    db.redisPool.release(redis);
-                                    if (err) {
-                                        logger.fatal("Process will exit: " + err);
-                                        process.exit(16);
-                                    }
-                                    // 不继续等待确认，继续发送下一条消息(如果有的话)
-                                    var msgs = queuedMsgs[connId];
-                                    if (typeof msgs != "undefined") {
-                                        var nextMsg = msgs.shift();
-                                        if (nextMsg) {
-                                            if (msgs.length == 0) {
-                                                delete queuedMsgs[connId];
-                                            }
-                                            sendMessage(connId, nextMsg.msgId, nextMsg.message, nextMsg.msgKey, true);
-                                            return;
-                                        }
-                                    }
-                                    logger.debug("Client " + clientConns[connId].clientAddress + ": no more message(s) to send");
-                                 });
+								// 消息确认超时，删除连接信息
+								removeConnection(connId, protocol.CONFIRM_TIMEOUT_MSG);
                             }
                         }, RECEIVE_RECEIPT_TIMEOUT);
                     });
@@ -553,6 +534,23 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
             });
         }
     });
+}
+
+function removeConnection(connId, reason, callback) {
+	var clientAddress = clientConns[connId].clientAddress;
+	logger.warn("Client " + clientAddress + "[" + clientConns[connId].accountName + "] "+reason);
+	db.removeLoginInfo(redis, connId, function (err) {
+		if (err) return callback(err);
+		var socket = clientConns[connId].socket;
+		clientConns.splice(clientConns.indexOf(connId), 1);
+		try {
+			if (TRACK_SOCKET) logger.trace("[SOCKET] end client " + clientAddress + ": " + reason);
+			socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(reason.length, reason));
+		} catch (err) {
+			logger.error(err);
+		}
+		if (calllback) callback();
+	});
 }
 
 var exitTimer = null;
@@ -593,20 +591,7 @@ void main(function () {
                 process.exit(18);
             }
             async.forEachSeries(inactiveConnIds, function (connId, callback) {
-                var clientAddress = clientConns[connId].clientAddress;
-                logger.warn("Client " + clientAddress + "[" + clientConns[connId].accountName + "] inactive timeout");
-                db.removeLoginInfo(redis, connId, function (err) {
-                    if (err) return callback(err);
-                    var socket = clientConns[connId].socket;
-                    clientConns.splice(clientConns.indexOf(connId), 1);
-                    try {
-                        if (TRACK_SOCKET) logger.trace("[SOCKET] end client " + clientAddress + ": " + protocol.INACTIVE_TIMEOUT_MSG);
-                        socket.end(/*protocol.PNTP_FLAG+*/protocol.CLOSE_CONN_RES.format(protocol.INACTIVE_TIMEOUT_MSG.length, protocol.INACTIVE_TIMEOUT_MSG));
-                    } catch (err) {
-                        logger.error(err);
-                    }
-                    callback();
-                });
+				removeConnection(connId, protocol.INACTIVE_TIMEOUT_MSG, callback);
             }, function (err) {
                 db.redisPool.release(redis);
                 if (err) {
