@@ -518,7 +518,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                             var pendingMsg = pendingMsgs[connId];
                             if (typeof pendingMsg != "undefined") {
 								// 消息确认超时，删除连接信息
-								removeConnection(connId, protocol.CONFIRM_TIMEOUT_MSG);
+								removeConnection(redis, connId, protocol.CONFIRM_TIMEOUT_MSG);
                             }
                         }, RECEIVE_RECEIPT_TIMEOUT);
                     });
@@ -536,7 +536,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
     });
 }
 
-function removeConnection(connId, reason, callback) {
+function removeConnection(redis, connId, reason, callback) {
 	var clientAddress = clientConns[connId].clientAddress;
 	logger.warn("Client " + clientAddress + "[" + clientConns[connId].accountName + "] "+reason);
 	db.removeLoginInfo(redis, connId, function (err) {
@@ -591,7 +591,7 @@ void main(function () {
                 process.exit(18);
             }
             async.forEachSeries(inactiveConnIds, function (connId, callback) {
-				removeConnection(connId, protocol.INACTIVE_TIMEOUT_MSG, callback);
+				removeConnection(redis, connId, protocol.INACTIVE_TIMEOUT_MSG, callback);
             }, function (err) {
                 db.redisPool.release(redis);
                 if (err) {
