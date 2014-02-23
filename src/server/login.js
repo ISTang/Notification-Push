@@ -103,40 +103,44 @@ function startNotifyPool() {
 
     for (var i = 0; i < NOTIFY_NUMBER; i++) {
 
-        var notifyProcess = child_process.fork(NOTIFY_PATH);
-
-        notifyProcess.on("error", onError);
-        notifyProcess.on("exit", onExit);
-
-        notifyProcess.send({type: "index", loginIndex: myIndex, notifyIndex: i});
+        var notifyProcess = fork(i);
 
         notifyProcessPool.push(notifyProcess);
     }
 
-    function onError(error) {
+    function onError(err) {
 
-        logger.error(error.toString());
+        // 无法向通知进程发送消息
+        var notifyIndex = this.notifyIndex;
+        logger.error("#" + notifyIndex + " notify process: " + err.toString());
         this.kill();
+
+        var notifyProcess = fork(notifyIndex);
+        notifyProcessPool[notifyIndex] = notifyProcess;
+        logger.warn("#" + notifyIndex + " notify process restarted(onError)");
     }
 
-    function onExit() {
+    function onExit(code, signal) {
 
-        for (var index in notifyProcessPool) {
+        // 通知进程被终止
+        var notifyIndex = this.notifyIndex;
+        logger.warn("#" + notifyIndex + " notify process: terminated(" + code + ")" + (signal ? " due to receipt of signal " + signal : ""));
 
-            if (notifyProcessPool[index] == this) {
+        var notifyProcess = fork(notifyIndex);
+        notifyProcessPool[notifyIndex] = notifyProcess;
+        logger.warn("#" + notifyIndex + " notify process restarted(onExit)");
+    }
 
-                notifyProcess = child_process.fork(NOTIFY_PATH);
+    function fork(index) {
+        var notifyProcess = child_process.fork(NOTIFY_PATH);
+        notifyProcess.notifyIndex = index;
 
-                notifyProcess.on("error", onError);
-                notifyProcess.on("exit", onExit);
+        notifyProcess.on("error", onError);
+        notifyProcess.on("exit", onExit);
 
-                notifyProcess.send({type: "index", loginIndex: myIndex, notifyIndex: index});
+        notifyProcess.send({type: "index", loginIndex: myIndex, notifyIndex: index});
 
-                notifyProcessPool[index] = notifyProcess;
-
-                logger.warn("#" + index + " notify process restarted");
-            }
-        }
+        return notifyProcess;
     }
 }
 
