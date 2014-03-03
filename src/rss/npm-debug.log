@@ -1,0 +1,56 @@
+0 info it worked if it ends with ok
+1 verbose cli [ '/usr/local/bin/node',
+1 verbose cli   '/usr/local/bin/npm',
+1 verbose cli   'install',
+1 verbose cli   'hashset' ]
+2 info using npm@1.3.5
+3 info using node@v0.10.15
+4 verbose cache add [ 'hashset', null ]
+5 verbose cache add name=undefined spec="hashset" args=["hashset",null]
+6 verbose parsed url { protocol: null,
+6 verbose parsed url   slashes: null,
+6 verbose parsed url   auth: null,
+6 verbose parsed url   host: null,
+6 verbose parsed url   port: null,
+6 verbose parsed url   hostname: null,
+6 verbose parsed url   hash: null,
+6 verbose parsed url   search: null,
+6 verbose parsed url   query: null,
+6 verbose parsed url   pathname: 'hashset',
+6 verbose parsed url   path: 'hashset',
+6 verbose parsed url   href: 'hashset' }
+7 silly lockFile 4b39b97c-hashset hashset
+8 verbose lock hashset /home/joebin/.npm/4b39b97c-hashset.lock
+9 silly lockFile 4b39b97c-hashset hashset
+10 silly lockFile 4b39b97c-hashset hashset
+11 verbose addNamed [ 'hashset', '' ]
+12 verbose addNamed [ null, '*' ]
+13 silly lockFile 8184fcf4-hashset hashset@
+14 verbose lock hashset@ /home/joebin/.npm/8184fcf4-hashset.lock
+15 silly addNameRange { name: 'hashset', range: '*', hasData: false }
+16 verbose url raw hashset
+17 verbose url resolving [ 'https://registry.npmjs.org/', './hashset' ]
+18 verbose url resolved https://registry.npmjs.org/hashset
+19 info trying registry request attempt 1 at 22:56:49
+20 http GET https://registry.npmjs.org/hashset
+21 http 404 https://registry.npmjs.org/hashset
+22 silly registry.get cb [ 404,
+22 silly registry.get   { server: 'CouchDB/1.5.0 (Erlang OTP/R15B03)',
+22 silly registry.get     date: 'Thu, 19 Dec 2013 14:57:30 GMT',
+22 silly registry.get     'content-type': 'application/json',
+22 silly registry.get     'content-length': '52',
+22 silly registry.get     'cache-control': 'must-revalidate' } ]
+23 silly lockFile 8184fcf4-hashset hashset@
+24 silly lockFile 8184fcf4-hashset hashset@
+25 error 404 'hashset' is not in the npm registry.
+25 error 404 You should bug the author to publish it
+25 error 404
+25 error 404 Note that you can also install from a
+25 error 404 tarball, folder, or http url, or git url.
+26 error System Linux 3.5.0-23-generic
+27 error command "/usr/local/bin/node" "/usr/local/bin/npm" "install" "hashset"
+28 error cwd /home/joebin/git/Notification-Push/src/rss
+29 error node -v v0.10.15
+30 error npm -v 1.3.5
+31 error code E404
+32 verbose exit [ 1, true ]
