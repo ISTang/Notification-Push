@@ -37,19 +37,6 @@ function startLoginPool(handle) {
         loginProcessPool.push(loginProcess);
     }
 
-    /*setInterval(function() {
-
-        for (var i = 0; i < LOGIN_NUMBER; i++) {
-
-            if (loginProcessPool[i]==null) {
-
-                var loginProcess = fork(i);
-                loginProcessPool[i] = loginProcess;
-                logger.warn("#" + i + " login process restarted(onExit)");
-            }
-        }
-    }, 10000);*/
-
     function onError(err) {
 
         // 无法向登录进程发送消息
@@ -57,7 +44,9 @@ function startLoginPool(handle) {
         logger.error("#"+loginIndex+" login process: "+err.toString());
         this.kill();
 
-        loginProcessPool[loginIndex] = null;
+        var loginProcess = fork(loginIndex);
+        loginProcessPool[loginIndex] = loginProcess;
+        logger.warn("#" + loginIndex + " login process restarted(onError)");
    }
 
     function onExit(code, signal) {
@@ -66,17 +55,21 @@ function startLoginPool(handle) {
         var loginIndex = this.loginIndex;
         logger.warn("#" + loginIndex + " login process: terminated(" + code + ")" + (signal ? " due to receipt of signal " + signal : ""));
 
-        loginProcessPool[loginIndex] = null;
+        var loginProcess = fork(loginIndex);
+        loginProcessPool[loginIndex] = loginProcess;
+        logger.warn("#" + loginIndex + " login process restarted(onExit)");
     }
 
-    function fork(i) {
+    function fork(loginIndex) {
+        logger.warn("Forking #" + loginIndex + " login process...");
         var loginProcess = child_process.fork(LOGIN_PATH);
-        loginProcess.loginIndex = i;
+        logger.warn("#" + loginIndex + " login process forked.");
+        loginProcess.loginIndex = loginIndex;
 
         loginProcess.on("error", onError);
         loginProcess.on("exit", onExit);
 
-        loginProcess.send({"server": true, loginIndex: i}, handle);
+        loginProcess.send({"server": true, loginIndex: loginIndex}, handle);
 
         return loginProcess;
     }
