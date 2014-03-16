@@ -96,10 +96,12 @@ public class FileUtils {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			try {
-				output.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+			if (output != null) {
+				try {
+					output.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		return file;
