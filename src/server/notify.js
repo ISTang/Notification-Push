@@ -517,8 +517,8 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
                         setTimeout(function () {
                             var pendingMsg = pendingMsgs[connId];
                             if (typeof pendingMsg != "undefined") {
-								// 消息确认超时，删除连接信息
-								removeConnection(redis, connId, protocol.CONFIRM_TIMEOUT_MSG);
+				// 消息确认超时，删除连接信息
+				removeConnection(redis, connId, protocol.CONFIRM_TIMEOUT_MSG);
                             }
                         }, RECEIVE_RECEIPT_TIMEOUT);
                     });
@@ -591,7 +591,7 @@ void main(function () {
                 process.exit(18);
             }
             async.forEachSeries(inactiveConnIds, function (connId, callback) {
-				removeConnection(redis, connId, protocol.INACTIVE_TIMEOUT_MSG, callback);
+		removeConnection(redis, connId, protocol.INACTIVE_TIMEOUT_MSG, callback);
             }, function (err) {
                 db.redisPool.release(redis);
                 if (err) {

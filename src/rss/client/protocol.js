@@ -235,7 +235,7 @@ const GET_FOLLOWED_FAILED_RES = "GET FOLLOWED\r\nSuccess: false\r\n" +
 // 处理连接(适合服务器端和客户端)
 function handleConnection(socket, handlePacket, handleError, handleClose, logger, isClient) {
 
-    var clientAddress = socket.remoteAddress + "[" + socket.remotePort + "]";
+    var clientAddress = socket.remoteAddress?socket.remoteAddress + "[" + socket.remotePort + "]":"";
 
     var waitForHead = true; // 等待头部(false表示等待体部或不需要再等待)
     var headInput = ""; // 头部输入
@@ -252,7 +252,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
     socket.on("data", function (data) {
 
         var newInput = data.toString();
-        if (TRACK_SOCKET) logger.trace("[SOCKET] read from client " + clientAddress + ": " + newInput);
+        if (TRACK_SOCKET) logger.trace("[SOCKET] read from " + clientAddress + ": " + newInput);
 
         var starr = [];
 

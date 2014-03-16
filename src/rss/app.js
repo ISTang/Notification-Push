@@ -89,6 +89,8 @@ logger.setLevel(config.LOG_LEVEL);
 var socket;
 var clientLogon = false; // 是否登录成功
 
+var failedChannels = [];
+ 
 function pushMessage(message, receivers, callback) {
 
     var user = {username: PLATFORM_USERNAME, password: utils.md5(PLATFORM_PASSWORD)};
@@ -250,6 +252,7 @@ function getArticles(channel, handleResult) {
                 try {
                     text = iconv.decode(text, encoding);
                 } catch (e) {
+                    text = "<failed to decode>";
                     logger.warn(e);
                 }
             }
@@ -338,13 +341,21 @@ function getAllArticles(handleResult) {
         var result = [];
         async.forEachSeries(channels, function (channel, callback) {
 
+            for (var failedChannel in failedChannels) {
+                if (channel==failedChannels) {
+                    logger.warn("跳过频道 "+channel);
+                    return callback(); // 跳过失败了频道
+                }
+            }
+
             logger.trace("获取频道 " + channel.title + "(" + channel.url + ")上的文章...");
             getArticles(channel, function (err, articles) {
                 if (err) {
 
+		    failedChannels.push(channel);
                     logger.warn(err);
 
-                    return callback(); // 忽略错误
+                    return callback();
                 }
                 logger.trace("从频道 " + channel.url + " 获取到 " + articles.length + " 篇文章。");
                 async.forEachSeries(articles, function (article, callback) {

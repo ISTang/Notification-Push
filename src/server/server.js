@@ -41,13 +41,13 @@ function startLoginPool(handle) {
 
         // 无法向登录进程发送消息
         var loginIndex = this.loginIndex;
-        logger.error("#" + loginIndex + " login process: " + err.toString());
+        logger.error("#"+loginIndex+" login process: "+err.toString());
         this.kill();
 
         var loginProcess = fork(loginIndex);
         loginProcessPool[loginIndex] = loginProcess;
         logger.warn("#" + loginIndex + " login process restarted(onError)");
-    }
+   }
 
     function onExit(code, signal) {
 
@@ -60,14 +60,16 @@ function startLoginPool(handle) {
         logger.warn("#" + loginIndex + " login process restarted(onExit)");
     }
 
-    function fork(i) {
+    function fork(loginIndex) {
+        logger.warn("Forking #" + loginIndex + " login process...");
         var loginProcess = child_process.fork(LOGIN_PATH);
-        loginProcess.loginIndex = i;
+        logger.warn("#" + loginIndex + " login process forked.");
+        loginProcess.loginIndex = loginIndex;
 
         loginProcess.on("error", onError);
         loginProcess.on("exit", onExit);
 
-        loginProcess.send({"server": true, loginIndex: i}, handle);
+        loginProcess.send({"server": true, loginIndex: loginIndex}, handle);
 
         return loginProcess;
     }
@@ -90,7 +92,7 @@ function startHttpServer() {
     function onExit(code, signal) {
 
         // HTTP进程被终止
-        logger.warn("HTTP child process terminated(code=" + code + ") due to receipt of signal " + signal);
+        logger.warn("HTTP child process terminated(code=" + code + ")" + (signal ? " due to receipt of signal " + signal : ""));
         fork();
         logger.info("httpd process restarted(onExit)");
     }
@@ -158,3 +160,4 @@ void main(function () {
         }
     });
 });
+
