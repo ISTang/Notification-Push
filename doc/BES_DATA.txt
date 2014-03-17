@@ -1,0 +1,35 @@
+BES测试数据(初始化)
+
+-- 应用
+sadd application:set 5A6D032A-DB6C-43BF-98EE-A699FBCAA628
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:name" "BES\xe6\xb5\x8b\xe8\xaf\x95"
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:create_time" "20131129171828"
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:password" "F558F461AEF4E598B3526BEEA65F5663"
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:client:need_login" "1"
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:client:need_password" "1"
+set "application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:account:auto_create" "1"
+
+
+-- 账号及权限
+sadd account:set 12420A30-7742-4FDA-B75E-D4D7186E0CF8
+set "account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:create_time" "20140317142228"
+set "account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:name" "wch"
+set "account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:password" "E10ADC3949BA59ABBE56E057F20F883E"
+set "account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:phone" "18508286119"
+
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_connections 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_applications 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_accounts 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions view_messages 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions list_applications 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions list_accounts 1
+//hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions push_message 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:permissions clear_messages 1
+
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:permissions broadcast 1
+hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:permissions multicast 1
+//hset account:12420A30-7742-4FDA-B75E-D4D7186E0CF8:application:5A6D032A-DB6C-43BF-98EE-A699FBCAA628:permissions send 1
+
+-- 登录用户
+set user:wch "12420A30-7742-4FDA-B75E-D4D7186E0CF8"
+set user:18508286119 "12420A30-7742-4FDA-B75E-D4D7186E0CF8"
