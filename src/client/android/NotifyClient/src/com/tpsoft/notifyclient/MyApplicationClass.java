@@ -21,9 +21,9 @@ import com.tpsoft.pushnotification.service.NotifyPushService;
 
 public class MyApplicationClass extends Application {
 
-	public static final String APP_ID = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
-	public static final String APP_PASSWORD = "@0Vd*4Ak";
-	public static final String LOGIN_PROTECT_KEY = "n9SfmcRs";
+	public static final String APP_ID = "5A6D032A-DB6C-43BF-98EE-A699FBCAA628"; //"4083AD3D-0F41-B78E-4F5D-F41A515F2667"
+	public static final String APP_PASSWORD = "THHgux8k";//"@0Vd*4Ak"; //"THHgux8k"
+	public static final String LOGIN_PROTECT_KEY = "cpuHCK9V"; //"n9SfmcRs"
 
 	public static final boolean ALERT_MSG = false;
 	public static final int INFO_SOUND = 1;

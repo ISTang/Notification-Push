@@ -1,4 +1,4 @@
-﻿// 引入依赖包
+// 引入依赖包
 var net = require("net");
 var child_process = require('child_process');
 var fs = require('fs');
@@ -112,7 +112,7 @@ function startNotifyPool() {
 
         // 无法向通知进程发送消息
         var notifyIndex = this.notifyIndex;
-        logger.error("#" + notifyIndex + " notify process: " + err.toString());
+        logger.error("#"+notifyIndex+" notify process: "+err.toString());
         this.kill();
 
         var notifyProcess = fork(notifyIndex);
@@ -124,7 +124,7 @@ function startNotifyPool() {
 
         // 通知进程被终止
         var notifyIndex = this.notifyIndex;
-        logger.warn("#" + notifyIndex + " notify process: terminated(" + code + ")" + (signal ? " due to receipt of signal " + signal : ""));
+        logger.warn("#"+notifyIndex+" notify process: terminated("+code+")"+(signal?" due to receipt of signal "+signal:""));
 
         var notifyProcess = fork(notifyIndex);
         notifyProcessPool[notifyIndex] = notifyProcess;
@@ -272,3 +272,4 @@ void main(function () {
         }
     }, LOGIN_TIMEOUT / 2);
 });
+

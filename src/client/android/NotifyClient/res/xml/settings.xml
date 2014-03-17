@@ -5,13 +5,13 @@
         android:key="server"
         android:title="@string/settings_server" >
         <EditTextPreference
-            android:defaultValue="isajia.com"
+            android:defaultValue="218.200.212.12"
             android:key="serverHost"
             android:persistent="true"
             android:summary="@string/server_host_summary"
             android:title="@string/server_host" />
         <EditTextPreference
-            android:defaultValue="1234"
+            android:defaultValue="3457"
             android:key="serverPort"
             android:persistent="true"
             android:summary="@string/server_port_summary"
