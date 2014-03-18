@@ -10,6 +10,7 @@ import com.tpsoft.pushnotification.manage.config.ServiceConfig;
 import com.tpsoft.pushnotification.manage.exception.PushMessageException;
 import com.tpsoft.pushnotification.manage.impl.MessagePushImpl;
 import com.tpsoft.pushnotification.manage.intf.IMessagePush;
+import com.tpsoft.pushnotification.manage.model.LoginInfo;
 import com.tpsoft.pushnotification.manage.model.Message;
 import com.tpsoft.pushnotification.manage.model.Message.Attachment;
 
@@ -20,8 +21,10 @@ public class MessagePushTest {
 
 	@Before
 	public void setUp() throws Exception {
-		serviceConfig.setServer("118.244.9.191");
-		serviceConfig.setPort(4567);
+		serviceConfig.setServer("218.200.212.120");
+		serviceConfig.setPort(2345);
+		messagePush.setLoginInfo(new LoginInfo("13808188051",
+				"5BE34BA238778F06B09D10647C0EBEAA"));
 	}
 
 	@Test
@@ -54,8 +57,8 @@ public class MessagePushTest {
 		String appId = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
 		List<String> accounts = new ArrayList<String>() {
 			{
-				add("+8613808188051");
-				add("13342884875");
+				add("+8614529132950");
+				add("13808188051");
 			}
 		};
 		Message message = new Message("测试消息", "这是一条群发消息。", "text",
@@ -82,7 +85,7 @@ public class MessagePushTest {
 	@Test
 	public void testSend() {
 		String appId = "4083AD3D-0F41-B78E-4F5D-F41A515F2667";
-		String addcount = "+8613808188051";
+		String addcount = "+8614529132950";
 		Message message = new Message("测试消息", "这是一条私密消息。", "text",
 				"http://www.baidu.com/");
 		message.setNeedReceipt(true);

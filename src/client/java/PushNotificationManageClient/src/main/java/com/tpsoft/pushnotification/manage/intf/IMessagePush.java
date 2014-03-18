@@ -3,6 +3,7 @@ package com.tpsoft.pushnotification.manage.intf;
 import java.util.Collection;
 
 import com.tpsoft.pushnotification.manage.exception.PushMessageException;
+import com.tpsoft.pushnotification.manage.model.LoginInfo;
 import com.tpsoft.pushnotification.manage.model.Message;
 
 /**
@@ -13,6 +14,12 @@ import com.tpsoft.pushnotification.manage.model.Message;
  */
 public interface IMessagePush {
 
+	/**
+	 * 设置登录信息
+	 * @param loginInfo 登录信息
+	 */
+	public void setLoginInfo(LoginInfo loginInfo);
+	
 	/**
 	 * 向应用广播消息
 	 * 

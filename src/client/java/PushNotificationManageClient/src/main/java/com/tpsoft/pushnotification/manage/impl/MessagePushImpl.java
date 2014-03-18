@@ -14,7 +14,9 @@ import com.google.gson.GsonBuilder;
 import com.tpsoft.pushnotification.manage.config.ServiceConfig;
 import com.tpsoft.pushnotification.manage.exception.PushMessageException;
 import com.tpsoft.pushnotification.manage.intf.IMessagePush;
+import com.tpsoft.pushnotification.manage.model.LoginInfo;
 import com.tpsoft.pushnotification.manage.model.Message;
+import com.tpsoft.pushnotification.manage.model.MessageWithLoginInfo;
 import com.tpsoft.pushnotification.manage.response.BroadcastMessageResult;
 import com.tpsoft.pushnotification.manage.response.MulticastMessageResult;
 import com.tpsoft.pushnotification.manage.response.SendMessageResult;
@@ -22,6 +24,7 @@ import com.tpsoft.pushnotification.manage.response.SendMessageResult;
 public class MessagePushImpl implements IMessagePush {
 
 	private ServiceConfig serviceConfig;
+	private LoginInfo loginInfo;
 
 	private Gson gson = new GsonBuilder().create();
 
@@ -31,6 +34,10 @@ public class MessagePushImpl implements IMessagePush {
 
 	public MessagePushImpl(ServiceConfig serviceConfig) {
 		this.serviceConfig = serviceConfig;
+	}
+
+	public void setLoginInfo(LoginInfo loginInfo) {
+		this.loginInfo = loginInfo;
 	}
 
 	public ServiceConfig getServiceConfig() {
@@ -45,8 +52,9 @@ public class MessagePushImpl implements IMessagePush {
 			throws PushMessageException {
 		ClientRequest req = new ClientRequest(
 				serviceConfig.getBroadcastMessageEndpoint());
+
 		req.pathParameter("id", appId).body(ServiceConfig.CONTENT_TYPE,
-				gson.toJson(message));
+				gson.toJson(new MessageWithLoginInfo(loginInfo, message)));
 
 		ClientResponse<BroadcastMessageResult> res;
 		try {
@@ -71,8 +79,10 @@ public class MessagePushImpl implements IMessagePush {
 			list.add(map);
 		}
 
-		String reqBody = String.format("{\"accounts\":%s,\"message\":%s}",
-				gson.toJson(list), gson.toJson(message));
+		String reqBody = String
+				.format("{\"user\":%s,\"accounts\":%s,\"message\":%s}",
+						gson.toJson(loginInfo), gson.toJson(list),
+						gson.toJson(message));
 
 		ClientRequest req = new ClientRequest(
 				serviceConfig.getMulticastMessageEndpoint());
@@ -97,8 +107,10 @@ public class MessagePushImpl implements IMessagePush {
 			throws PushMessageException {
 		ClientRequest req = new ClientRequest(
 				serviceConfig.getSendMessageEndpoint());
-		req.pathParameter("id", appId).pathParameter("name", account)
-				.body(ServiceConfig.CONTENT_TYPE, gson.toJson(message));
+		req.pathParameter("id", appId)
+				.pathParameter("name", account)
+				.body(ServiceConfig.CONTENT_TYPE,
+						gson.toJson(new MessageWithLoginInfo(loginInfo, message)));
 
 		ClientResponse<SendMessageResult> res;
 		try {
