@@ -286,7 +286,7 @@ typedef void (*HandlePacketFunc)(SOCKET socket, const char *action, const char *
 struct AppInfo
 {
 	AppInfo() {}
-	AppInfo(std::string id, std::string password, std::string protectKey)
+	AppInfo(const std::string &id, const std::string &password, const std::string &protectKey)
 	{
 		this->id = id;
 		this->password = password;
@@ -302,7 +302,7 @@ struct AppInfo
 struct LoginInfo
 {
 	LoginInfo() {}
-	LoginInfo(std::string username, std::string password)
+	LoginInfo(const std::string &username, const std::string &password)
 	{
 		this->username = username;
 		this->password = password;
@@ -320,21 +320,21 @@ public:
 	virtual ~Connection(void);
 
 protected:
-	virtual void onConnected(void); // 连接成功事件
-	virtual void onConnectFailed(void); // 连接失败事件
-	virtual void onDisconnected(bool passive = true); // 连接断开事件
+	virtual void onConnected(void) = 0; // 连接成功事件
+	virtual void onConnectFailed(void) = 0; // 连接失败事件
+	virtual void onDisconnected(bool passive = true) = 0; // 连接断开事件
 
-	virtual void onTextReceived(std::string text); // 接收到文本事件(utf8)
-	virtual void onTextSent(std::string text); // 输出文本事件
+	virtual void onTextReceived(const std::string& text) = 0; // 接收到文本事件(utf8)
+	virtual void onTextSent(const std::string& text) = 0; // 输出文本事件
 
 	virtual void handlePacket(const std::string &action, const std::string &target, 
-		std::map<std::string, std::string> &fields, const std::string &body); // 处理报文
+		std::map<std::string, std::string> &fields, const std::string &body) = 0; // 处理报文
 
-	virtual void error(const std::string& log); // 输出错误
-	virtual void warn(const std::string& log); // 输出警告
-	virtual void info(const std::string& log); // 输出信息
-	virtual void debug(const std::string& log); // 输出调试
-	virtual void trace(const std::string& log); // 输出跟踪
+	virtual void error(const std::string& log) = 0; // 输出错误
+	virtual void warn(const std::string& log) = 0; // 输出警告
+	virtual void info(const std::string& log) = 0; // 输出信息
+	virtual void debug(const std::string& log) = 0; // 输出调试
+	virtual void trace(const std::string& log) = 0; // 输出跟踪
 
 	bool write(const std::string& msg, bool end=false);
 
@@ -373,26 +373,27 @@ public:
 
 	void setAppInfo(const AppInfo &appInfo);
 	void setLoginInfo(const LoginInfo &loginInfo);
+	void setServerInfo(const std::string &serverHost, int serverPort);
 
-	bool connect(const std::string &server, int port);
+	bool connect();
 
 protected:
-	virtual void onLoginStatus(int nStatus);
-	virtual void onMsgKeyReceived(void);
-	virtual void onMaxInactiveTimeReceived(void);
-	virtual void onMsgReceived(std::string msg); // utf8
+	virtual void onLoginStatus(int nStatus) = 0;
+	virtual void onMsgKeyReceived(void) = 0;
+	virtual void onMaxInactiveTimeReceived(void) = 0;
+	virtual void onMsgReceived(const std::string& msg) = 0; // utf8
 
 	std::string msgKey;
 	int maxInactiveTime; // client(self)
 	time_t lastActiveTime; // server
 
-private:
+protected:
 	virtual void onConnected(void);
 	virtual void onConnectFailed(void);
 	virtual void onDisconnected(bool passive = true);
 
 	virtual void handlePacket(const std::string &action, const std::string &target,
-		std::map<std::string, std::string> &fields, const std::string &body); // 处理报文
+		std::map<std::string, std::string> &fields, const std::string &body);
 
 	void startKeepAlive(void);
 	
@@ -400,6 +401,8 @@ private:
 
 	AppInfo appInfo;
 	LoginInfo loginInfo;
+	std::string serverHost;
+	int serverPort;
 
     bool clientLogon;
     bool clientLogining;

@@ -672,6 +672,7 @@ bool CSocketComm::ConnectTo(LPCTSTR strDestination, LPCTSTR strServiceName, int 
             return false;
         }
 
+		// TODO 在win8下先bind再connect会失败
         if ( SOCKET_ERROR == bind(sock, sockAddr, sockAddr.Size() ))
         {
             closesocket( sock );

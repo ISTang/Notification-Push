@@ -3,10 +3,10 @@
 //
 
 #pragma once
-#include "ClientThread.h"
 #include "afxwin.h"
 
 const int AUTO_RECONNECT_INTERVAL = 1000 * 30;
+const int MAX_LINE = 255;
 
 // CTuixinDlg ¶Ô»°¿ò
 class CTuixinDlg : public CDialogEx
@@ -49,7 +49,4 @@ private:
 	int m_nThreads;
 
 	bool m_bTrackPacket;
-
-	std::vector<CClientThread *> m_clientThreads;
-
 };

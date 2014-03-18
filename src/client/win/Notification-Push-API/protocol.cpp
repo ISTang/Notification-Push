@@ -16,70 +16,6 @@ Connection::~Connection(void)
 {
 }
 
-
-void Connection::onConnected(void)
-{
-	//std::cout<<"Connected to "<<peerAddress<<std::endl;
-}
-
-
-void Connection::onConnectFailed(void)
-{
-	//std::cerr<<"Connect failed. "<<std::endl;
-}
-
-void Connection::onTextReceived(std::string text)
-{
-	//std::cout << "Received text: " << text << std::endl;
-}
-
-void Connection::onTextSent(std::string text)
-{
-	//std::cout << "Sent text: " << text << std::endl;
-}
-
-void Connection::onDisconnected(bool passive)
-{
-	//std::cerr<<"Disconnected("<<peerAddress<<(passive?"passive":"active")<<")"<<std::endl;
-}
-
-
-void Connection::handlePacket(const std::string &action, const std::string &target, 
-	std::map<std::string, std::string> &fields, const std::string &body)
-{
-	//std::cout<<"Received action: "<<action<<" "<<target<<std::endl;
-}
-
-
-void Connection::error(const std::string& log)
-{
-	//std::cerr<<"[error] "<<log<<std::endl;
-}
-
-
-void Connection::warn(const std::string& log)
-{
-	//std::cerr<<"[warn] "<<log<<std::endl;
-}
-
-
-void Connection::info(const std::string& log)
-{
-	//std::cout<<"[info] "<<log<<std::endl;
-}
-
-
-void Connection::debug(const std::string& log)
-{
-	//std::cout<<"[debug] "<<log<<std::endl;
-}
-
-
-void Connection::trace(const std::string& log)
-{
-	//std::cout<<"[trace] "<<log<<std::endl;
-}
-
 bool Connection::write(const std::string& msg, bool end)
 {
 	onTextSent(msg);
@@ -140,7 +76,7 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 				// 解析头部行
 				if (!actionLineFound) {
 					// 动作行
-					//debug("[Action line]"+std::string(line));
+					debug("[Action line]"+std::string(line));
 					const char *pszTemp = line;
 					while (NULL != *pszTemp && !isspace(*pszTemp)) ++pszTemp;
 					if (NULL == *pszTemp) {
@@ -153,12 +89,12 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 					action = std::string(line, pszTemp++); // 动作
 					while (NULL != *pszTemp && isspace(*pszTemp)) ++pszTemp;
 					target = pszTemp; // 目标
-					//debug("Action: " + action + ", target: " + target);
+					debug("Action: " + action + ", target: " + target);
 					actionLineFound = true;
 				}
 				else if (*line != NULL) {
 					// 属性行
-					//debug("[Field line]" + std::string(line));
+					debug("[Field line]" + std::string(line));
 					const char *pszColon = strchr(line, ':');
 					if (NULL == pszColon) {
 						// 格式不对
@@ -174,11 +110,11 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 					while (isspace(*pszValueStart)) ++pszValueStart;
 					auto value = pszValueStart; // 值
 					fields[name] = value;
-					//debug("Field: " + name + ", value: " + value);
+					debug("Field: " + name + ", value: " + value);
 				}
 				else {
 					// 找到空行
-					//debug("[Empty line]");
+					debug("[Empty line]");
 					emptyLineFound = true;
 				}
 				// 记录头部
@@ -223,7 +159,7 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 			// 没有多余的输入
 			headInput = "";
 		}
-		//debug("body: "+body);
+		debug("body: "+body);
 		if (SHOW_PACKET) trace(head + body);
 		// 处理新的报文
 		handlePacket(action, target, fields, body);
@@ -246,8 +182,8 @@ void Connection::OnEvent(UINT uEvent, LPVOID lpvData)
 	switch( uEvent )
 	{
 		case EVT_CONSUCCESS:
-			// 连接成功
-			peerAddress = ""; // TODO remoteAddress + "[" + socket.remotePort + "]";
+			// TODO 连接成功
+			peerAddress = "?";
 			onConnected();
 			break;
 		case EVT_CONFAILURE:
@@ -309,66 +245,35 @@ void ClientConnection::setLoginInfo(const LoginInfo &loginInfo)
 	this->loginInfo = loginInfo;
 }
 
-bool ClientConnection::connect(const std::string &server, int port)
+void ClientConnection::setServerInfo(const std::string &serverHost, int serverPort)
 {
-	CA2T strServer(server.c_str());
-	if (!ConnectTo(strServer, std::to_wstring(port).c_str(), AF_INET, SOCK_STREAM)) return false;
+	this->serverHost = serverHost;
+	this->serverPort = serverPort;
+}
+
+bool ClientConnection::connect()
+{
+	CA2T strServer(serverHost.c_str());
+	if (!ConnectTo(strServer, std::to_wstring(serverPort).c_str(), AF_INET, SOCK_STREAM)) return false;
 	if (!WatchComm()) return false;
 
 	onLoginStatus(LOGINING);
 	return true;
 }
 
-void ClientConnection::onLoginStatus(int nStatus)
-{
-	switch (nStatus)
-	{
-	case LOGOUT:
-		std::cout << "Logout" << std::endl;
-		break;
-	case LOGINING:
-		std::cout << "Logining..." << std::endl;
-		break;
-	case LOGON:
-		std::cout << "Logon" << std::endl;
-		break;
-	}
-}
-
-void ClientConnection::onMsgKeyReceived(void)
-{
-	std::cout << "MsgKey: " << msgKey << std::endl;
-}
-
-void ClientConnection::onMaxInactiveTimeReceived(void)
-{
-	std::cout << "MaxInactiveTime: " << maxInactiveTime << "ms" << std::endl;
-}
-
-void ClientConnection::onMsgReceived(std::string msg)
-{
-	std::cout << "Received msg: " << msg << std::endl;
-}
-
 void ClientConnection::onConnected(void)
 {
-	Connection::onConnected();
-
 	clientLogining = true;
 	onLoginStatus(LOGINING);
 }
 
 void ClientConnection::onConnectFailed(void)
 {
-	Connection::onConnectFailed();
-
 	onLoginStatus(LOGOUT);
 }
 
 void ClientConnection::onDisconnected(bool passive)
 {
-	Connection::onDisconnected(passive);
-
 	clientLogon = false;
 	clientLogining = false;
 	onLoginStatus(LOGOUT);

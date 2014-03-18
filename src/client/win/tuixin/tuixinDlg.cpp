@@ -6,6 +6,7 @@
 #include "tuixin.h"
 #include "tuixinDlg.h"
 #include "afxdialogex.h"
+#include "Notification-Push-API.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -182,24 +183,6 @@ void CTuixinDlg::OnConnect()
 	
 	for (int i = 0; i < m_nThreads; i++)
 	{
-		// 创建客户端UI线程
-		CClientThread *pClientThread = (CClientThread *)AfxBeginThread(RUNTIME_CLASS(CClientThread),
-			THREAD_PRIORITY_NORMAL, CREATE_SUSPENDED);
-
-		// 设置线程参数
-		pClientThread->m_nClientId = i;
-		pClientThread->m_strServer = m_strServer;
-		pClientThread->m_nPort = m_nPort;
-		pClientThread->m_strUsername = m_strUsername;
-		pClientThread->m_strPassword = m_strPassword;
-		pClientThread->m_bTrackPacket = m_bTrackPacket;
-		pClientThread->m_hwndOutput = GetDlgItem(IDC_OUTPUT)->GetSafeHwnd();
-		pClientThread->m_hwndStatus = GetDlgItem(IDC_STATUS)->GetSafeHwnd();;
-
-		// 启动线程
-		pClientThread->ResumeThread();
-
-		// 记录新的线程
-		m_clientThreads.push_back(pClientThread);
+		LoginAsUser("test", "test");
 	}
 }

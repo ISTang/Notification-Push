@@ -42,31 +42,13 @@
     <ClInclude Include="MyMessage.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="protocol.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="SocketComm.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="cMD5.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="json\json.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="json\json-forwards.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="is_utf8.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="strlen_utf8.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="pointer_add_utf8.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="ClientThread.h">
+    <ClInclude Include="Notification-Push-API.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -83,28 +65,7 @@
     <ClCompile Include="MyMessage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="protocol.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="SocketComm.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="cMD5.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="jsoncpp.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="is_utf8.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="strlen_utf8.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="pointer_add_utf8.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="ClientThread.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
