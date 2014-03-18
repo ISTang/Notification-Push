@@ -1,0 +1,40 @@
+label, input { /*display:block;*/ }
+input.text { margin-bottom:12px; width:95%; padding: .4em; }
+fieldset { padding:0; border:0; margin-top:25px; }
+.ui-dialog .ui-state-error { padding: .3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em; }
+
+#msgText {
+    width: 100%;
+    height: 64px;
+}
+
+#receiver .ui-selecting { background: #FECA40; }
+#receiver .ui-selected { background: #F39814; color: white; }
+#receiver { list-style-type: none; margin: 0; padding: 0; width: 600px; }
+#receiver li { margin: 2px; padding: 1px; float: left; width: 110px; height: 16px; font-size: 1em; text-align: center; }
+
+.clock{
+	cursor:pointer;
+	padding:5px 5px 5px 5px;
+	margin:5px 0 5px 0;
+	width:70px;
+	-webkit-border-bottom-right-radius: 4px;
+	-webkit-border-bottom-left-radius: 4px;
+	-webkit-border-top-right-radius: 4px;
+	-webkit-border-top-left-radius: 4px;
+	-moz-border-radius-bottomright: 4px;
+	-moz-border-radius-bottomleft: 4px;
+	-moz-border-radius-topright: 4px;
+	-moz-border-radius-topleft: 4px;
+	text-align:center;
+	font-weight: bold;
+	font-family: arial;
+}
+
+
+#serverTime { 
+	background-color:#000000;
+	color:#00CC66; 
+}
+

@@ -1,0 +1,54 @@
+<% include header.html %>
+
+<div id="body">
+    <p class="message-info">所有账号: </p>
+    <table id="accounts">
+        <thead>
+        <tr>
+            <th>账号标识</th>
+            <th>账号名称</th>
+            <th>手机号码</th>
+            <th>邮箱地址</th>
+            <th>账号状态</th>
+            <th>创建时间</th>
+            <th>修改时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <!--<button id="btnDeleteAccount">删除账号</button>-->
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        $('#accounts').dataTable({
+            "bServerSide": true,
+            "bProcessing": true,
+            "sAjaxSource": "/accounts/AjaxHandler",
+            "sAjaxDataProp": "aaData",
+            "aoColumns": [
+                { "sName": "accountId", "sDefaultContent": "" },
+                { "sName": "name", "sDefaultContent": "" },
+                { "sName": "phoneNumber", "sDefaultContent": "" },
+                { "sName": "emailAddress", "sDefaultContent": "" },
+                { "sName": "disabled", "sDefaultContent": "启用", "sWidth": "56px" },
+                { "sName": "createTime", "sDefaultContent": "", "sWidth": "80px" },
+                { "sName": "updateTime", "sDefaultContent": "", "sWidth": "80px" }
+            ],
+            "aaSorting": [
+                [5, 'desc']
+            ],
+            "oLanguage": dataTablesLanguage,
+            //"fnDrawCallback": groupMyTable,
+            "bPaginate": true,
+            "bLengthChange": true,
+            "bFilter": true,
+            "bSort": true,
+            "bInfo": true,
+            "bAutoWidth": true
+        });
+    });
+</script>
+
+<% include footer.html %>

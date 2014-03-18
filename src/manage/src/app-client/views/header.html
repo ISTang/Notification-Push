@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <title><%= pageTitle %></title>
+    <link rel="shortcut icon" type="image/x-icon" href="images/favicon.ico" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/site.css" media="screen"/>
+
+    <script src="frameworks/KeyTable.js"></script>
+    <script src="frameworks/jquery/jquery-1.9.1.js"></script>
+    <script src="frameworks/jquery/plugins/jAlert/jquery.alerts.js"></script>
+    <script src="frameworks/jquery/plugins/complete.js"></script>
+    <script src="frameworks/jquery/plugins/jquery-ui.js"></script>
+    <script src="frameworks/jquery/plugins/jquery.validate.js"></script>
+    <script src="frameworks/jquery/plugins/jquery.jeditable.js"></script>
+    <script src="frameworks/jquery/plugins/jquery.form.js"></script>
+    <!--<script src="frameworks/jquery/plugins/ajaxfileupload.js"></script>-->
+    <script src="frameworks/DataTables-1.9.4/js/jquery.dataTables.js"></script>
+    <script src="frameworks/DataTables-Editable-1.3/js/jquery.dataTables.editable.js"></script>
+
+    <script language="javascript" type="text/javascript" src="frameworks/My97DatePicker/WdatePicker.js"></script>
+
+    <script type="text/javascript">
+        var dataTablesLanguage = {
+            "oPaginate": {
+                "sFirst": "第一页",
+                "sPrevious": "上一页",
+                "sNext": "下一页",
+                "sLast": "最后一页"
+            },
+            "sEmptyTable": "没有数据",
+            "sInfo": "显示 _START_ 到 _END_, 共 _TOTAL_ 条",
+            "sInfoEmpty": "显示 0 到 0, 共 0 条",
+            "sInfoFiltered": "(从总共 _MAX_ 条记录过滤)",
+            "sInfoPostFix": "",
+            "sInfoThousands": ",",
+            "sLengthMenu": "显示 _MENU_ 条",
+            "sLoadingRecords": "正在装入...",
+            "sProcessing": "正在处理...",
+            "sSearch": "过滤:",
+            "sZeroRecords": "未找到符合条件的记录"
+        };
+    </script>
+
+</head>
+<body>
+    <header>
+        <div class="content-wrapper">
+            <div class="float-left">
+                <p class="site-title">消息推送中心</p>
+            </div>
+	    <%if (req.isAuthenticated()){%>
+            <div class="float-right">
+                <nav>
+                    <ul id="menu">
+                        <li><a href="/">首页</a></li>
+                        <li><a href="/appman">应用管理</a></li>
+                        <li><a href="/accman">账号管理</a></li>
+                        <li><a href="/msgman">消息管理</a></li>
+                    </ul>
+                </nav>
+            </div>
+	    <%}%>
+        </div>
+    </header>
