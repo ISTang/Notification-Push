@@ -77,6 +77,8 @@ exports.cleanData = cleanData;
 exports.getAccountPermissions = getAccountPermissions;
 exports.getAccountType = getAccountType;
 
+exports.getConnectionInfo = getConnectionInfo;
+
 const REDIS_SERVER = config.REDIS_SERVER;
 const REDIS_PORT = config.REDIS_PORT;
 //
@@ -2161,6 +2163,45 @@ function getAccountPermissions(redis, accountId, callback) {
 function getAccountType(redis, accountId, callback) {
 
     redis.get("account:" + accountId + ":type", callback)
+}
+
+function getConnectionInfo(redis, username, callback) {
+    var accountId;
+    var result = [];
+    async.series([
+        function (callback) {
+            logger.trace("Getting account id of username " + username + "...");
+            redis.get('user:' + username, function (err, value) {
+                if (err) return callback(err);
+                if (!value) return callback("No account with username " + username);
+                accountId = value;
+                callback();
+            });
+        },
+        function (callback) {
+            logger.trace("Getting all connections for account id " + accountId + "...");
+            redis.smembers('account:' + accountId + ":connections", function (err, connIds) {
+                if (err) return callback(err);
+                async.forEachSeries(connIds, function (connId, callback) {
+                    logger.trace("Getting connection info for id " + connId + "...");
+                    redis.hgetall("account:" + connId + ":connections", function (err, connInfo) {
+                        if (err) return callback(err);
+                        logger.trace("Getting application name for id " + connInfo.application_id + "...");
+                        redis.get("application:" + connInfo.application_id + ":name", function (err, appName) {
+                            if (err) return callback(err);
+                            result.push({appName: appName, beginTime: connInfo.begin_time});
+                            callback();
+                        });
+                    });
+                }, function (err) {
+                    callback(err);
+                });
+            });
+        }],
+        function (err) {
+            callback(err, result);
+        }
+    );
 }
 
 function main(fn) {

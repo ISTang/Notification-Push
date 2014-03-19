@@ -10,6 +10,7 @@ var db = require(__dirname + '/../db');
 
 // 导出函数
 exports.getConnections = getConnections;
+exports.getConnectionInfo = getConnectionInfo;
 
 // 定义常量
 //
@@ -116,4 +117,28 @@ function getConnections(req, res) {
 
         return (sSortDir_0 == 'asc' ? s1.localeCompare(s2) : s2.localeCompare(s1));
     }
+}
+
+function getConnectionInfo(req, res) {
+    logger.trace('Get connection info: ' +
+        'username=' + req.query.username +
+        ''
+    );
+
+    db.redisPool.acquire(function (err, redis) {
+        if (err) {
+            res.json({success: false, errcode: 1, errmsg: err});
+        } else {
+            db.getConnectionInfo(redis, function (err, connectionInfo) {
+
+                db.redisPool.release(redis);
+
+                if (err) {
+                    return res.json({success: false, errcode: 2, errmsg: err});
+                }
+
+                res.json({success: true, list: connectionInfo});
+            });
+        }
+    });
 }
