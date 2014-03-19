@@ -120,8 +120,10 @@ function getConnections(req, res) {
 }
 
 function getConnectionInfo(req, res) {
+    var username = req.params.username.replace("&plus;", "+");
+
     logger.trace('Get connection info: ' +
-        'username=' + req.query.username +
+        'username=' + username +
         ''
     );
 
@@ -129,7 +131,7 @@ function getConnectionInfo(req, res) {
         if (err) {
             res.json({success: false, errcode: 1, errmsg: err});
         } else {
-            db.getConnectionInfo(redis, function (err, connectionInfo) {
+            db.getConnectionInfo(redis, username, function (err, connectionInfo) {
 
                 db.redisPool.release(redis);
 

@@ -2184,7 +2184,7 @@ function getConnectionInfo(redis, username, callback) {
                 if (err) return callback(err);
                 async.forEachSeries(connIds, function (connId, callback) {
                     logger.trace("Getting connection info for id " + connId + "...");
-                    redis.hgetall("account:" + connId + ":connections", function (err, connInfo) {
+                    redis.hgetall("connection:" + connId, function (err, connInfo) {
                         if (err) return callback(err);
                         logger.trace("Getting application name for id " + connInfo.application_id + "...");
                         redis.get("application:" + connInfo.application_id + ":name", function (err, appName) {
