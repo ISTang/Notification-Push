@@ -81,6 +81,8 @@ function checkAppId(appId, password, handleResult) {
  */
 function checkUsername(username, password, autoCreateAccount, handleResult) {
 
+    if (!username || username=="") return handleResult({passed: false, reason: "No username provided!");
+
     db.redisPool.acquire(function (err, redis) {
         if (err) {
             handleResult({passed: false, reason: err});

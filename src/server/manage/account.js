@@ -481,6 +481,8 @@ function getAccounts(req, res) {
 // 检查用户身份(用户名和密码[md5])
 function checkUser(req, res, next) {
     var user = req.body.user; //JSON.parse(req.rawBody);
+    if (!user) return next("No user info provided!");
+
     logger.trace('Checking user ' +
         'username=' + (user.username || '(null)') +
         ', password=' + (user.password || '(null)')
