@@ -73,7 +73,7 @@ public class Message {
 	private String expiration; // 过期时间: 可选，格式为yyyyMMddhhmmss，默认为永不过期
 	private String callback; // 用于在消息发送成功或失败时通知发送者，可选，仅支持HTTP协议，1-1024个字符
 	private boolean need_receipt; // 是否需要回执(true/false)，可选，默认为不需要回执(false)
-
+	
 	public Message() {
 	}
 
@@ -164,4 +164,5 @@ public class Message {
 	public void setNeedReceipt(boolean needReceipt) {
 		this.need_receipt = needReceipt;
 	}
+
 }

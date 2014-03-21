@@ -3,6 +3,10 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotifyClient", "NotifyClient.vcxproj", "{1372DB2F-4DCB-4AA2-8EE7-C23B75143C21}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{2CBD2506-1516-4EB6-A273-BC15F9017D27}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tuixin", "..\tuixin\tuixin.vcxproj", "{4CF76555-AB45-40A8-8475-E026714A354B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +17,14 @@ Global
 		{1372DB2F-4DCB-4AA2-8EE7-C23B75143C21}.Debug|Win32.Build.0 = Debug|Win32
 		{1372DB2F-4DCB-4AA2-8EE7-C23B75143C21}.Release|Win32.ActiveCfg = Release|Win32
 		{1372DB2F-4DCB-4AA2-8EE7-C23B75143C21}.Release|Win32.Build.0 = Release|Win32
+		{2CBD2506-1516-4EB6-A273-BC15F9017D27}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2CBD2506-1516-4EB6-A273-BC15F9017D27}.Debug|Win32.Build.0 = Debug|Win32
+		{2CBD2506-1516-4EB6-A273-BC15F9017D27}.Release|Win32.ActiveCfg = Release|Win32
+		{2CBD2506-1516-4EB6-A273-BC15F9017D27}.Release|Win32.Build.0 = Release|Win32
+		{4CF76555-AB45-40A8-8475-E026714A354B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4CF76555-AB45-40A8-8475-E026714A354B}.Debug|Win32.Build.0 = Debug|Win32
+		{4CF76555-AB45-40A8-8475-E026714A354B}.Release|Win32.ActiveCfg = Release|Win32
+		{4CF76555-AB45-40A8-8475-E026714A354B}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

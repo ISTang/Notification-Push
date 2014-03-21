@@ -379,6 +379,8 @@ void main(function () {
         });
     });
 
+    webapp.get('/username/:username/connections', connman.getConnectionInfo);
+
     // 上传文件
     // curl --header "Content-Type:application/json;charset=utf-8" -d "..." http://localhost:4567/uploadFiles
     webapp.post('/uploadFiles', msgpush.uploadFiles);

@@ -7,17 +7,27 @@
 	<name>PushNotificationManageClient</name>
 	<description>Push Notification Manage Client</description>
 
+	<dependencyManagement>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-bom</artifactId>
+			<version>3.0.6.Final</version><!-- 2.3.1.GA -->
+			<type>pom</type>
+			<scope>import</scope>
+		</dependency>
+	</dependencyManagement>
+	
 	<dependencies>
 		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
 			<artifactId>resteasy-jaxrs</artifactId>
-			<version>2.3.1.GA</version>
+			<version>3.0.6.Final</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
 			<artifactId>resteasy-jackson-provider</artifactId>
-			<version>2.3.1.GA</version>
+			<version>3.0.6.Final</version>
 		</dependency>
 
 		<dependency>

@@ -6,8 +6,8 @@
 
     <string name="receiver_starting">启动消息接收器……</string>
     <string name="receiver_stopping">停止消息接收器……</string>
-    <string name="receiver_started">消息接收器已启动</string>
-    <string name="receiver_stopped">消息接收器已停止</string>
+    <string name="receiver_started">消息接收器已启动。</string>
+    <string name="receiver_stopped">消息接收器已停止。</string>
     
     <string name="settings">设置</string>
     <string name="menu_start">启动</string>
@@ -32,7 +32,7 @@
     <string name="emulate_sms_summary">将接收到的消息写入短信数据库，并发出通知</string>
     <string name="play_sound_summary">收到新消息时，发出声音提醒</string>
     
-    <string name="msg_received">接收到一条新消息</string>
+    <string name="msg_received">接收到一条新消息。</string>
     <string name="msg_index"></string>
     <string name="msg_title">消息标题</string>
     <string name="msg_body">消息正文</string>
