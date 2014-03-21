@@ -1,0 +1,134 @@
+<% include header.html %>
+
+<div id="body">
+    <p class="message-info">所有应用: &nbsp;&nbsp;
+        <!--<button id="add-app">添加应用</button>-->
+    </p>
+    <table id="applications">
+        <thead>
+        <tr>
+            <th>应用标识</th>
+            <th>应用名称</th>
+            <th>必须登录</th>
+            <th>登录需要密码</th>
+            <th>自动创建账号</th>
+            <th>安全登录</th>
+            <th>消息加密</th>
+            <th>接入时间</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <!--<button id="btnDeleteApplication">删除应用</button>-->
+</div>
+
+<div id="addapp-form" title="添加应用">
+    <form id="addapp" method="post" action="/addapp">
+        <fieldset>
+            <label for="appName">应用名称</label>
+            <input type="text" id="appName" name="appName" class="text ui-widget-content ui-corner-all"/>
+            <label for="appOption">应用参数</label>
+            <ol id="appOption" class="text ui-widget-content ui-corner-all">
+                <li class="ui-widget-content" data-id="needLogin">必须登录</li>
+                <li class="ui-widget-content" data-id="needPassword">登录需要密码</li>
+                <li class="ui-widget-content" data-id="autoCreateAccount">自动创建账号</li>
+                <li class="ui-widget-content" data-id="needProtect">安全登录</li>
+                <li class="ui-widget-content" data-id="secureMessage">消息加密</li>
+            </ol>
+            <input type="hidden" id="appOptions" name="appOptions"/>
+        </fieldset>
+    </form>
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        $('#applications').dataTable({
+            "bServerSide": true,
+            "bProcessing": true,
+            "sAjaxSource": "/applications/AjaxHandler",
+            "sAjaxDataProp": "aaData",
+            "aoColumns": [
+                { "sName": "appId", "sDefaultContent": "" },
+                { "sName": "name", "sDefaultContent": "", "sWidth": "64px" },
+                { "sName": "needLogin", "sDefaultContent": "否", "sWidth": "48px" },
+                { "sName": "needLoginPassword", "sDefaultContent": "否", "sWidth": "72px" },
+                { "sName": "autoCreateAccount", "sDefaultContent": "是", "sWidth": "72px" },
+                { "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
+                { "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
+                { "sName": "createTime", "sDefaultContent": "" }
+            ],
+            "aaSorting": [
+                [7, 'desc']
+            ],
+            "oLanguage": dataTablesLanguage,
+            //"fnDrawCallback": groupMyTable,
+            "bPaginate": true,
+            "bLengthChange": true,
+            "bFilter": true,
+            "bSort": true,
+            "bInfo": true,
+            "bAutoWidth": true
+        });
+
+        $("#appOption").selectable({
+            stop: function () {
+                var appOptions = "";
+                $(".ui-selected", this).each(function (li) {
+                    var index = $("#appOption li").index(this);
+                    var li = $($("#appOption li")[index]);
+                    if (appOptions != "") appOptions += ",";
+                    appOptions += li.attr("data-id");
+                });
+                $("#appOptions").val(appOptions);
+            }
+        });
+
+        $("#addapp-form").dialog({
+            autoOpen: false,
+            height: 480,
+            width: 640,
+            modal: true,
+            buttons: {
+                "添加": function () {
+                    var bValid = true;
+
+                    if (bValid) {
+                        $("#addapp").submit();
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                $("#addapp")[0].reset();
+            }
+        });
+
+        $("#add-app")
+                .button()
+                .click(function () {
+                    $("#addapp-form").dialog("open");
+                });
+
+        // bind to the form's submit event
+        $('#addapp').submit(function () {
+            $(this).ajaxSubmit({dataType: "json", success: showResponse});
+            return false;
+        });
+
+        // post-submit callback
+        function showResponse(data, statusText) {
+            if (data.success) {
+                alert("已成功添加应用。");
+                $("#addapp-form").dialog("close");
+            } else {
+                alert("添加应用失败：" + data.errmsg + "(#" + data.errcode + ")");
+            }
+        }
+    });
+</script>
+
+
+<% include footer.html %>

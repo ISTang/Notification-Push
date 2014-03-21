@@ -57,10 +57,10 @@
 
             <div id="receiver-container" style="display:none">
                 <label for="receiver">接收者</label>
-                <!--<ol id="receiver" class="text ui-widget-content ui-corner-all" style="height:72px;overflow:scroll">
-                    <li class="ui-widget-content">Item 1</li>
-                </ol>-->
-                <input type="text" id="receivers" name="receivers"/>
+                <ol id="receiver" class="text ui-widget-content ui-corner-all" style="height:72px;overflow:scroll">
+                    <!--<li class="ui-widget-content">Item 1</li>-->
+                </ol>
+                <input type="hidden" id="receivers" name="receivers"/>
             </div>
         </fieldset>
     </form>
@@ -119,7 +119,7 @@
 
         $("#pushMethod").buttonset();
         $("#msgType").buttonset();
-        /*$("#receiver").selectable({
+        $("#receiver").selectable({
             stop: function () {
                 var receivers = "";
                 $(".ui-selected", this).each(function (li) {
@@ -130,7 +130,7 @@
                 });
                 $("#receivers").val(receivers);
             }
-        });*/
+        });
 
         $("#msgpush-form").dialog({
             autoOpen: false,
@@ -187,7 +187,7 @@
                         });
                     }, "json");
 
-                    /*$("#receiver li").remove();
+                    $("#receiver li").remove();
                     $.get("/accounts", function (object) {
                         object.list.forEach(function (accountInfo) {
                             if (accountInfo.name != "") {
@@ -204,43 +204,28 @@
                                 $("#receiver").append("<li class='ui-widget-content' data-id='" + accountInfo.name + "'><span " + (tip ? "title='" + tip + "'" : "") + ">" + name + "</span></li>");
                             }
                         });
-                    }, "json");*/
+                    }, "json");
                     $("#msgpush-form").dialog("open");
                 });
-
-        var pushMode = "broadcast";
 
         $("#broadcast")
                 .button()
                 .click(function () {
                     $("#receiver-container").hide("drop", {}, 1000);
-                    pushMode = "broadcast";
                 });
         $("#multicast")
                 .button()
                 .click(function () {
                     $("#receiver-container").removeAttr("style").hide().fadeIn();
-                    pushMode = "multicast";
                 });
         $("#send")
                 .button()
                 .click(function () {
                     $("#receiver-container").removeAttr("style").hide().fadeIn();
-                    pushMode = "send";
                 });
 
         // bind to the form's submit event
         $('#msgpush').submit(function () {
-            if ($("#msgBody").val().replace(/(^\s*)|(\s*$)/g,"")=="") { alert("消息正文不能为空！"); return false; }
-
-            if (pushMode=="send" || pushMode=="multicast") {
-                var receivers = $("#receivers").val().replace(/(^\s*)|(\s*$)/g,"");
-                if (receivers=="") { alert("请输入接收者账号!"); return false; }
-                arr = receivers.split(",");
-                if (pushMode=="send" && arr.length>1) { alert("接收者不唯一！"); return false; }
-                if (pushMode=="multicast" && arr.length<2) { alert("接收者太少！"); return false; }
-            }
-            
             $(this).ajaxSubmit({dataType: "json", success: showResponse, error: showError});
             return false;
         });
