@@ -673,11 +673,11 @@ bool CSocketComm::ConnectTo(LPCTSTR strDestination, LPCTSTR strServiceName, int 
         }
 
 		// TODO 在win8下先bind再connect会失败
-        if ( SOCKET_ERROR == bind(sock, sockAddr, sockAddr.Size() ))
+        /*if ( SOCKET_ERROR == bind(sock, sockAddr, sockAddr.Size() ))
         {
             closesocket( sock );
             return false;
-        }
+        }*/
 
         // Now get destination address & port
         sockAddr.CreateFrom( strDestination, strServiceName );
@@ -735,13 +735,13 @@ bool CSocketComm::WatchComm()
                                       0,    // stack
                         SocketThreadProc,   // Thread proc
                                     this,   // Thread param
-                        CREATE_SUSPENDED,   // creation mode
+									   0,   // creation mode(old:CREATE_SUSPENDED)
                             &uiThreadId);   // Thread ID
 
             if ( NULL != hThread)
             {
                 //SetThreadPriority(hThread, THREAD_PRIORITY_ABOVE_NORMAL);
-                ResumeThread( hThread );
+                //ResumeThread( hThread );
                 m_hThread = hThread;
                 return true;
             }

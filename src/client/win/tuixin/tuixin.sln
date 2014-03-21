@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tuixin", "tuixin.vcxproj", "{4CF76555-AB45-40A8-8475-E026714A354B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Notification-Push-API", "..\Notification-Push-API\Notification-Push-API.vcxproj", "{73C88FEC-7EAD-4D97-9C12-0FD23F8A19A0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NotificationPushAPI", "..\NotificationPushAPI\NotificationPushAPI.vcxproj", "{73C88FEC-7EAD-4D97-9C12-0FD23F8A19A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

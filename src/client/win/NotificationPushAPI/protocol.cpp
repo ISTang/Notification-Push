@@ -3,7 +3,6 @@
 #include "is_utf8.h"
 #include "strlen_utf8.h"
 #include "pointer_add_utf8.h"
-#include "json/json.h"
 
 Connection::Connection(void)
 {
@@ -23,8 +22,7 @@ bool Connection::write(const std::string& msg, bool end)
 	DWORD dwBytesWritten = WriteComm((LPBYTE)msg.c_str(), msg.size(), SOCKET_WRITE_TIMEOUT);
 	if (end) {
 		StopComm();
-		CloseComm();
-		onDisconnected();
+		onDisconnected(false);
 	}
 	return (dwBytesWritten == msg.size());
 }
@@ -171,8 +169,7 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 		if (e == SOCKET_WRITE_ERROR)
 		{
 			StopComm();
-			CloseComm();
-			onDisconnected();
+			onDisconnected(false);
 		}
 	}
 }
@@ -182,21 +179,26 @@ void Connection::OnEvent(UINT uEvent, LPVOID lpvData)
 	switch( uEvent )
 	{
 		case EVT_CONSUCCESS:
-			// TODO 连接成功
+			// 连接成功
+			{
+			/*SockAddrIn saddr_in;
+			GetPeerName(saddr_in);
+			int ipAddr = saddr_in.sin_addr.s_addr;
+			char str[INET_ADDRSTRLEN];
+			inet_ntop( AF_INET, &ipAddr, str, INET_ADDRSTRLEN );*/
 			peerAddress = "?";
+			}
 			onConnected();
 			break;
 		case EVT_CONFAILURE:
 			// 连接失败
 			StopComm();
-			CloseComm();
 			onConnectFailed();
 			break;
 		case EVT_CONDROP:
 			// 连接断开
 			StopComm();
-			CloseComm();
-			onDisconnected();
+			onDisconnected(false);
 			break;
 		case EVT_ZEROLENGTH:
 			// 收到空分组
@@ -232,7 +234,7 @@ ClientConnection::ClientConnection()
 
 ClientConnection::~ClientConnection(void)
 {
-	if (NULL != m_hKeepAlive) CloseHandle(m_hKeepAlive);
+	disconnect();
 }
 
 void ClientConnection::setAppInfo(const AppInfo &appInfo)
@@ -251,13 +253,81 @@ void ClientConnection::setServerInfo(const std::string &serverHost, int serverPo
 	this->serverPort = serverPort;
 }
 
-bool ClientConnection::connect()
+bool ClientConnection::connect(void)
 {
 	CA2T strServer(serverHost.c_str());
 	if (!ConnectTo(strServer, std::to_wstring(serverPort).c_str(), AF_INET, SOCK_STREAM)) return false;
 	if (!WatchComm()) return false;
 
 	onLoginStatus(LOGINING);
+	return true;
+}
+
+void ClientConnection::disconnect(void)
+{
+	stopKeepAlive();
+	
+	if (IsStart()) {
+		StopComm();
+		onDisconnected(true);
+	}
+}
+
+bool ClientConnection::send(const std::string &receiver, const std::string &sendId, const std::string &msg, bool secure)
+{
+	if (secure) {
+		// TODO 暂不支持安全消息
+		throw "本应用暂不支持安全消息";
+	}
+
+	char buf[MAX_BUF + 1];
+	memset(buf, 0, sizeof buf);
+
+	debug("Sending message to " + receiver + "...");
+	sprintf_s(buf, SEND_MSG_REQ, receiver, sendId, secure?"true":"false", msg.length(), msg);
+	if (!write(buf)) throw SOCKET_WRITE_ERROR;
+
+	return true;
+}
+
+bool ClientConnection::multicast(const std::vector<std::string> &receivers, const std::string &sendId, const std::string &msg, bool secure)
+{
+	if (secure) {
+		// TODO 暂不支持安全消息
+		throw "本应用暂不支持安全消息";
+	}
+
+	char buf[MAX_BUF + 1];
+	memset(buf, 0, sizeof buf);
+
+	if (receivers.size()<2) return false;
+
+	std::string strReceivers = receivers[0];
+	for (unsigned int i=1; i<receivers.size(); i++) {
+		strReceivers += ","+receivers[i];
+	}
+
+	debug("Multicasting message to " + strReceivers + "...");
+	sprintf_s(buf, MULTICAST_MSG_REQ, strReceivers, sendId, secure?"true":"false", msg.length(), msg);
+	if (!write(buf)) throw SOCKET_WRITE_ERROR;
+
+	return true;
+}
+
+bool ClientConnection::broadcast(const std::string &sendId, const std::string &msg, bool secure)
+{
+	if (secure) {
+		// TODO 暂不支持安全消息
+		throw "本应用暂不支持安全消息";
+	}
+
+	char buf[MAX_BUF + 1];
+	memset(buf, 0, sizeof buf);
+
+	debug("Broadcasting message ...");
+	sprintf_s(buf, BROADCAST_MSG_REQ, sendId, secure?"true":"false", msg.length(), msg);
+	if (!write(buf)) throw SOCKET_WRITE_ERROR;
+
 	return true;
 }
 
@@ -339,9 +409,8 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
 			throw "本应用暂不支持安全消息";
         }
 		if (!write(SET_MSGKEY_ACK)) throw SOCKET_WRITE_ERROR;
-        msgKey = body;
-        debug("Received message key: " + msgKey);
-		onMsgKeyReceived();
+        debug("Received message key: " + body);
+		onMsgKeyReceived(body);
     } else if (action == "SET" && target == "ALIVEINT") {
         // 设置心跳周期
 		if (!write(SET_ALIVEINT_ACK)) throw SOCKET_WRITE_ERROR;
@@ -349,7 +418,7 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
 		clientLogining = false;
         maxInactiveTime = atoi(body.c_str());
         debug("Max inactive time(ms): " + body);
-		onMaxInactiveTimeReceived();
+		onMaxInactiveTimeReceived(maxInactiveTime);
 		onLoginStatus(LOGON);
 		time(&lastActiveTime);
 		startKeepAlive();
@@ -379,16 +448,19 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
         auto msgId = fields[FIELD_ACTION_ID];
         auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
         info("message " + msgId + (success ? " broadcasted." : " broadcast failed: " + body));
+		onMsgReplied(msgId, success, body);
     } else if (action == "MULTICAST" && target == "MSG") {
         // 收到消息群发回复
         auto msgId = fields[FIELD_ACTION_ID];
         auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
         info("message " + msgId + (success ? " multicasted." : " multicast failed: " + body));
+		onMsgReplied(msgId, success, body);
     } else if (action == "SEND" && target == "MSG") {
         // 收到消息发送回复
         auto msgId = fields[FIELD_ACTION_ID];
         auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
         info("message " + msgId + (success ? " sent." : " send failed: " + body));
+		onMsgReplied(msgId, success, body);
     } else if (action == "QUERY" && target == "PUBLIC") {
         // 收到公众号查询回复
     } else if (action == "FOLLOW" && target == "PUBLIC") {
@@ -399,9 +471,9 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
         // 收到获取已关注公众号回复
     } else if (action == "CLOSE" && target == "CONN") {
         // 服务器主动断开连接
+		stopKeepAlive();
 		StopComm();
-		CloseComm();
-		onDisconnected();
+		onDisconnected(false);
         warn("Server kickoff me: " + body);
     } else {
         // 无法理解的动作
@@ -411,11 +483,21 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
 
 void ClientConnection::startKeepAlive(void)
 {
-	if (NULL != m_hKeepAlive) CloseHandle(m_hKeepAlive);
-
 	unsigned nThreadId;
 	m_hKeepAlive = (HANDLE)_beginthreadex(NULL, 0, keepAlive, this, CREATE_SUSPENDED, &nThreadId);
 	ResumeThread(m_hKeepAlive);
+}
+
+void ClientConnection::stopKeepAlive(void)
+{
+	if (m_hKeepAlive==NULL) return;
+
+	if (clientLogon) {
+		TerminateThread(m_hKeepAlive, 0);
+	}
+	CloseHandle(m_hKeepAlive);
+
+	m_hKeepAlive = NULL;
 }
 
 unsigned __stdcall ClientConnection::keepAlive(void * pThis)
@@ -437,8 +519,7 @@ unsigned __stdcall ClientConnection::keepAlive(void * pThis)
 		if (!pConn->IsOpen())
 		{
 			pConn->StopComm();
-			pConn->CloseComm();
-			pConn->onDisconnected();
+			pConn->onDisconnected(false);
 			pConn->warn("Connection broken");
 			return 1;
 		}
@@ -453,8 +534,7 @@ unsigned __stdcall ClientConnection::keepAlive(void * pThis)
 			if (!pConn->write(buf, true))
 			{
 				pConn->StopComm();
-				pConn->CloseComm();
-				pConn->onDisconnected();
+				pConn->onDisconnected(false);
 				pConn->warn("Write socket failed");
 				return 2;
 			}
@@ -468,8 +548,7 @@ unsigned __stdcall ClientConnection::keepAlive(void * pThis)
 			if (!pConn->write(SET_ALIVE_REQ))
 			{
 				pConn->StopComm();
-				pConn->CloseComm();
-				pConn->onDisconnected();
+				pConn->onDisconnected(false);
 				pConn->warn("Write socket failed");
 				return 2;
 			}
