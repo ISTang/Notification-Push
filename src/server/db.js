@@ -2189,7 +2189,7 @@ function getConnectionInfo(redis, username, callback) {
                         logger.trace("Getting application name for id " + connInfo.application_id + "...");
                         redis.get("application:" + connInfo.application_id + ":name", function (err, appName) {
                             if (err) return callback(err);
-                            result.push({appName: appName, beginTime: connInfo.begin_time});
+                            result.push({appId:connInfo.application_id, appName: appName, beginTime: connInfo.begin_time});
                             callback();
                         });
                     });

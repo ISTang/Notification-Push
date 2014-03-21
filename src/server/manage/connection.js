@@ -120,7 +120,7 @@ function getConnections(req, res) {
 }
 
 function getConnectionInfo(req, res) {
-    var username = req.params.username.replace("&plus;", "+");
+    var username = req.params.username.replace("&plus;","+");
 
     logger.trace('Get connection info: ' +
         'username=' + username +
@@ -144,3 +144,4 @@ function getConnectionInfo(req, res) {
         }
     });
 }
+
