@@ -14,19 +14,20 @@
     <ProjectGuid>{73C88FEC-7EAD-4D97-9C12-0FD23F8A19A0}</ProjectGuid>
     <RootNamespace>NotificationPushAPI</RootNamespace>
     <Keyword>MFCDLLProj</Keyword>
+    <ProjectName>NotificationPushAPI</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
@@ -58,7 +59,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>.\Notification-Push-API.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>.\NotificationPushAPI.def</ModuleDefinitionFile>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -85,7 +86,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ModuleDefinitionFile>.\Notification-Push-API.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>.\NotificationPushAPI.def</ModuleDefinitionFile>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -101,10 +102,10 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ClientThread.cpp" />
+    <ClCompile Include="MyConnection.cpp" />
     <ClCompile Include="cMD5.cpp" />
     <ClCompile Include="is_utf8.cpp" />
-    <ClCompile Include="Notification-Push-API.cpp" />
+    <ClCompile Include="NotificationPushAPI.cpp" />
     <ClCompile Include="pointer_add_utf8.cpp" />
     <ClCompile Include="protocol.cpp" />
     <ClCompile Include="SocketComm.cpp" />
@@ -112,27 +113,30 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="string_format.cpp" />
     <ClCompile Include="strlen_utf8.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ClientThread.h" />
+    <ClInclude Include="MyConnection.h" />
     <ClInclude Include="cMD5.h" />
     <ClInclude Include="is_utf8.h" />
-    <ClInclude Include="Notification-Push-API.h" />
+    <ClInclude Include="NotificationPushAPI.h" />
+    <ClInclude Include="NotificationPushAPI_proto.h" />
     <ClInclude Include="pointer_add_utf8.h" />
     <ClInclude Include="protocol.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SocketComm.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="string_format.h" />
     <ClInclude Include="strlen_utf8.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Notification-Push-API.def" />
+    <None Include="NotificationPushAPI.def" />
     <None Include="res\NotificationPushAPI.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Notification-Push-API.rc" />
+    <ResourceCompile Include="NotificationPushAPI.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

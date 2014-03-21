@@ -7,16 +7,12 @@
 	#error "include 'stdafx.h' before including this file for PCH"
 #endif
 
+#define MYLIBRARY_EXPORTS
+
 #include "resource.h"		// main symbols
 #include "protocol.h"
-
-typedef void (CALLBACK *TextReceivedCallbackFunc)(LPCSTR lpszUsername, LPCSTR lpszText); // utf8
-typedef void (CALLBACK *TextSentCallbackFunc)(LPCSTR lpszUsername, LPCSTR lpszText);
-
-typedef void (CALLBACK *LoginStatusCallbackFunc)(LPCSTR lpszUsername, int nStatus);
-typedef void (CALLBACK *MsgKeyReceivedCallbackFunc)(LPCSTR lpszUsername);
-typedef void (CALLBACK *MaxInactiveTimeReceivedCallbackFunc)(LPCSTR lpszUsername);
-typedef void (CALLBACK *MsgReceivedCallbackFunc)(LPCSTR lpszUsername, LPCSTR lpszMsg); // utf8
+#include "NotificationPushAPI_proto.h"
+#include "MyConnection.h"
 
 extern std::string g_strAppId;
 extern std::string g_strAppPassword;
@@ -27,9 +23,14 @@ extern TextReceivedCallbackFunc g_lpTextReceivedCallbackFunc;
 extern TextSentCallbackFunc g_lpTextSentCallbackFunc;
 
 extern LoginStatusCallbackFunc g_lpLoginStatusCallbackFunc;
+extern LogCallbackFunc g_lpLogCallbackFunc;
 extern MsgKeyReceivedCallbackFunc g_lpMsgKeyReceivedCallbackFunc;
 extern MaxInactiveTimeReceivedCallbackFunc g_lpMaxInactiveTimeReceivedCallbackFunc;
 extern MsgReceivedCallbackFunc g_lpMsgReceivedCallbackFunc;
+extern MsgRepliedCallbackFunc g_lpMsgRepliedCallbackFunc;
+extern LogCallbackFunc g_lpLogCallbackFunc;
+
+extern std::map<long, MyConnection*> g_connections;
 
 // CNotificationPushAPIApp
 //

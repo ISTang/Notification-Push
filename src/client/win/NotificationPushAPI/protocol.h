@@ -148,22 +148,22 @@ const auto SET_ALIVE_ACK = "SET ALIVE\r\n\r\n"; // 不需要体部
 //
 // :消息推送(平台发起)
 //
-// (1)命令 ({0}-消息是否加密, {1}-消息是否需要确认, {2}-{3}的长度, {3}-消息JSON对象)(P-->C)
+// (1)命令 ({0}-消息是否加密, {1}-消息是否需要确认, {2}-{3}的长度, {3}-消息对象)(P-->C)
 #ifdef BODY_BYTE_LENGTH
-#define PUSH_MSG_CMD "PUSH MSG\r\nSecure: %s\r\nReceipt: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define PUSH_MSG_CMD "PUSH MSG\r\nSecure: %s\r\nReceipt: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #else
-#define PUSH_MSG_CMD "PUSH MSG\r\nSecure: %s\r\nReceipt: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define PUSH_MSG_CMD "PUSH MSG\r\nSecure: %s\r\nReceipt: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #endif
 // (2)确认 (C-->P)
 const auto PUSH_MSG_ACK = "PUSH MSG\r\n\r\n"; // 不需要体部
 //
 // :广播消息(客户端发起)
 //
-// (1)请求 ({0}-发送标识[回传用] {1}-消息是否加密, {2}-{3}的长度, {3}-消息JSON对象)(C-->P)
+// (1)请求 ({0}-发送标识[回传用] {1}-消息是否加密, {2}-{3}的长度, {3}-消息对象)(C-->P)
 #ifdef BODY_BYTE_LENGTH
-#define BROADCAST_MSG_REQ "BROADCAST MSG\r\nId: %s\r\nSecure: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define BROADCAST_MSG_REQ "BROADCAST MSG\r\nId: %s\r\nSecure: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #else
-#define BROADCAST_MSG_REQ "BROADCAST MSG\r\nId: %s\r\nSecure: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define BROADCAST_MSG_REQ "BROADCAST MSG\r\nId: %s\r\nSecure: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #endif
 // (2)成功响应 ({0}-发送标识)(P-->C)
 const auto BROADCAST_MSG_SUCCESS_RES = "BROADCAST MSG\r\nId: %s\r\nSuccess: true\r\n\r\n"; // 无体部
@@ -176,11 +176,11 @@ const auto BROADCAST_MSG_SUCCESS_RES = "BROADCAST MSG\r\nId: %s\r\nSuccess: true
 //
 // :群发消息(客户端发起)
 //
-// (1)请求 ({0}-接收者账号[逗号分隔] {1}-发送标识[回传用] {2}-消息是否加密, {3}-{4}的长度, {4}-消息JSON对象)(C-->P)
+// (1)请求 ({0}-接收者账号[逗号分隔] {1}-发送标识[回传用] {2}-消息是否加密, {3}-{4}的长度, {4}-消息对象)(C-->P)
 #ifdef BODY_BYTE_LENGTH
-#define MULTICAST_MSG_REQ "MULTICAST MSG\r\nAccounts: %s\r\nId: %s\r\nSecure: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define MULTICAST_MSG_REQ "MULTICAST MSG\r\nAccounts: %s\r\nId: %s\r\nSecure: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #else
-#define MULTICAST_MSG_REQ "MULTICAST MSG\r\nAccounts: %s\r\nId: %s\r\nSecure: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define MULTICAST_MSG_REQ "MULTICAST MSG\r\nAccounts: %s\r\nId: %s\r\nSecure: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #endif
 // (2)成功响应 ({0}-发送标识)(P-->C)
 const auto MULTICAST_MSG_SUCCESS_RES = "MULTICAST MSG\r\nId: %s\r\nSuccess: true\r\n\r\n"; // 无体部
@@ -193,11 +193,11 @@ const auto MULTICAST_MSG_SUCCESS_RES = "MULTICAST MSG\r\nId: %s\r\nSuccess: true
 //
 // :发消息(客户端发起)
 //
-// (1)请求 ({0}-接收者账号 {1}-发送标识[回传用] {2}-消息是否加密, {3}-{4}的长度, {4}-消息JSON对象)(C-->P)
+// (1)请求 ({0}-接收者账号 {1}-发送标识[回传用] {2}-消息是否加密, {3}-{4}的长度, {4}-消息对象)(C-->P)
 #ifdef BODY_BYTE_LENGTH
-#define SEND_MSG_REQ "SEND MSG\r\nAccount: %s\r\nId: %s\r\nSecure: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s}" // 体部: 消息JSON对象(已包含)
+#define SEND_MSG_REQ "SEND MSG\r\nAccount: %s\r\nId: %s\r\nSecure: %s\r\n"##FIELD_BODY_BYTE_LENGTH##":true\r\nLength: %d\r\n\r\n%s}" // 体部: 消息对象(已包含)
 #else
-#define SEND_MSG_REQ "SEND MSG\r\nAccount: %s\r\nId: %s\r\nSecure: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息JSON对象(已包含)
+#define SEND_MSG_REQ "SEND MSG\r\nAccount: %s\r\nId: %s\r\nSecure: %s\r\nLength: %d\r\n\r\n%s" // 体部: 消息对象(已包含)
 #endif
 // (2)成功响应 ({0}-发送标识)(P-->C)
 const auto SEND_MSG_SUCCESS_RES = "SEND MSG\r\nId: %s\r\nSuccess: true\r\n\r\n"; // 无体部
@@ -376,12 +376,18 @@ public:
 	void setServerInfo(const std::string &serverHost, int serverPort);
 
 	bool connect();
+	void disconnect();
+
+	bool send(const std::string &receiver, const std::string &msgId, const std::string &msg, bool secure=false);
+	bool multicast(const std::vector<std::string> &receivers, const std::string &msgId, const std::string &msg, bool secure=false);
+	bool broadcast(const std::string &msgId, const std::string &msg, bool secure=false);
 
 protected:
 	virtual void onLoginStatus(int nStatus) = 0;
-	virtual void onMsgKeyReceived(void) = 0;
-	virtual void onMaxInactiveTimeReceived(void) = 0;
+	virtual void onMsgKeyReceived(const std::string& msgKey) = 0; // utf8
+	virtual void onMaxInactiveTimeReceived(int nMaxInactiveTime) = 0;
 	virtual void onMsgReceived(const std::string& msg) = 0; // utf8
+	virtual void onMsgReplied(const std::string& msgId, bool success, const std::string& error) = 0; // utf8
 
 	std::string msgKey;
 	int maxInactiveTime; // client(self)
@@ -396,6 +402,7 @@ protected:
 		std::map<std::string, std::string> &fields, const std::string &body);
 
 	void startKeepAlive(void);
+	void stopKeepAlive(void);
 	
 	static unsigned __stdcall keepAlive(void * pThis);
 
