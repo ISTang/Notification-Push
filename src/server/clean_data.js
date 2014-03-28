@@ -5,13 +5,13 @@ var redis = require('redis');
 //
 var utils = require(__dirname + '/utils');
 var log4js = require('log4js');
-log4js.configure('log4js_clean_data.json', {});
+//log4js.configure('log4js_clean_data.json', {});
 var logger = log4js.getLogger('normal');
 logger.setLevel('INFO');
 
 // 系统参数
 const REDIS_HOST = 'localhost';
-const REDIS_PORT = 7379;
+const REDIS_PORT = 8379;
 //
 const GRACE_EXIT_TIME = 1500;
 

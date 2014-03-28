@@ -65,6 +65,7 @@ exports.getAllConnections = getAllConnections;
 exports.getAllApplications = getAllApplications;
 exports.getAllAccounts = getAllAccounts;
 exports.getAllMessages = getAllMessages;
+exports.getMessageDetails = getMessageDetails;
 
 exports.queryPublicAccounts = queryPublicAccounts;
 exports.followPublicAccount = followPublicAccount;
@@ -439,6 +440,7 @@ function removeLoginInfo(redis, connId, handleResult) {
             redis.hget("connection:" + connId, "account_id", function (err, value) {
                 if (err) return callback(err);
                 accountId = value;
+                callback();
             });
         }, function (callback) {
             redis.smembers("account:" + accountId + ":followed", function (err, publicAccountIds) {
@@ -1766,6 +1768,109 @@ function getAllMessages(redis, handleResult) {
             handleResult(err, messages);
         });
     });
+}
+
+function getMessageDetails(redis, msgId, summaryOnly, callback) {
+	var appId;
+	var senderId;
+	var receiverIds;
+	var needReceipt;
+	var generateTime,expiration,sendTime;
+	var sendDetails = [];
+        var sendCount = 0;
+	var sentCount = 0;
+	var receiptCount = 0;
+	async.series([
+		function(callback) {
+			redis.hgetall("message:"+msgId+":meta", function(err, message) {
+				if (err) return callback(err);
+                                if (!message) return callback("No message with id "+msgId);
+				appId = message.application_id;
+				if (message.receiver_ids)
+					receiverIds = message.receiver_ids.split(","); 
+				callback();
+			});
+		},
+		function(callback) {
+			redis.hgetall("message:"+msgId, function(err, message) {
+				if (err) return callback(err);
+				needReceipt = message.need_receipt=="1"?true:false;
+                                if (!summaryOnly) {
+				    senderId = message.sender_id;
+				    generateTime = message.generate_time;
+				    expiration = message.expiration||"";
+				    sendTime = message.send_time||"";
+                                }
+				callback();
+			});
+		},
+		function(callback) {
+			if (!receiverIds) {
+				redis.smembers("account:set", function(err, accountIds) {
+					if (err) return callback(err);
+					receiverIds = accountIds;
+					receiverIds.splice(receiverIds.indexOf(senderId), 1);
+					callback();
+				});
+			} else callback();
+		},
+		function(callback) {
+			async.forEachSeries(receiverIds, function(receiverId, callback) {
+				var receiverName, receiverPhone, receiverEmail;
+				async.series([
+					function(callback) {
+                                                if (summaryOnly) return callback();
+						redis.get("account:"+receiverId+":name", function(err, accountName) {
+							if (err) return callback(err);
+							receiverName = accountName;
+							callback();
+                                                });
+					},
+					function(callback) {
+                                                if (summaryOnly) return callback();
+						redis.get("account:"+receiverId+":phone", function(err, accountPhone) {
+							if (err) return callback(err);
+							receiverPhone = accountPhone;
+							callback();
+                                                });
+					},
+					function(callback) {
+                                                if (summaryOnly) return callback();
+						redis.get("account:"+receiverId+":email", function(err, accountEmail) {
+							if (err) return callback(err);
+							receiverEmail = accountEmail;
+							callback();
+                                                });
+					},
+					function(callback) {
+						redis.hgetall("account:"+receiverId+":application:"+appId+":message:"+msgId, function(err, timeInfo) {
+							if (err) return callback(err);
+                                                        sendCount++;
+							if (!timeInfo) {
+								if (!summaryOnly) sendDetails.push({account:{id:receiverId,name:receiverName,phone:receiverPhone||"",email:receiverEmail||""}});
+							} else {
+								if (!summaryOnly) sendDetails.push({account:{id:receiverId,name:receiverName,phone:receiverPhone||"",email:receiverEmail||""},sentTime:timeInfo.sent_time,receiptTime:timeInfo.receipt_time});
+								sentCount++;
+								if (timeInfo.receipt_time) receiptCount++;
+							}
+							callback();
+						});
+					}],
+				function(err) {
+					callback(err);
+				});
+			},
+                        function(err) {
+                            callback(err);
+                        });
+		}],
+		function(err) {
+                        if (!summaryOnly)
+    			    callback(err, {generateTime:generateTime, expiration:expiration, needReceipt:needReceipt, sendTime:sendTime, sendDetails:sendDetails,
+			    	sentCount:sentCount, receiptCount:receiptCount});
+                        else
+                            callback(err, {needReceipt:needReceipt, sendCount:sendCount, sentCount:sentCount, receiptCount:receiptCount});
+		});
 }
 
 /**

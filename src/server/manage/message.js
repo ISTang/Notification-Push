@@ -18,6 +18,7 @@ exports.multicast = multicastMessage;
 exports.send = sendMessage;
 exports.pushMessage = pushMessage;
 exports.getMessages = getMessages;
+exports.getMessageDetails = getMessageDetails;
 exports.clearMessages = clearMessages;
 exports.uploadFiles = uploadFiles;
 
@@ -258,7 +259,7 @@ function pushMessage(req, res) {
     }
     // 初始化消息
     var message = {
-        type: "html",
+        type: "text",
         body: req.body.msgBody,
         need_receipt: true,
         sender_id: req.user.id,
@@ -425,9 +426,8 @@ function getMessages(req, res) {
         } else {
             db.getAllMessages(redis, function (err, messages) {
 
-                db.redisPool.release(redis);
-
                 if (err) {
+                    db.redisPool.release(redis);
                     return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1,
                         iTotalDisplayRecords: 1, aaData: [
                             ['数据库操作失败: ' + err]
@@ -487,17 +487,40 @@ function getMessages(req, res) {
                 var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
                 var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
                 var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart + iDisplayLength, filtered.length));
-                var result = [];
-                for (var i in paged) {
-                    var message = paged[i];
-                    var attachments = message.attachments;
-                    result.push([message.messageId, message.applicationName, message.sender, message.receivers,
-                        message.type, message.title, message.body, message.url, attachments, message.generateTime]);
-                }
 
-                return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: messages.length,
-                    iTotalDisplayRecords: filtered.length, aaData: result,
-                    sColumns: "messageId,applicationName,sender,receivers,type,title,body,url,attachments,generateTime"});
+                async.forEachSeries(paged, function(message, callback) {
+                    db.getMessageDetails(redis, message.messageId, true, function(err, summary) {
+                        if (!summary.needReceipt)
+                            message.pushSummary = (summary.sentCount==summary.sendCount?"OK":((summary.sentCount*100.0/summary.sendCount).toFixed(2)+"%"))+
+                                "("+summary.sentCount+"/"+summary.sendCount+")";
+                        else
+                            message.pushSummary = (summary.receiptCount==summary.sendCount?"OK":((summary.receiptCount*100.0/summary.sendCount).toFixed(2)+"%"))+
+                                "("+summary.receiptCount+"/"+summary.sentCount+"/"+summary.sendCount+")";
+                        callback();
+                               
+                    });
+                },
+                function(err) {
+                    db.redisPool.release(redis);
+
+                    if (err) {
+                        return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1,
+                            iTotalDisplayRecords: 1, aaData: [
+                                ['获取推送情况时出错: ' + err]
+                            ],
+                            sColumns: "messageId"});
+                    }
+                    var result = [];
+                    for (var i in paged) {
+                        var message = paged[i];
+                        var attachments = message.attachments;
+                        result.push([message.messageId, message.applicationName, message.sender, message.receivers,
+                            message.type, message.title, message.body, message.url, attachments, message.generateTime, message.pushSummary]);
+                    }
+                    res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: messages.length,
+                        iTotalDisplayRecords: filtered.length, aaData: result,
+                        sColumns: "messageId,applicationName,sender,receivers,type,title,body,url,attachments,generateTime,pushSummary"});
+                });
             });
         }
     });
@@ -516,6 +539,39 @@ function getMessages(req, res) {
     }
 }
 
+function getMessageDetails(req, res) {
+    logger.trace('Get message details: ' +
+        'id=' + req.params.id +
+        'summaryOnly=' + req.query.summaryOnly +
+        ''
+    );
+
+    var msgId = req.params.id;
+    var summaryOnly = req.query.summaryOnly=="1";
+    db.redisPool.acquire(function (err, redis) {
+        if (err) {
+            res.json({
+            success: false,
+            errcode: 1,
+            errmsg: '无法访问数据库: ' + err});
+        } else {
+            db.getMessageDetails(redis, msgId, summaryOnly, function(err, result) {
+                db.redisPool.release(redis);
+                if (err) {
+                    res.json({
+                    success: false,
+                    errcode: 2,
+                    errmsg: err.toString()});
+                } else {
+                    res.json({
+                        success: true,
+                        result: result});
+                }
+            });
+        }
+    });
+}
+ 
 function uploadFiles(req, res) {
     logger.trace("Uploading files..."/*+JSON.stringify(req.files)*/);
     var downloadUrls = [];

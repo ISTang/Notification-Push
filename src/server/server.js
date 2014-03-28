@@ -47,29 +47,27 @@ function startLoginPool(handle) {
         var loginProcess = fork(loginIndex);
         loginProcessPool[loginIndex] = loginProcess;
         logger.warn("#" + loginIndex + " login process restarted(onError)");
-   }
+    }
 
     function onExit(code, signal) {
 
         // 登录进程被终止
         var loginIndex = this.loginIndex;
-        logger.warn("#" + loginIndex + " login process: terminated(" + code + ")" + (signal ? " due to receipt of signal " + signal : ""));
+        logger.warn("#"+loginIndex+" login process: terminated("+code+")"+(signal?" due to receipt of signal "+signal:""));
 
         var loginProcess = fork(loginIndex);
         loginProcessPool[loginIndex] = loginProcess;
         logger.warn("#" + loginIndex + " login process restarted(onExit)");
     }
 
-    function fork(loginIndex) {
-        logger.warn("Forking #" + loginIndex + " login process...");
+    function fork(i) {
         var loginProcess = child_process.fork(LOGIN_PATH);
-        logger.warn("#" + loginIndex + " login process forked.");
-        loginProcess.loginIndex = loginIndex;
+        loginProcess.loginIndex = i;
 
         loginProcess.on("error", onError);
         loginProcess.on("exit", onExit);
 
-        loginProcess.send({"server": true, loginIndex: loginIndex}, handle);
+        loginProcess.send({"server": true, loginIndex: i}, handle);
 
         return loginProcess;
     }
@@ -92,7 +90,7 @@ function startHttpServer() {
     function onExit(code, signal) {
 
         // HTTP进程被终止
-        logger.warn("HTTP child process terminated(code=" + code + ")" + (signal ? " due to receipt of signal " + signal : ""));
+        logger.warn("HTTP child process terminated(code="+code+") due to receipt of signal "+signal);
         fork();
         logger.info("httpd process restarted(onExit)");
     }

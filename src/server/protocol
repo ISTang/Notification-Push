@@ -8,8 +8,6 @@ var config = require(__dirname + '/../config');
 var utils = require(__dirname + '/../utils');
 var crypt = require(__dirname + '/crypt');
 var async = require('async');
-var isUtf8 = require('is-utf8');
-var BufferHelper = require('bufferhelper');//用于拼接BUffer，防止中文单词断裂
 
 String.prototype.trim = utils.StringTrim;
 String.prototype.format = utils.StringFormat;
@@ -55,6 +53,7 @@ const INVALID_USERNAME_MSG = "Check username failed";
 const SERVER_ERROR_MSG = "Server error";
 const LOGIN_TIMEOUT_MSG = "Login timeout";
 const INACTIVE_TIMEOUT_MSG = "Inactive timeout";
+const CONFIRM_TIMEOUT_MSG = "Confirm timeout";
 
 // 心跳周期
 const KEEP_ALIVE_INTERVAL = config.MAX_INACTIVE_TIME;
@@ -241,12 +240,10 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
 
     var waitForHead = true; // 等待头部(false表示等待体部或不需要再等待)
     var headInput = ""; // 头部输入
-    var headInputBuffer = new BufferHelper(); // 头部输入缓冲区
     var actionLineFound = false; // 是否已找到动作行
 
     var head = ""; // 头部内容
     var body = ""; // 体部内容
-    var bodyBuffer = new BufferHelper(); // 体部缓冲区
 
     var action = ""; // 动作
     var target = ""; // 目标
@@ -255,16 +252,15 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
 
     socket.on("data", function (data) {
 
-        if (TRACK_SOCKET) logger.trace("[SOCKET] read from client " + clientAddress + ": " + data.toString());
+        var newInput = data.toString();
+        if (TRACK_SOCKET) logger.trace("[SOCKET] read from client " + clientAddress + ": " + newInput);
 
         var starr = [];
 
         if (waitForHead) {
 
             // 读取头部
-            headInputBuffer.concat(data);
-            if (!isUtf8(headInputBuffer.toBuffer())) return;
-            headInput = headInputBuffer.toBuffer().toString();
+            headInput += newInput;
 
             // 从首字符开始处理
             var emptyLineFound = false;
@@ -276,6 +272,7 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
                 // 寻找行结束符
                 var pos = headInput.indexOf(INPUT_RETURN);
                 if (pos == -1) {
+
                     // 未找到行结束符
                     return;
                 }
@@ -299,31 +296,31 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
                      line = line.substring(PNTP_FLAG.length);*/
 
                     // 动作行
-                    logger.debug("[Action line]"+line);
+                    //logger.debug("[Action line]"+line);
                     starr = line.split(/\s+/);
                     if (starr.length != 2) {
 
                         // 格式不对
                         if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Invalid action line(" + line + ")");
-                        socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_ACTION_LINE_MSG) : INVALID_ACTION_LINE_MSG.length, INVALID_ACTION_LINE_MSG));
+                        socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_ACTION_LINE_MSG) : INVALID_ACTION_LINE_MSG.length, INVALID_ACTION_LINE_MSG));
                         return;
                     }
 
                     action = starr[0].trim().toLocaleUpperCase(); // 动作
                     target = starr[1].trim().toLocaleUpperCase(); // 目标
 
-                    logger.debug("Action: " + action + ", target: " + target);
+                    //logger.debug("Action: " + action + ", target: " + target);
                     actionLineFound = true;
                 } else if (line != "") {
 
                     // 属性行
-                    logger.debug("[Field line]" + line);
+                    //logger.debug("[Field line]" + line);
                     starr = line.split(/\s*:\s*/);
                     if (starr.length != 2) {
 
                         // 格式不对
                         if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": Invalid field line(" + line + ")");
-                        socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_FIELD_LINE_MSG) : INVALID_FIELD_LINE_MSG.length, INVALID_FIELD_LINE_MSG));
+                        socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_FIELD_LINE_MSG) : INVALID_FIELD_LINE_MSG.length, INVALID_FIELD_LINE_MSG));
                         return;
                     }
 
@@ -331,11 +328,11 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
                     var value = starr[1].trim(); // 值
                     fields[name] = value;
 
-                    logger.debug("Field: " + name + ", value: " + value);
+                    //logger.debug("Field: " + name + ", value: " + value);
                 } else {
 
                     // 找到空行
-                    logger.debug("[Empty line]");
+                    //logger.debug("[Empty line]");
                     emptyLineFound = true;
                 }
 
@@ -344,7 +341,6 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
 
                 // 为寻找下一个行结束符准备
                 headInput = headInput.substring(pos + INPUT_RETURN.length);
-                headInputBuffer = new BufferHelper(); headInputBuffer.concat(new Buffer(headInput));
             } while (!emptyLineFound); // 直到遇到空行
 
             // 头部读取完毕
@@ -359,20 +355,17 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
 
                     // 体部长度字段值无效
                     if (TRACK_SOCKET) logger.trace("[SOCKET] write to client " + clientAddress + ": " + INVALID_LENGTH_VALUE_MSG);
-                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_LENGTH_VALUE_MSG) : INVALID_LENGTH_VALUE_MSG.length, INVALID_LENGTH_VALUE_MSG));
+                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(INVALID_LENGTH_VALUE_MSG) : INVALID_LENGTH_VALUE_MSG.length, INVALID_LENGTH_VALUE_MSG));
                     return;
                 }
             }
 
             // 将余下输入内容作为体部
             body = headInput;
-            bodyBuffer = headInputBuffer;
         } else {
 
             // 读取体部
-            bodyBuffer.concat(data);
-            if (!isUtf8(bodyBuffer.toBuffer())) return;
-            body = bodyBuffer.toBuffer().toString();
+            body += newInput;
         }
 
         // 检查体部内容
@@ -384,27 +377,20 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
 
             // 将多余的内容作为下一个报文的头部输入
             headInput = body.substring(bodyLength);
-            headInputBuffer = new BufferHelper(); headInputBuffer.concat(new Buffer(headInput));
             body = body.substring(0, bodyLength);
-            bodyBuffer = new BufferHelper(); bodyBuffer.concat(new Buffer(body));
         } else {
 
             // 没有多余的输入
             headInput = "";
-            headInputBuffer = new BufferHelper();
         }
 
-        logger.debug("body: "+body);
+        //logger.debug("body: "+body);
 
         if (SHOW_PACKET) logger.trace(head + body);
 
         // 处理新的报文
         handlePacket(socket, action, target, fields, body, logger, function (err) {
-            if (err) {
-                logger.error(err);
-                try{socket.end();}catch(e){logger.error(e.toString())};
-                return;
-            }
+            if (err) logger.error(err);
 
             // 准备处理下一个报文
             waitForHead = true;
@@ -412,7 +398,6 @@ function handleConnection(socket, handlePacket, handleError, handleClose, logger
             //
             head = "";
             body = "";
-            bodyBuffer = new BufferHelper();
             //
             action = "";
             target = "";
@@ -461,7 +446,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
                     }
 
                     // 错误的响应
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
                     return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
@@ -537,7 +522,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
                     }
 
                     // 错误的响应
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
                     return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
@@ -610,7 +595,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
                     }
 
                     // 错误的响应
-                    socket.write(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
+                    socket.end(/*PNTP_FLAG+*/CLOSE_CONN_RES.format(BODY_BYTE_LENGTH ? Buffer.byteLength(WRONG_RESPONSE_MSG) : WRONG_RESPONSE_MSG.length, WRONG_RESPONSE_MSG));
                     return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
@@ -635,7 +620,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
                     }
 
                     // 错误的响应
-                    socket.write(/*PNTP_FLAG+*/WRONG_RESPONSE_MSG);
+                    socket.end(/*PNTP_FLAG+*/WRONG_RESPONSE_MSG);
                     return callback("[SOCKET] write to client " + clientAddress + ": " + WRONG_RESPONSE_MSG + "(" + action + " " + target + ")");
                 }
 
@@ -644,7 +629,7 @@ function handleClientConnection(socket, checkAppId, checkUsername, clientLogon, 
                 clientLogon(socket, accountId, accountName, appId, msgKey, function (err) {
 
                     if (err) {
-                        socket.write(/*PNTP_FLAG+*/SERVER_ERROR_MSG);
+                        socket.end(/*PNTP_FLAG+*/SERVER_ERROR_MSG);
                         return callback("[SOCKET] write to client " + clientAddress + ": " + err);
                     }
                     // 更新客户状态
