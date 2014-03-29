@@ -9,6 +9,7 @@ var fs = require('fs');
 //var randomstring = require("randomstring");
 
 // 导出函数
+exports.addDays = addDays;
 exports.DateFormat = DateFormat;
 exports.DateParse = DateParse;
 exports.DateParse2 = DateParse2;
@@ -17,9 +18,14 @@ exports.StringTrim = StringTrim;
 exports.md5 = md5;
 exports.makeFileChecksum = makeFileChecksum;
 exports.timeDiff = timeDiff;
-
 const DATE_FORMAT_REGEX = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/g;
 const DATE_FORMAT_REGEX2 = /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/g;
+
+function addDays(date, days) {
+    var result = new Date(date);
+    result.setDate(date.getDate() + days);
+    return result;
+}
 
 // 对Date的扩展，将 Date 转化为指定格式的String
 // 月(M)、日(d)、小时(h)、分(m)、秒(s)、季度(q) 可以用 1-2 个占位符，
