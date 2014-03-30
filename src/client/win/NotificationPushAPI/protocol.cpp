@@ -3,35 +3,52 @@
 #include "is_utf8.h"
 #include "strlen_utf8.h"
 #include "pointer_add_utf8.h"
+#include "string_format.h"
 
 Connection::Connection(void)
+: canReconnect(true)
 {
-	memset(unhandleInput, 0, sizeof unhandleInput);
+	unhandleInput = NULL;
 	initPacket();
 }
 
 
 Connection::~Connection(void)
 {
+	if (unhandleInput!=NULL) delete[] unhandleInput;
 }
 
 bool Connection::write(const std::string& msg, bool end)
 {
-	onTextSent(msg);
+	if (!IsOpen()) return false;
 
 	DWORD dwBytesWritten = WriteComm((LPBYTE)msg.c_str(), msg.size(), SOCKET_WRITE_TIMEOUT);
 	if (end) {
-		StopComm();
-		onDisconnected(false);
+		CloseComm();
+		onDisconnected(true);
 	}
-	return (dwBytesWritten == msg.size());
+	bool ok = (dwBytesWritten == msg.size());
+	if (ok) onTextSent(msg);
+	return ok;
 }
 
 void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 {
+	if (dwCount==0) return;
+
 	try
 	{
-		strncat_s(unhandleInput, (char *)lpBuffer, dwCount);
+		int newSize = ((unhandleInput!=NULL)?strlen(unhandleInput):0)+dwCount;
+		char *newBuf = new char[newSize+1];
+		memset(newBuf, 0, newSize);
+		if (unhandleInput!=NULL)
+		{
+			strcpy_s(newBuf, newSize, unhandleInput);
+		}
+		strncat_s(newBuf, newSize+1, (char *)lpBuffer, dwCount);
+		//
+		if (unhandleInput!=NULL) delete[] unhandleInput;
+		unhandleInput = newBuf;
 
 		int  read_retval = 0;
 		if (is_utf8((unsigned char *)unhandleInput, read_retval) != 0) {
@@ -44,24 +61,23 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 		{
 			CA2T strText(unhandleInput, CP_UTF8);
 			CT2A strText2(strText.m_psz);
-			trace("[SOCKET] read from " + peerAddress + ": " + strText2.m_psz);
+			trace(std::string("[SOCKET] received: ") + strText2.m_psz);
 		}
 
-		char newInput[MAX_BUF+1];
-		memcpy(newInput, unhandleInput, sizeof newInput);
-		memset(unhandleInput, 0, sizeof unhandleInput);
-
-		char buf[MAX_BUF + 1];
+		int unhandleSize = strlen(unhandleInput);
+		char *newInput = new char[unhandleSize+1];
+		memcpy(newInput, unhandleInput, unhandleSize);
+		newInput[unhandleSize] = '\0';
+		//
+		unhandleInput = NULL;
 
 		if (waitForHead) {
 			// 读取头部
 			headInput += newInput;
+			delete[] newInput;
 			// 从首字符开始处理
 			auto emptyLineFound = false;
 			do {
-				// 初始化
-				char line[MAX_LINE + 1];
-				memset(line, 0, sizeof line);
 				// 寻找行结束符
 				auto pos = headInput.find(INPUT_RETURN);
 				if (pos == -1) {
@@ -70,40 +86,40 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 				}
 				// 找到行结束符
 				// 记录行内容(不包括行结束符)
-				strncpy_s(line, headInput.c_str(), pos);
+				std::string line(headInput.c_str(), pos);
 				// 解析头部行
 				if (!actionLineFound) {
 					// 动作行
-					debug("[Action line]"+std::string(line));
-					const char *pszTemp = line;
+					debug("[Action line]"+line);
+					const char *pszTemp = line.c_str();
 					while (NULL != *pszTemp && !isspace(*pszTemp)) ++pszTemp;
 					if (NULL == *pszTemp) {
 						// 格式不对
-						if (TRACK_SOCKET) trace("[SOCKET] write to client " + peerAddress + ": Invalid action line(" + line + ")");
-						sprintf_s(buf, CLOSE_CONN_RES, strlen(INVALID_ACTION_LINE_MSG), INVALID_ACTION_LINE_MSG);
-						if (!write(buf, true)) throw SOCKET_WRITE_ERROR;
-						return;
+						if (TRACK_SOCKET) trace(std::string("[SOCKET] write: Invalid action line(") + line + ")");
+						std::string buf = string_format(CLOSE_CONN_RES, strlen(INVALID_ACTION_LINE_MSG), INVALID_ACTION_LINE_MSG);
+						write(buf, true);
+						throw INVALID_ACTION_LINE;
 					}
-					action = std::string(line, pszTemp++); // 动作
+					action = std::string(line.c_str(), pszTemp++); // 动作
 					while (NULL != *pszTemp && isspace(*pszTemp)) ++pszTemp;
 					target = pszTemp; // 目标
 					debug("Action: " + action + ", target: " + target);
 					actionLineFound = true;
 				}
-				else if (*line != NULL) {
+				else if (*line.c_str() != NULL) {
 					// 属性行
 					debug("[Field line]" + std::string(line));
-					const char *pszColon = strchr(line, ':');
+					const char *pszColon = strchr(line.c_str(), ':');
 					if (NULL == pszColon) {
 						// 格式不对
-						if (TRACK_SOCKET) trace("[SOCKET] write to client " + peerAddress + ": Invalid field line(" + line + ")");
-						sprintf_s(buf, CLOSE_CONN_RES, strlen(INVALID_FIELD_LINE_MSG), INVALID_FIELD_LINE_MSG);
-						if (!write(buf, true)) throw SOCKET_WRITE_ERROR;
-						return;
+						if (TRACK_SOCKET) trace(std::string("[SOCKET] write: Invalid field line(") + line + ")");
+						std::string buf = string_format(CLOSE_CONN_RES, strlen(INVALID_FIELD_LINE_MSG), INVALID_FIELD_LINE_MSG);
+						write(buf, true);
+						throw INVALID_FIELD_LINE;
 					}
 					const char *pszNameEnd = pszColon;
 					while (isspace(*(pszNameEnd - 1))) --pszNameEnd;
-					auto name = std::string(line, pszNameEnd); // 名字
+					auto name = std::string(line.c_str(), pszNameEnd); // 名字
 					const char *pszValueStart = pszColon + 1;
 					while (isspace(*pszValueStart)) ++pszValueStart;
 					auto value = pszValueStart; // 值
@@ -128,10 +144,10 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 				bodyLength = atoi(fields[FIELD_BODY_LENGTH].c_str());
 				if (bodyLength < 0) {
 					// 体部长度字段值无效
-					if (TRACK_SOCKET) trace("[SOCKET] write to client " + peerAddress + ": " + INVALID_LENGTH_VALUE_MSG);
-					sprintf_s(buf, CLOSE_CONN_RES, strlen(INVALID_LENGTH_VALUE_MSG), INVALID_LENGTH_VALUE_MSG);
-					if (!write(buf, true)) throw SOCKET_WRITE_ERROR;
-					return;
+					if (TRACK_SOCKET) trace(std::string("[SOCKET] write: ") + INVALID_LENGTH_VALUE_MSG);
+					std::string buf = string_format(CLOSE_CONN_RES, strlen(INVALID_LENGTH_VALUE_MSG), INVALID_LENGTH_VALUE_MSG);
+					write(buf, true);
+					throw INVALID_BODY_LENGTH;
 				}
 			}
 			// 将余下输入内容作为体部
@@ -140,6 +156,7 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 		else {
 			// 读取体部
 			body += newInput;
+			delete[] newInput;
 		}
 		// 检查体部内容
 		unsigned int bodySize = strlen_utf8(body.c_str());
@@ -166,11 +183,25 @@ void Connection::OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount)
 	}
 	catch (int e)
 	{
-		if (e == SOCKET_WRITE_ERROR)
+		switch (e)
 		{
-			StopComm();
-			onDisconnected(false);
+		case INVALID_ACTION_LINE:
+		case INVALID_FIELD_LINE:
+		case INVALID_BODY_LENGTH:
+		case SOCKET_WRITE_ERROR:
+		case SERVER_KICKOFF_ME:
+			canReconnect = true;
+			break;
+		case INVALID_APP_INFO:
+		case INVALID_USER_INFO:
+		case FEATURE_NOT_SUPPORTED:
+		default:
+			canReconnect = false;
+			break;
 		}
+		initPacket();
+		CloseComm();
+		onDisconnected(false);
 	}
 }
 
@@ -180,24 +211,16 @@ void Connection::OnEvent(UINT uEvent, LPVOID lpvData)
 	{
 		case EVT_CONSUCCESS:
 			// 连接成功
-			{
-			/*SockAddrIn saddr_in;
-			GetPeerName(saddr_in);
-			int ipAddr = saddr_in.sin_addr.s_addr;
-			char str[INET_ADDRSTRLEN];
-			inet_ntop( AF_INET, &ipAddr, str, INET_ADDRSTRLEN );*/
-			peerAddress = "?";
-			}
 			onConnected();
 			break;
 		case EVT_CONFAILURE:
 			// 连接失败
-			StopComm();
+			CloseComm();
 			onConnectFailed();
 			break;
 		case EVT_CONDROP:
 			// 连接断开
-			StopComm();
+			CloseComm();
 			onDisconnected(false);
 			break;
 		case EVT_ZEROLENGTH:
@@ -210,7 +233,11 @@ void Connection::OnEvent(UINT uEvent, LPVOID lpvData)
 
 void Connection::initPacket(void)
 {
+	if (unhandleInput != NULL) delete[] unhandleInput;
+	unhandleInput = NULL;
+
 	waitForHead = true; // 等待头部(false表示等待体部或不需要再等待)
+	headInput = "";
 	actionLineFound = false; // 是否已找到动作行
 	//
 	head = ""; // 头部内容
@@ -227,7 +254,9 @@ void Connection::initPacket(void)
 ClientConnection::ClientConnection()
 : clientLogon(false)
 , clientLogining(false)
-, m_hKeepAlive(NULL)
+, keepAliveHandle(NULL)
+, connectHandle(NULL)
+, disconnectNow(false)
 {
 }
 
@@ -253,18 +282,81 @@ void ClientConnection::setServerInfo(const std::string &serverHost, int serverPo
 	this->serverPort = serverPort;
 }
 
+void ClientConnection::SetAutoReconnect(bool autoReconnect, int reconnectDelay) {
+	this->autoReconnect = autoReconnect;
+	this->reconnectDelay = reconnectDelay;
+}
+
 bool ClientConnection::connect(void)
 {
-	CA2T strServer(serverHost.c_str());
-	if (!ConnectTo(strServer, std::to_wstring(serverPort).c_str(), AF_INET, SOCK_STREAM)) return false;
-	if (!WatchComm()) return false;
+	if (!autoReconnect) return (doConnect(this)==0);
 
-	onLoginStatus(LOGINING);
-	return true;
+	HANDLE hThread;
+	UINT uiThreadId = 0;
+	hThread = (HANDLE)_beginthreadex(NULL,  // Security attributes
+		0,    // stack
+		doConnect,   // Thread proc
+		this,   // Thread param
+		0,   // creation mode(old:CREATE_SUSPENDED)
+		&uiThreadId);   // Thread ID
+
+	if (NULL != hThread)
+	{
+		//SetThreadPriority(m_hconnectHandle, THREAD_PRIORITY_ABOVE_NORMAL);
+		//ResumeThread( m_hconnectHandle );
+		connectHandle = hThread;
+		return true;
+	}
+
+	return false;
+}
+
+UINT WINAPI  ClientConnection::doConnect(LPVOID pParam)
+{
+	ClientConnection* pThis = reinterpret_cast<ClientConnection*>(pParam);
+	_ASSERTE(pThis != NULL);
+
+	do {
+		if (pThis->disconnectNow) break;
+		if (!pThis->IsOpen() && pThis->canReconnect)
+		{
+			pThis->stopKeepAlive();
+			pThis->StopComm();
+			pThis->initPacket();
+
+			pThis->onLoginStatus(LOGINING);
+			CA2T strServer(pThis->serverHost.c_str());
+			if (!pThis->ConnectTo(strServer, std::to_wstring(pThis->serverPort).c_str(), AF_INET, SOCK_STREAM))
+			{
+				if (pThis->disconnectNow) break;
+				Sleep(pThis->reconnectDelay);
+				continue;
+			}
+			if (!pThis->WatchComm())
+			{
+				pThis->CloseComm();
+				if (pThis->disconnectNow) break;
+				Sleep(pThis->reconnectDelay);
+				continue;
+			}
+		}
+		else
+		{
+			Sleep(100);
+		}
+	} while (true);
+
+	return 0;
 }
 
 void ClientConnection::disconnect(void)
 {
+	disconnectNow = true;
+	if (WaitForSingleObject(connectHandle, 1000L) == WAIT_TIMEOUT)
+		TerminateThread(connectHandle, 1L);
+	CloseHandle(connectHandle);
+	connectHandle = NULL;
+
 	stopKeepAlive();
 	
 	if (IsStart()) {
@@ -276,16 +368,14 @@ void ClientConnection::disconnect(void)
 bool ClientConnection::send(const std::string &receiver, const std::string &sendId, const std::string &msg, bool secure)
 {
 	if (secure) {
-		// TODO 暂不支持安全消息
-		throw "本应用暂不支持安全消息";
+		// TODO 支持安全消息
+		error("本应用暂不支持安全消息");
+		return false;
 	}
 
-	char buf[MAX_BUF + 1];
-	memset(buf, 0, sizeof buf);
-
 	debug("Sending message to " + receiver + "...");
-	sprintf_s(buf, SEND_MSG_REQ, receiver, sendId, secure?"true":"false", msg.length(), msg);
-	if (!write(buf)) throw SOCKET_WRITE_ERROR;
+	std::string buf = string_format(SEND_MSG_REQ, receiver.c_str(), sendId.c_str(), secure ? "true" : "false", strlen_utf8(msg.c_str()), msg.c_str());
+	if (!write(buf)) return false;
 
 	return true;
 }
@@ -293,12 +383,10 @@ bool ClientConnection::send(const std::string &receiver, const std::string &send
 bool ClientConnection::multicast(const std::vector<std::string> &receivers, const std::string &sendId, const std::string &msg, bool secure)
 {
 	if (secure) {
-		// TODO 暂不支持安全消息
-		throw "本应用暂不支持安全消息";
+		// TODO 支持安全消息
+		error("本应用暂不支持安全消息");
+		return false;
 	}
-
-	char buf[MAX_BUF + 1];
-	memset(buf, 0, sizeof buf);
 
 	if (receivers.size()<2) return false;
 
@@ -308,8 +396,12 @@ bool ClientConnection::multicast(const std::vector<std::string> &receivers, cons
 	}
 
 	debug("Multicasting message to " + strReceivers + "...");
-	sprintf_s(buf, MULTICAST_MSG_REQ, strReceivers, sendId, secure?"true":"false", msg.length(), msg);
-	if (!write(buf)) throw SOCKET_WRITE_ERROR;
+	std::string buf = string_format(MULTICAST_MSG_REQ, strReceivers.c_str(), sendId.c_str(), secure ? "true" : "false", strlen_utf8(msg.c_str()), msg.c_str());
+	if (!write(buf))
+	{
+		warn("写套接字失败");
+		return false;
+	}
 
 	return true;
 }
@@ -317,16 +409,18 @@ bool ClientConnection::multicast(const std::vector<std::string> &receivers, cons
 bool ClientConnection::broadcast(const std::string &sendId, const std::string &msg, bool secure)
 {
 	if (secure) {
-		// TODO 暂不支持安全消息
-		throw "本应用暂不支持安全消息";
+		// TODO 支持安全消息
+		error("本应用暂不支持安全消息");
+		return false;
 	}
 
-	char buf[MAX_BUF + 1];
-	memset(buf, 0, sizeof buf);
-
 	debug("Broadcasting message ...");
-	sprintf_s(buf, BROADCAST_MSG_REQ, sendId, secure?"true":"false", msg.length(), msg);
-	if (!write(buf)) throw SOCKET_WRITE_ERROR;
+	std::string buf = string_format(BROADCAST_MSG_REQ, sendId.c_str(), secure ? "true" : "false", strlen_utf8(msg.c_str()), msg.c_str());
+	if (!write(buf))
+	{
+		warn("写套接字失败");
+		return false;
+	}
 
 	return true;
 }
@@ -352,14 +446,11 @@ void ClientConnection::onDisconnected(bool passive)
 void ClientConnection::handlePacket(const std::string &action, const std::string &target,
 	std::map<std::string, std::string> &fields, const std::string &body)
 {
-	char buf[MAX_BUF + 1];
-	memset(buf, 0, sizeof buf);
-
 	if (action == "GET" && target == "APPID") {
 		// 应用认证请求, 发送当前应用ID及密码
 		auto password = md5.CalcMD5FromString(appInfo.password.c_str());
         debug("Received application certificate request, sending...");
-		sprintf_s(buf, GET_APPID_RES, appInfo.id.length()+1+strlen(password), appInfo.id.c_str(), password);
+		std::string buf = string_format(GET_APPID_RES, appInfo.id.length()+1+strlen(password), appInfo.id.c_str(), password);
 		if (!write(buf)) throw SOCKET_WRITE_ERROR;
 	}
 	else if (action == "SET" && target == "APPID") {
@@ -369,27 +460,30 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
             debug("Application certificate passed");
         } else {
             error("Application certificate failed: " + body);
+			onAppCheckFailed(body);
+			throw INVALID_APP_INFO;
         }
     } else if (action == "GET" && target == "USERNAME") {
         // 用户认证请求, 发送用户名及密码
         debug("Received user certificate request, sending...");
         if (fields[FIELD_LOGIN_SECURE] == "true") {
-            // TODO 安全登录: 暂时不支持
-			throw "本应用暂不支持安全登录";
+            // 安全登录: 暂时不支持
+			onUserCheckFailed("Secure login not supported yet!");
+			throw FEATURE_NOT_SUPPORTED;
         } else {
             // 非安全登录
             if (fields[FIELD_LOGIN_PASSWORD] == "true") {
                 // 需要登录密码
 				auto password = md5.CalcMD5FromString(loginInfo.password.c_str());
                 debug("Getting username...");
-				sprintf_s(buf, GET_USERNAME_RES, "false", "true", loginInfo.username.length()+1+strlen(password),
+				std::string buf = string_format(GET_USERNAME_RES, "false", "true", loginInfo.username.length()+1+strlen(password),
 					(loginInfo.username+","+password).c_str());
 				if (!write(buf)) throw SOCKET_WRITE_ERROR;
 			}
 			else {
                 // 不需要登录密码
                 debug("Getting username...");
-				sprintf_s(buf, GET_USERNAME_RES, "false", "false", loginInfo.username.length(),
+				std::string buf = string_format(GET_USERNAME_RES, "false", "false", loginInfo.username.length(),
 					loginInfo.username.c_str());
 				if (!write(buf)) throw SOCKET_WRITE_ERROR;
 			}
@@ -401,13 +495,16 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
             info("User certificate passed");
         } else {
             error("User certificate failed: " + body);
-        }
+			onUserCheckFailed(body);
+			throw INVALID_USER_INFO;
+		}
     } else if (action == "SET" && target == "MSGKEY") {
         // 收到消息密钥
         if (fields[FIELD_LOGIN_SECURE] == "true") {
-            // TODO 暂不支持安全消息
-			throw "本应用暂不支持安全消息";
-        }
+            // 暂不支持安全消息
+			onUserCheckFailed("Secure message not supported yet!");
+			throw FEATURE_NOT_SUPPORTED;
+		}
 		if (!write(SET_MSGKEY_ACK)) throw SOCKET_WRITE_ERROR;
         debug("Received message key: " + body);
 		onMsgKeyReceived(body);
@@ -439,8 +536,9 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
         //debug("Message received: "+msg);
         time(&lastActiveTime);
 		if (secure) {
-			// TODO 暂不支持
-			throw "本应用不支持加密消息";
+			// 暂不支持安全消息
+			error("Secure message not supported yet!");
+			throw FEATURE_NOT_SUPPORTED;
 		}
 		onMsgReceived(msg);
     } else if (action == "BROADCAST" && target == "MSG") {
@@ -471,33 +569,32 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
         // 收到获取已关注公众号回复
     } else if (action == "CLOSE" && target == "CONN") {
         // 服务器主动断开连接
-		stopKeepAlive();
-		StopComm();
-		onDisconnected(false);
         warn("Server kickoff me: " + body);
+		throw SERVER_KICKOFF_ME;
     } else {
         // 无法理解的动作
         error("Unknown action: " + action + " " + target);
+		throw FEATURE_NOT_SUPPORTED;
     }
 }
 
 void ClientConnection::startKeepAlive(void)
 {
 	unsigned nThreadId;
-	m_hKeepAlive = (HANDLE)_beginthreadex(NULL, 0, keepAlive, this, CREATE_SUSPENDED, &nThreadId);
-	ResumeThread(m_hKeepAlive);
+	keepAliveHandle = (HANDLE)_beginthreadex(NULL, 0, keepAlive, this, CREATE_SUSPENDED, &nThreadId);
+	ResumeThread(keepAliveHandle);
 }
 
 void ClientConnection::stopKeepAlive(void)
 {
-	if (m_hKeepAlive==NULL) return;
+	if (keepAliveHandle == NULL) return;
 
 	if (clientLogon) {
-		TerminateThread(m_hKeepAlive, 0);
+		TerminateThread(keepAliveHandle, 0);
 	}
-	CloseHandle(m_hKeepAlive);
+	CloseHandle(keepAliveHandle);
 
-	m_hKeepAlive = NULL;
+	keepAliveHandle = NULL;
 }
 
 unsigned __stdcall ClientConnection::keepAlive(void * pThis)
@@ -510,17 +607,16 @@ unsigned __stdcall ClientConnection::keepAlive(void * pThis)
 	auto checkedCount = 0;
 	auto maxCheckCount = maxInactiveTime / checkInterval / 2;
 
-	char buf[MAX_BUF + 1];
-
 	while (pConn->clientLogon)
 	{
 		Sleep(checkInterval);
 
 		if (!pConn->IsOpen())
 		{
-			pConn->StopComm();
-			pConn->onDisconnected(false);
 			pConn->warn("Connection broken");
+			pConn->clientLogon = false;
+			pConn->CloseComm();
+			pConn->onDisconnected(false);
 			return 1;
 		}
 
@@ -529,13 +625,14 @@ unsigned __stdcall ClientConnection::keepAlive(void * pThis)
 		if (now - lastActiveTime > maxInactiveTime / 1000)
 		{
 			// server gone?
-			if (TRACK_SOCKET) pConn->trace("[SOCKET] write to client " + pConn->peerAddress + ": server gone?");
-			sprintf_s(buf, CLOSE_CONN_RES, strlen(INACTIVE_TIMEOUT_MSG), INACTIVE_TIMEOUT_MSG);
+			if (TRACK_SOCKET) pConn->trace("[SOCKET] write: server gone?");
+			std::string buf = string_format(CLOSE_CONN_RES, strlen(INACTIVE_TIMEOUT_MSG), INACTIVE_TIMEOUT_MSG);
 			if (!pConn->write(buf, true))
 			{
-				pConn->StopComm();
-				pConn->onDisconnected(false);
 				pConn->warn("Write socket failed");
+				pConn->clientLogon = false;
+				pConn->CloseComm();
+				pConn->onDisconnected(false);
 				return 2;
 			}
 			return 3;
@@ -544,12 +641,13 @@ unsigned __stdcall ClientConnection::keepAlive(void * pThis)
 		if (++checkedCount == maxCheckCount)
 		{
 			pConn->debug("Keep alive...");
-			if (TRACK_SOCKET) pConn->trace("[SOCKET] write to client " + pConn->peerAddress + ": " + SET_ALIVE_REQ);
+			if (TRACK_SOCKET) pConn->trace(std::string("[SOCKET] write: ") + SET_ALIVE_REQ);
 			if (!pConn->write(SET_ALIVE_REQ))
 			{
-				pConn->StopComm();
-				pConn->onDisconnected(false);
 				pConn->warn("Write socket failed");
+				pConn->clientLogon = false;
+				pConn->CloseComm();
+				pConn->onDisconnected(false);
 				return 2;
 			}
 

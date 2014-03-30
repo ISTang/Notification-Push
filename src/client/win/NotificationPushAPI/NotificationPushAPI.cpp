@@ -18,6 +18,7 @@ TextReceivedCallbackFunc g_lpTextReceivedCallbackFunc;
 TextSentCallbackFunc g_lpTextSentCallbackFunc;
 
 LoginStatusCallbackFunc g_lpLoginStatusCallbackFunc;
+LoginFailedCallbackFunc g_lpLoginFailedCallbackFunc;
 LogCallbackFunc g_lpLogCallbackFunc;
 MsgKeyReceivedCallbackFunc g_lpMsgKeyReceivedCallbackFunc;
 MaxInactiveTimeReceivedCallbackFunc g_lpMaxInactiveTimeReceivedCallbackFunc;
@@ -53,6 +54,10 @@ void CALLBACK SetLoginStatusCallbackFunc(LoginStatusCallbackFunc lpLoginStatusCa
 {
 	g_lpLoginStatusCallbackFunc = lpLoginStatusCallbackFunc;
 }
+void CALLBACK SetLoginFailedCallbackFunc(LoginFailedCallbackFunc lpLoginFailedCallbackFunc)
+{
+	g_lpLoginFailedCallbackFunc = lpLoginFailedCallbackFunc;
+}
 void CALLBACK SetLogCallbackFunc(LogCallbackFunc lpLogCallbackFunc)
 {
 	g_lpLogCallbackFunc = lpLogCallbackFunc;
@@ -75,7 +80,8 @@ void CALLBACK SetMsgRepliedCallbackFunc(MsgRepliedCallbackFunc lpMsgRepliedCallb
 }
 
 // 用户登录
-bool CALLBACK LoginAsUser(long connId, LPCSTR lpszUsername, LPCSTR lpszPassword, bool bTrackPacket)
+bool CALLBACK LoginAsUser(long connId, LPCSTR lpszUsername, LPCSTR lpszPassword, 
+	bool bAutoReconnect, int nReconnectDelay, bool bTrackPacket)
 {
 	AFX_MANAGE_STATE(AfxGetStaticModuleState());
 
@@ -88,6 +94,7 @@ bool CALLBACK LoginAsUser(long connId, LPCSTR lpszUsername, LPCSTR lpszPassword,
 	pMyConnection->setServerInfo(g_strServerHost, g_nServerPort);
 	pMyConnection->SetTrackPacket(bTrackPacket);
 	pMyConnection->SetConnId(connId);
+	pMyConnection->SetAutoReconnect(bAutoReconnect, nReconnectDelay);
 
 	// 开始连接
 	bool ok = pMyConnection->connect();

@@ -13,6 +13,7 @@ typedef void (CALLBACK *TextReceivedCallbackFunc)(long connId, LPCSTR lpszText);
 typedef void (CALLBACK *TextSentCallbackFunc)(long connId, LPCSTR lpszText);
 
 typedef void (CALLBACK *LoginStatusCallbackFunc)(long connId, int nStatus);
+typedef void (CALLBACK *LoginFailedCallbackFunc)(long connId, LPCSTR lpszReason);
 typedef void (CALLBACK *LogCallbackFunc)(long connId, LPCSTR lpszLogText, int nLogLevel);
 typedef void (CALLBACK *MsgKeyReceivedCallbackFunc)(long connId, LPCSTR lpszMsgKey);
 typedef void (CALLBACK *MaxInactiveTimeReceivedCallbackFunc)(long connId, int nMaxInactiveTime);
@@ -46,10 +47,12 @@ FUNCTION void CALLBACK SetMsgReceivedCallbackFunc(MsgReceivedCallbackFunc lpMsgR
 FUNCTION void CALLBACK SetMsgRepliedCallbackFunc(MsgRepliedCallbackFunc lpMsgRepliedCallbackFunc);
 //
 FUNCTION void CALLBACK SetLoginStatusCallbackFunc(LoginStatusCallbackFunc lpLoginStatusCallbackFunc);
+FUNCTION void CALLBACK SetLoginFailedCallbackFunc(LoginFailedCallbackFunc lpLoginFailedCallbackFunc);
 FUNCTION void CALLBACK SetLogCallbackFunc(LogCallbackFunc lpLogCallbackFunc);
 
 // 用户登录
-FUNCTION bool CALLBACK LoginAsUser(long connId, LPCSTR lpszUsername, LPCSTR lpszPassword, bool bTrackPacket = true);
+FUNCTION bool CALLBACK LoginAsUser(long connId, LPCSTR lpszUsername, LPCSTR lpszPassword, 
+	bool bAutoReconnect = false, int nReconnectDelay=1000, bool bTrackPacket = true);
 // 断开连接
 FUNCTION bool CALLBACK Disconnect(long connId);
 

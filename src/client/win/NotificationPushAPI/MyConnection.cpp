@@ -37,6 +37,26 @@ void MyConnection::onLoginStatus(int nStatus)
 	}
 }
 
+void MyConnection::onAppCheckFailed(const std::string& reason)
+{
+	if (g_lpLoginFailedCallbackFunc != NULL)
+	{
+		CA2T strText(reason.c_str(), CP_UTF8);
+		CT2A strText2(strText.m_psz);
+		g_lpLoginFailedCallbackFunc(m_connId, std::string(strText2.m_psz).c_str());
+	}
+}
+
+void MyConnection::onUserCheckFailed(const std::string& reason)
+{
+	if (g_lpLoginFailedCallbackFunc != NULL)
+	{
+		CA2T strText(reason.c_str(), CP_UTF8);
+		CT2A strText2(strText.m_psz);
+		g_lpLoginFailedCallbackFunc(m_connId, std::string(strText2.m_psz).c_str());
+	}
+}
+
 void MyConnection::onMsgKeyReceived(const std::string& msgKey)
 {
 	if (g_lpMsgKeyReceivedCallbackFunc != NULL)
@@ -80,29 +100,49 @@ void MyConnection::onMsgReplied(const std::string& msgId, bool success, const st
 void MyConnection::error(const std::string& log)
 {
 	if (g_lpLogCallbackFunc!=NULL)
-		g_lpLogCallbackFunc(m_connId, log.c_str(), LOG_ERROR);
+	{
+		CA2T strLog(log.c_str(), CP_UTF8);
+		CT2A strLog2(strLog.m_psz);
+		g_lpLogCallbackFunc(m_connId, strLog2.m_psz, LOG_ERROR);
+	}
 }
 
 void MyConnection::warn(const std::string& log)
 {
 	if (g_lpLogCallbackFunc!=NULL)
-		g_lpLogCallbackFunc(m_connId, log.c_str(), LOG_WARN);
+	{
+		CA2T strLog(log.c_str(), CP_UTF8);
+		CT2A strLog2(strLog.m_psz);
+		g_lpLogCallbackFunc(m_connId, strLog2.m_psz, LOG_WARN);
+	}
 }
 
 void MyConnection::info(const std::string& log)
 {
 	if (g_lpLogCallbackFunc!=NULL)
-		g_lpLogCallbackFunc(m_connId, log.c_str(), LOG_INFO);
+	{
+		CA2T strLog(log.c_str(), CP_UTF8);
+		CT2A strLog2(strLog.m_psz);
+		g_lpLogCallbackFunc(m_connId, strLog2.m_psz, LOG_INFO);
+	}
 }
 
 void MyConnection::debug(const std::string& log)
 {
 	if (g_lpLogCallbackFunc!=NULL)
-		g_lpLogCallbackFunc(m_connId, log.c_str(), LOG_DEBUG);
+	{
+		CA2T strLog(log.c_str(), CP_UTF8);
+		CT2A strLog2(strLog.m_psz);
+		g_lpLogCallbackFunc(m_connId, strLog2.m_psz, LOG_DEBUG);
+	}
 }
 
 void MyConnection::trace(const std::string& log)
 {
 	if (g_lpLogCallbackFunc!=NULL)
-		g_lpLogCallbackFunc(m_connId, log.c_str(), LOG_TRACE);
+	{
+		CA2T strLog(log.c_str(), CP_UTF8);
+		CT2A strLog2(strLog.m_psz);
+		g_lpLogCallbackFunc(m_connId, strLog2.m_psz, LOG_TRACE);
+	}
 }

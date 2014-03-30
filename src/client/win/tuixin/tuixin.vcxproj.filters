@@ -42,13 +42,10 @@
     <ClInclude Include="MyMessage.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="json\json.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="json\json-forwards.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="NotificationPushAPI_proto.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="json\json.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -65,7 +62,13 @@
     <ClCompile Include="MyMessage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="jsoncpp.cpp">
+    <ClCompile Include="json_reader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="json_value.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="json_writer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -23,6 +23,7 @@ extern TextReceivedCallbackFunc g_lpTextReceivedCallbackFunc;
 extern TextSentCallbackFunc g_lpTextSentCallbackFunc;
 
 extern LoginStatusCallbackFunc g_lpLoginStatusCallbackFunc;
+extern LoginFailedCallbackFunc g_lpLoginFailedCallbackFunc;
 extern LogCallbackFunc g_lpLogCallbackFunc;
 extern MsgKeyReceivedCallbackFunc g_lpMsgKeyReceivedCallbackFunc;
 extern MaxInactiveTimeReceivedCallbackFunc g_lpMaxInactiveTimeReceivedCallbackFunc;

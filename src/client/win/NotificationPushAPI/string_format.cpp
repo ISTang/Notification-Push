@@ -2,20 +2,19 @@
 #include "string_format.h"
 
 std::string string_format(const std::string fmt_str, ...) {
-    int final_n, n = fmt_str.size() * 2; /* reserve 2 times as much as the length of the fmt_str */
-    std::string str;
-    std::unique_ptr<char[]> formatted;
-    va_list ap;
-    while(1) {
-        formatted.reset(new char[n]); /* wrap the plain char array into the unique_ptr */
-        strcpy_s(&formatted[0], n, fmt_str.c_str());
-        va_start(ap, fmt_str);
-        final_n = vsnprintf_s(&formatted[0], n, n, fmt_str.c_str(), ap);
-        va_end(ap);
-        if (final_n < 0 || final_n >= n)
-            n += abs(final_n - n + 1);
-        else
-            break;
+    int size = 512;
+    char* buffer = new char[size+1];
+    va_list vl;
+	va_start(vl, fmt_str);
+    int ret = vsnprintf_s(buffer, size+1, size, fmt_str.c_str(), vl);
+    while (ret == -1){ //fail, delete buffer and try again
+        delete[] buffer;
+		size *= 2;
+        buffer = new char[size+1];
+        ret = vsnprintf_s(buffer, size+1, size, fmt_str.c_str(), vl);
     }
-    return std::string(formatted.get());
+    std::string result(buffer);
+    va_end(vl);
+    delete[] buffer;
+    return result;
 }

@@ -2,6 +2,13 @@
 #include "SocketComm.h"
 #include "cMD5.h"
 
+const int INVALID_ACTION_LINE = 10;
+const int INVALID_FIELD_LINE = 20;
+const int INVALID_BODY_LENGTH = 30;
+const int INVALID_APP_INFO = 100;
+const int INVALID_USER_INFO = 200;
+const int SERVER_KICKOFF_ME = 300;
+const int FEATURE_NOT_SUPPORTED = 1000;
 const int SOCKET_WRITE_TIMEOUT = 3000;
 const int SOCKET_WRITE_ERROR = 10000;
 
@@ -21,8 +28,6 @@ const auto CLIENT_STATUS_ALIVEINT_ACK = 4; // ÒÑÈ·ÈÏÐÄÌøÖÜÆÚ(¿ÉÒÔ½ÓÊÕÐÄÌøÐÅºÅºÍÍ
 
 // ÐÐ½áÊø·û¶¨Òå
 const auto INPUT_RETURN = "\r\n";
-const auto MAX_LINE = 512;
-const auto MAX_BUF = 4096;
 
 // Í·²¿×Ö¶ÎÃû¶¨Òå
 #define FIELD_BODY_BYTE_LENGTH "ByteLength"
@@ -330,23 +335,24 @@ protected:
 	virtual void handlePacket(const std::string &action, const std::string &target, 
 		std::map<std::string, std::string> &fields, const std::string &body) = 0; // ´¦Àí±¨ÎÄ
 
-	virtual void error(const std::string& log) = 0; // Êä³ö´íÎó
-	virtual void warn(const std::string& log) = 0; // Êä³ö¾¯¸æ
-	virtual void info(const std::string& log) = 0; // Êä³öÐÅÏ¢
-	virtual void debug(const std::string& log) = 0; // Êä³öµ÷ÊÔ
-	virtual void trace(const std::string& log) = 0; // Êä³ö¸ú×Ù
+	virtual void error(const std::string& log) = 0; // Êä³ö´íÎó(utf8)
+	virtual void warn(const std::string& log) = 0; // Êä³ö¾¯¸æ(utf8)
+	virtual void info(const std::string& log) = 0; // Êä³öÐÅÏ¢(utf8)
+	virtual void debug(const std::string& log) = 0; // Êä³öµ÷ÊÔ(utf8)
+	virtual void trace(const std::string& log) = 0; // Êä³ö¸ú×Ù(utf8)
 
-	bool write(const std::string& msg, bool end=false);
+	bool write(const std::string& msg, bool end=false); // utf8
 
 	std::string peerAddress; // ¶Ô·½µØÖ·(IP[¶Ë¿Ú])
+	bool canReconnect;
 
-private:
+protected:
 	virtual void OnDataReceived(const LPBYTE lpBuffer, DWORD dwCount);
 	virtual void OnEvent(UINT uEvent, LPVOID lpvData);
 
 	void initPacket(void); // ³õÊ¼»¯±¨ÎÄ
 
-	char unhandleInput[MAX_BUF + 1];
+	char *unhandleInput;
 	bool waitForHead; // µÈ´ýÍ·²¿(false±íÊ¾µÈ´ýÌå²¿»ò²»ÐèÒªÔÙµÈ´ý)
 
 	std::string  headInput; // Í·²¿ÊäÈë
@@ -374,16 +380,24 @@ public:
 	void setAppInfo(const AppInfo &appInfo);
 	void setLoginInfo(const LoginInfo &loginInfo);
 	void setServerInfo(const std::string &serverHost, int serverPort);
+	void SetAutoReconnect(bool autoReconnect, int reconnectDelay);
 
 	bool connect();
 	void disconnect();
 
-	bool send(const std::string &receiver, const std::string &msgId, const std::string &msg, bool secure=false);
-	bool multicast(const std::vector<std::string> &receivers, const std::string &msgId, const std::string &msg, bool secure=false);
-	bool broadcast(const std::string &msgId, const std::string &msg, bool secure=false);
+	bool send(const std::string &receiver, const std::string &msgId, const std::string &msg, bool secure=false); // utf8
+	bool multicast(const std::vector<std::string> &receivers, const std::string &msgId, const std::string &msg, bool secure=false); // utf8
+	bool broadcast(const std::string &msgId, const std::string &msg, bool secure=false); // utf8
+
+private:
+	static UINT WINAPI doConnect(LPVOID pParam);
+	HANDLE connectHandle;
+	bool disconnectNow;
 
 protected:
 	virtual void onLoginStatus(int nStatus) = 0;
+	virtual void onAppCheckFailed(const std::string& reason) = 0; // utf8
+	virtual void onUserCheckFailed(const std::string& reason) = 0; // utf8
 	virtual void onMsgKeyReceived(const std::string& msgKey) = 0; // utf8
 	virtual void onMaxInactiveTimeReceived(int nMaxInactiveTime) = 0;
 	virtual void onMsgReceived(const std::string& msg) = 0; // utf8
@@ -410,11 +424,13 @@ protected:
 	LoginInfo loginInfo;
 	std::string serverHost;
 	int serverPort;
+	bool autoReconnect;
+	int reconnectDelay;
 
     bool clientLogon;
     bool clientLogining;
 
-	HANDLE m_hKeepAlive;
+	HANDLE keepAliveHandle;
 
 	cMD5 md5;
 };
