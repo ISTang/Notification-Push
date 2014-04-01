@@ -389,6 +389,11 @@ public:
 	bool multicast(const std::vector<std::string> &receivers, const std::string &msgId, const std::string &msg, bool secure=false); // utf8
 	bool broadcast(const std::string &msgId, const std::string &msg, bool secure=false); // utf8
 
+	bool queryPublic(const std::string &pattern, const std::string &queryId="query_public");
+	bool follow(const std::string &account);
+	bool unfollow(const std::string &account);
+	bool getFollowed();
+
 private:
 	static UINT WINAPI doConnect(LPVOID pParam);
 	HANDLE connectHandle;
@@ -396,12 +401,19 @@ private:
 
 protected:
 	virtual void onLoginStatus(int nStatus) = 0;
-	virtual void onAppCheckFailed(const std::string& reason) = 0; // utf8
-	virtual void onUserCheckFailed(const std::string& reason) = 0; // utf8
-	virtual void onMsgKeyReceived(const std::string& msgKey) = 0; // utf8
+	virtual void onAppCheckFailed(const std::string &reason) = 0; // utf8
+	virtual void onUserCheckFailed(const std::string &reason) = 0; // utf8
+	virtual void onMsgKeyReceived(const std::string &msgKey) = 0; // utf8
 	virtual void onMaxInactiveTimeReceived(int nMaxInactiveTime) = 0;
-	virtual void onMsgReceived(const std::string& msg) = 0; // utf8
-	virtual void onMsgReplied(const std::string& msgId, bool success, const std::string& error) = 0; // utf8
+	virtual void onMsgReceived(const std::string &msg) = 0; // utf8
+	virtual void onMsgReplied(const std::string &msgId, bool success, const std::string &error) = 0; // utf8
+
+	virtual void onQueryPublicFailed(std::string &queryId, const std::string &error) = 0; // utf8
+	virtual void onPublicReceived(const std::string &jsonText) = 0; // utf8
+	virtual void onFollowReplied(const std::string &account, bool success, const std::string &error) = 0; // utf8
+	virtual void onUnfollowReplied(const std::string &account, bool success, const std::string &error) = 0; // utf8
+	virtual void onGetFollowedFailed(const std::string &error) = 0; // utf8
+	virtual void onFollowedReceived(const std::vector<std::string> &accounts) = 0; // utf8
 
 	std::string msgKey;
 	int maxInactiveTime; // client(self)

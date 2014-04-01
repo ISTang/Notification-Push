@@ -11,26 +11,25 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{73C88FEC-7EAD-4D97-9C12-0FD23F8A19A0}</ProjectGuid>
-    <RootNamespace>NotificationPushAPI</RootNamespace>
-    <Keyword>MFCDLLProj</Keyword>
-    <ProjectName>NotificationPushAPI</ProjectName>
+    <ProjectGuid>{B01C19E5-C182-4AFE-8965-5213ADEB8F99}</ProjectGuid>
+    <RootNamespace>teachingClient</RootNamespace>
+    <Keyword>MFCProj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -53,20 +52,25 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>.\NotificationPushAPI.def</ModuleDefinitionFile>
+      <AdditionalDependencies>NotificationPushAPI.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </Midl>
     <ResourceCompile>
-      <Culture>0x0409</Culture>
+      <Culture>0x0804</Culture>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
@@ -78,69 +82,67 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ModuleDefinitionFile>.\NotificationPushAPI.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>NotificationPushAPI.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
+      <ValidateAllParameters>true</ValidateAllParameters>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </Midl>
     <ResourceCompile>
-      <Culture>0x0409</Culture>
+      <Culture>0x0804</Culture>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
+    <None Include="ReadMe.txt" />
+    <None Include="res\teachingClient.ico" />
+    <None Include="res\teachingClient.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MyConnection.cpp" />
+    <ClInclude Include="cMD5.h" />
+    <ClInclude Include="json\json.h" />
+    <ClInclude Include="MyMessage.h" />
+    <ClInclude Include="NotificationPushAPI_proto.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="SystemTray.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="teachingClient.h" />
+    <ClInclude Include="teachingClientDlg.h" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="cMD5.cpp" />
-    <ClCompile Include="is_utf8.cpp" />
-    <ClCompile Include="NotificationPushAPI.cpp" />
-    <ClCompile Include="pointer_add_utf8.cpp" />
-    <ClCompile Include="protocol.cpp" />
-    <ClCompile Include="SocketComm.cpp" />
+    <ClCompile Include="json_reader.cpp" />
+    <ClCompile Include="json_value.cpp" />
+    <ClCompile Include="json_writer.cpp" />
+    <ClCompile Include="MyMessage.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="string_format.cpp" />
-    <ClCompile Include="string_split.cpp" />
-    <ClCompile Include="strlen_utf8.cpp" />
+    <ClCompile Include="SystemTray.cpp" />
+    <ClCompile Include="teachingClient.cpp" />
+    <ClCompile Include="teachingClientDlg.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MyConnection.h" />
-    <ClInclude Include="cMD5.h" />
-    <ClInclude Include="is_utf8.h" />
-    <ClInclude Include="NotificationPushAPI.h" />
-    <ClInclude Include="NotificationPushAPI_proto.h" />
-    <ClInclude Include="pointer_add_utf8.h" />
-    <ClInclude Include="protocol.h" />
-    <ClInclude Include="Resource.h" />
-    <ClInclude Include="SocketComm.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="string_format.h" />
-    <ClInclude Include="string_split.h" />
-    <ClInclude Include="strlen_utf8.h" />
-    <ClInclude Include="targetver.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="NotificationPushAPI.def" />
-    <None Include="res\NotificationPushAPI.rc2" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="NotificationPushAPI.rc" />
+    <ResourceCompile Include="teachingClient.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="teachingClient.rc" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>

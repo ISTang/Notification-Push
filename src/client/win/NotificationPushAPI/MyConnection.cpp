@@ -97,6 +97,90 @@ void MyConnection::onMsgReplied(const std::string& msgId, bool success, const st
 	}
 }
 
+void MyConnection::onQueryPublicFailed(std::string &queryId, const std::string &error)
+{
+	if (g_lpQueryPublicAccountsFailedCallbackFunc != NULL)
+	{
+		CA2T strQueryId(queryId.c_str(), CP_UTF8);
+		CT2A strQueryId2(strQueryId.m_psz);
+		CA2T strError(error.c_str(), CP_UTF8);
+		CT2A strError2(strError.m_psz);
+		g_lpQueryPublicAccountsFailedCallbackFunc(m_connId, std::string(strQueryId2.m_psz).c_str(), std::string(strError2.m_psz).c_str());
+	}
+}
+
+void MyConnection::onPublicReceived(const std::string &jsonText)
+{
+	if (g_lpPublicAccountsReceivedCallbackFunc != NULL)
+	{
+		CA2T strJsonText(jsonText.c_str(), CP_UTF8);
+		CT2A strJsonText2(strJsonText.m_psz);
+		g_lpPublicAccountsReceivedCallbackFunc(m_connId, std::string(strJsonText2.m_psz).c_str());
+	}
+}
+
+void MyConnection::onFollowReplied(const std::string &account, bool success, const std::string &error)
+{
+	if (g_lpFollowPublicAccountRepliedCallbackFunc != NULL)
+	{
+		CA2T strAccount(account.c_str(), CP_UTF8);
+		CT2A strAccount2(strAccount.m_psz);
+		CA2T strError(error.c_str(), CP_UTF8);
+		CT2A strError2(strError.m_psz);
+		g_lpFollowPublicAccountRepliedCallbackFunc(m_connId, std::string(strAccount2.m_psz).c_str(), success, std::string(strError2.m_psz).c_str());
+	}
+}
+
+void MyConnection::onUnfollowReplied(const std::string &account, bool success, const std::string &error)
+{
+	if (g_lpUnfollowPublicAccountRepliedCallbackFunc != NULL)
+	{
+		CA2T strAccount(account.c_str(), CP_UTF8);
+		CT2A strAccount2(strAccount.m_psz);
+		CA2T strError(error.c_str(), CP_UTF8);
+		CT2A strError2(strError.m_psz);
+		g_lpUnfollowPublicAccountRepliedCallbackFunc(m_connId, std::string(strAccount2.m_psz).c_str(), success, std::string(strError2.m_psz).c_str());
+	}
+}
+
+void MyConnection::onGetFollowedFailed(const std::string &error)
+{
+	if (g_lpGetFollowedPublicAccountsFailedCallbackFunc != NULL)
+	{
+		CA2T strError(error.c_str(), CP_UTF8);
+		CT2A strError2(strError.m_psz);
+		g_lpGetFollowedPublicAccountsFailedCallbackFunc(m_connId, std::string(strError2.m_psz).c_str());
+	}
+}
+
+void MyConnection::onFollowedReceived(const std::vector<std::string> &accounts)
+{
+	if (g_lpFollowedPublicAccountsReceivedCallbackFunc != NULL)
+	{
+		LPCSTR *psz = new LPCSTR[accounts.size()+1];
+		LPCSTR *p = psz;
+		for (auto i=accounts.begin(); i!=accounts.end(); ++i)
+		{
+			CA2T strAccount(i->c_str(), CP_UTF8);
+			CT2A strAccount2(strAccount.m_psz);
+
+			int len = strlen(strAccount2.m_psz);
+			char *tmp = new char[len+1];
+			strcpy_s(tmp, len+1, strAccount2.m_psz);
+			*p = tmp;
+
+			++p;
+		}
+		*p = NULL;
+		g_lpFollowedPublicAccountsReceivedCallbackFunc(m_connId, psz);
+		for (p=psz; *p!=NULL; ++p)
+		{
+			delete[] *p;
+		}
+		delete[] p;
+	}
+}
+
 void MyConnection::error(const std::string& log)
 {
 	if (g_lpLogCallbackFunc!=NULL)

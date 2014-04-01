@@ -4,6 +4,7 @@
 #include "strlen_utf8.h"
 #include "pointer_add_utf8.h"
 #include "string_format.h"
+#include "string_split.h"
 
 Connection::Connection(void)
 : canReconnect(true)
@@ -425,6 +426,58 @@ bool ClientConnection::broadcast(const std::string &sendId, const std::string &m
 	return true;
 }
 
+bool ClientConnection::queryPublic(const std::string &pattern, const std::string &queryId)
+{
+	debug("Quering public accounts with pattern " + pattern + "...");
+	std::string buf = string_format(QUERY_PUBLIC_REQ, queryId.c_str(), strlen_utf8(pattern.c_str()), pattern.c_str());
+	if (!write(buf))
+	{
+		warn("写套接字失败");
+		return false;
+	}
+
+	return true;
+}
+
+bool ClientConnection::follow(const std::string &account)
+{
+	debug("Following public account " +account + "...");
+	std::string buf = string_format(FOLLOW_PUBLIC_REQ, strlen_utf8(account.c_str()), account.c_str());
+	if (!write(buf))
+	{
+		warn("写套接字失败");
+		return false;
+	}
+
+	return true;
+}
+
+bool ClientConnection::unfollow(const std::string &account)
+{
+	debug("Unfollowing public account " +account + "...");
+	std::string buf = string_format(UNFOLLOW_PUBLIC_REQ, strlen_utf8(account.c_str()), account.c_str());
+	if (!write(buf))
+	{
+		warn("写套接字失败");
+		return false;
+	}
+
+	return true;
+}
+
+bool ClientConnection::getFollowed()
+{
+	debug("Getting followed public accounts ...");
+	std::string buf = string_format(GET_FOLLOWED_REQ);
+	if (!write(buf))
+	{
+		warn("写套接字失败");
+		return false;
+	}
+
+	return true;
+}
+
 void ClientConnection::onConnected(void)
 {
 	clientLogining = true;
@@ -561,12 +614,37 @@ void ClientConnection::handlePacket(const std::string &action, const std::string
 		onMsgReplied(msgId, success, body);
     } else if (action == "QUERY" && target == "PUBLIC") {
         // 收到公众号查询回复
+        auto queryId = fields[FIELD_ACTION_ID];
+        auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
+		info("Query public accounts(#" + queryId + ")" + (success ? " ok." : " failed: " + body));
+		if (!success)
+			onQueryPublicFailed(queryId, body);
+		else
+			onPublicReceived(body);
     } else if (action == "FOLLOW" && target == "PUBLIC") {
         // 收到公众号关注回复
+        auto account = fields[FIELD_ACTION_ACCOUNT];
+        auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
+        info("Follow " + account + (success ? " ok." : " failed: " + body));
+		onFollowReplied(account, success, body);
     } else if (action == "UNFOLLOW" && target == "PUBLIC") {
         // 收到公众号取消关注回复
+        auto account = fields[FIELD_ACTION_ACCOUNT];
+        auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
+        info("Unfollow " + account + (success ? " ok." : " failed: " + body));
+		onFollowReplied(account, success, body);
     } else if (action == "GET" && target == "FOLLOWED") {
         // 收到获取已关注公众号回复
+        auto success = (fields[FIELD_ACTION_SUCCESS] == "true");
+        info("Get followed public accounts " + (success ? " ok." : " failed: " + body));
+		if (!success)
+			onGetFollowedFailed(body);
+		else
+		{
+			std::vector<std::string> accounts;
+			string_split(body, accounts);
+			onFollowedReceived(accounts);
+		}
     } else if (action == "CLOSE" && target == "CONN") {
         // 服务器主动断开连接
         warn("Server kickoff me: " + body);
