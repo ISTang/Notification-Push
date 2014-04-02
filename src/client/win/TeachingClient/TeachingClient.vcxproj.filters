@@ -57,7 +57,7 @@
     <ClInclude Include="SignDialog.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="XMLite.h">
+    <ClInclude Include="Markup.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -92,7 +92,7 @@
     <ClCompile Include="SignDialog.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="XMLite.cpp">
+    <ClCompile Include="Markup.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

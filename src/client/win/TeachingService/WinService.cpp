@@ -2,7 +2,7 @@
 #include "WinService.h"
 #include "NotificationPushAPI_proto.h"
 #include "MyMessage.h"
-#include "XMLite.h"
+#include "Markup.h"
 
 static CMyService *g_pMyService;
 
@@ -607,31 +607,29 @@ void CALLBACK CMyService::onMsgReceived(long connId, LPCSTR lpszMsg)
 	CA2T msgBody(msg.getBody().c_str());
 
 	DebugMsg(_T("%s说: [%s]%s(%s)"), msgSender.m_psz, msgTitle.m_psz, msgBody.m_psz, msgType.m_psz);
-	if (StrCmp(msgType.m_psz, _T("xml"))==0 && 
-		StrCmp(msgTitle.m_psz, _T("signin")))
-	{
-		XNode xml;
-		PARSEINFO pi;
-		xml.Load(msgBody.m_psz, &pi);
-		if( pi.erorr_occur ) 
-		{
-			DebugMsg(_T("XML解析失败: %s!"), pi.error_string);
-			return;
-		}
+	if (wcscmp(msgType.m_psz, _T("xml")) != 0) return;
 
-		MyMessage msg;
-		msg.setType("xml");
-		msg.setTitle("signin_result");
+	CMarkup xml;
+	xml.SetDoc(msgBody);
+	if (wcscmp(msgTitle.m_psz, _T("signin")) == 0)
+	{
+		MyMessage msg2;
+		msg2.setType("xml");
+		msg2.setTitle("signin_result");
 		CString xmlResp;
 
-		CString userId = xml.GetChildText(_T("userid"));
-		CString realName = xml.GetChildText(_T("userid"));
-		CString userPassword = xml.GetChildText(_T("userid"));
-		int userType = g_pMyService->CheckUser(userId.GetBuffer(), realName.GetBuffer(), userPassword.GetBuffer());
+		if (!xml.FindChildElem(_T("userid"))) return;
+		CString userId = xml.GetChildData();
+		if (!xml.FindChildElem(_T("realname"))) return;
+		CString realName = xml.GetChildData();
+		if (!xml.FindChildElem(_T("userpassword"))) return;
+		CString userPassword = xml.GetChildData();
+		DebugMsg(_T("Sign info: userId=%s, realName=%s, userPassword=%s"), userId, realName, userPassword);
+		int userType = g_pMyService->CheckUser(userId, realName, userPassword);
 		if (userType)
 		{
 			// 身份检查成功
-			g_pMyService->Signin(userId.GetBuffer(), realName.GetBuffer(), msgSender.m_psz);
+			g_pMyService->Signin(userId, realName, msgSender.m_psz);
 
 			xmlResp.Format(
 				_T("<root>")
@@ -651,8 +649,8 @@ void CALLBACK CMyService::onMsgReceived(long connId, LPCSTR lpszMsg)
 				_T("check failed."));
 		}
 		CT2A resp(xmlResp);
-		msg.setBody(resp.m_psz);
-		if (!SendMessageTo(0, msg.getSender().c_str(), "signin_result", msg.toJson().c_str()))
+		msg2.setBody(resp.m_psz);
+		if (!SendMessageTo(0, msg.getSender().c_str(), "signin_result", msg2.toJson().c_str()))
 		{
 			DebugMsg(_T("Failed to send message."));
 		}
@@ -672,7 +670,7 @@ void CALLBACK CMyService::onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSucc
 	}
 }
 
-int CMyService::CheckUser(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szUserPassword)
+int CMyService::CheckUser(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szUserPassword)
 {
 	try
 	{
@@ -702,7 +700,7 @@ int CMyService::CheckUser(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szUserPassw
 		else
 		{
 			// 错误!!!
-			DebugMsg(_T("Wrong used id: %s"), szUserId);
+			DebugMsg(_T("Wrong user id: %s"), szUserId);
 			return 0;
 		}
 		_variant_t matchedCount;
@@ -719,7 +717,7 @@ int CMyService::CheckUser(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szUserPassw
 	}
 }
 
-void CMyService::Signin(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szComputerName)
+void CMyService::Signin(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szComputerName)
 {
 	try
 	{

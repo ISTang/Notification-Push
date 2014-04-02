@@ -63,11 +63,11 @@ protected:
 	static void CALLBACK onMsgReceived(long connId, LPCSTR lpszMsg);
 	static void CALLBACK onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSuccess, LPCSTR lpszError);
 
-	int CheckUser(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szUserPassword); // 0-failed, 1-student, 2-teacher
-	void Signin(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szComputerName);
+	int CheckUser(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szUserPassword); // 0-failed, 1-student, 2-teacher
+	void Signin(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szComputerName);
 
 	void SaveStatus();
-	bool DoQueryTest();
+	bool DoQueryTest(); 
 
 	// ·þÎñÆ÷µØÖ·
 	CString m_strServer;

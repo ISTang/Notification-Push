@@ -39,7 +39,7 @@
     <ClCompile Include="MyMessage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="XMLite.cpp">
+    <ClCompile Include="Markup.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -65,7 +65,7 @@
     <ClInclude Include="NotificationPushAPI_proto.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="XMLite.h">
+    <ClInclude Include="Markup.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

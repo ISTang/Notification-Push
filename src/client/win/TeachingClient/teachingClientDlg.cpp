@@ -9,7 +9,7 @@
 #include "NotificationPushAPI_proto.h"
 #include "MyMessage.h"
 #include "SignDialog.h"
-#include "XMLite.h"
+#include "Markup.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -320,7 +320,8 @@ void CALLBACK CTeachingClientDlg::onLoginFailed(long connId, LPCSTR lpszReason)
 	CA2T text(lpszReason);
 	g_pTeachingClientDlg->AppendStatusText(text.m_psz);
 
-	::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), _T("登录失败！"), _T("错误"), MB_OK|MB_ICONERROR);
+	//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), _T("登录失败！"), _T("错误"), MB_OK|MB_ICONERROR);
+	g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(text.m_psz, _T("登录失败"));
 }
 
 void CALLBACK CTeachingClientDlg::onLog(long connId, LPCSTR lpszLogText, int nLogLevel)
@@ -345,46 +346,45 @@ void CALLBACK CTeachingClientDlg::onMsgReceived(long connId, LPCSTR lpszMsg)
 {
 	MyMessage msg = MyMessage::parse(lpszMsg);
 	CA2T msgSender(msg.getSender().c_str());
-	CA2T msgType(msg.getSender().c_str());
+	CA2T msgType(msg.getType().c_str());
 	CA2T msgTitle(msg.getTitle().c_str());
 	CA2T msgBody(msg.getBody().c_str());
 
-	if (StrCmp(msgType, _T("xml"))!=0)
+	if (wcscmp(msgType, _T("xml")) != 0)
 	{
 		CString str;
 		str.Format(_T("%s说: %s"), msgSender.m_psz, msgBody.m_psz);
 
 		g_pTeachingClientDlg->AppendChatMsg(str);
+		g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("您收到新消息了"));
 		return;
 	}
 
-	XNode xml;
-	PARSEINFO pi;
-	xml.Load(msgBody.m_psz, &pi);
-	if( pi.erorr_occur ) 
+	CMarkup xml;
+	xml.SetDoc(msgBody.m_psz);
+	if (wcscmp(msgTitle.m_psz, _T("signin_result")) == 0)
 	{
-		CString str;
-		str.Format(_T("XML解析失败: %s!"), pi.error_string);
-		g_pTeachingClientDlg->AppendStatusText(str);
-		return;
-	}
+		if (!xml.FindChildElem(_T("success"))) return;
+		CString success = xml.GetChildData();
+		if (success != _T("true"))
+		{
+			if (!xml.FindChildElem(_T("reason"))) return;
+			CString str;
+			str.Format(_T("签到失败: %s!"), xml.GetChildData());
+			//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("警告"), MB_OK | MB_ICONWARNING);
+			g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("签到失败"));
+			return;
+		}
 
-	CString success = xml.GetChildText(_T("success"));
-	if (success==_T("false"))
-	{
-		CString reason = xml.GetChildText(_T("reason"));
+		if (!xml.FindChildElem(_T("role"))) return;
+		CString role = xml.GetChildData();
+		g_pTeachingClientDlg->m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU2);
+		g_pTeachingClientDlg->m_bSignIn = !g_pTeachingClientDlg->m_bSignIn;
 		CString str;
-		str.Format(_T("签到失败: %s!"), reason);
-		::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("警告"), MB_OK|MB_ICONWARNING);
-		return;
+		str.Format(_T("您已以 %s 身份签到成功。"), role == _T("student") ? "学生" : "教师");
+		//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("提示"), MB_OK | MB_ICONINFORMATION);
+		g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("签到成功"));
 	}
-
-	CString role = xml.GetChildText(_T("role"));
-	g_pTeachingClientDlg->m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU2);
-	g_pTeachingClientDlg->m_bSignIn = !g_pTeachingClientDlg->m_bSignIn;
-	CString str;
-	str.Format(_T("您已以 %s 身份签到成功。"), role==_T("student")?"学生":"教师");
-	::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("提示"), MB_OK|MB_ICONINFORMATION);
 }
 
 void CALLBACK CTeachingClientDlg::onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSuccess, LPCSTR lpszError)
@@ -397,7 +397,8 @@ void CALLBACK CTeachingClientDlg::onMsgReplied(long connId, LPCSTR lpszMsgId, bo
 		CA2T error(lpszError);
 		CString str;
 		str.Format(_T("消息发送失败: %s"), error.m_psz);
-		::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("错误"), MB_OK|MB_ICONERROR);
+		//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("错误"), MB_OK|MB_ICONERROR);
+		g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("消息发送失败"));
 	}
 }
 
@@ -523,7 +524,8 @@ void CTeachingClientDlg::OnTeachingSign()
 		CSignDialog dlg;
 		if (dlg.DoModal()==IDOK)
 		{
-			::MessageBox(m_hWnd, _T("签到信息已经发出。"), _T("提示"), MB_OK|MB_ICONINFORMATION);
+			//::MessageBox(m_hWnd, _T("签到信息已经发出。"), _T("提示"), MB_OK|MB_ICONINFORMATION);
+			g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(_T("签到信息已发出"), _T("签到"));
 		}
 	}
 	else
