@@ -6,3 +6,6 @@ download
 bin
 .DS_Store
 target
+/src/client/win/TeachingService/Debug
+/src/client/win/TeachingService/ipch
+/src/client/win/TeachingClient/Debug
