@@ -8,6 +8,8 @@
 #include "afxdialogex.h"
 #include "NotificationPushAPI_proto.h"
 #include "MyMessage.h"
+#include "SignDialog.h"
+#include "XMLite.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -72,6 +74,7 @@ CTeachingClientDlg::CTeachingClientDlg(CWnd* pParent /*=NULL*/)
 	, m_bClearWhenSent(TRUE)
 	, m_nLoginStatus(0)
 	, m_nMsgCount(0)
+	, m_bSignIn(false)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -109,6 +112,7 @@ BEGIN_MESSAGE_MAP(CTeachingClientDlg, CDialogEx)
 	ON_COMMAND(ID_APP_SHOW, &CTeachingClientDlg::OnAppShow)
 	ON_BN_CLICKED(IDC_SEND, CTeachingClientDlg::OnSendMsg)
 	ON_BN_CLICKED(IDC_BROADCAST, CTeachingClientDlg::OnBroadcastMsg)
+	ON_COMMAND(ID_TEACHING_SIGN, &CTeachingClientDlg::OnTeachingSign)
 END_MESSAGE_MAP()
 
 
@@ -289,22 +293,7 @@ void CALLBACK CTeachingClientDlg::onLoginStatus(long connId, int nStatus)
 {
 	if (nStatus == g_pTeachingClientDlg->m_nLoginStatus) return;
 	g_pTeachingClientDlg->m_nLoginStatus = nStatus;
-
-	CTime time = CTime::GetCurrentTime();
-
-	CString str;
-	str.Format(_T("[%s]%s"), time.Format("%H:%M:%S"), LoginStatusText[nStatus]);
-
-	CListBox *plstStatus = (CListBox *)g_pTeachingClientDlg->GetDlgItem(IDC_STATUS);
-	plstStatus->InsertString(plstStatus->GetCount(), str);
-	if (plstStatus->GetCount()>MAX_STATUS_LINES)
-	{
-		for (int i=0; i<plstStatus->GetCount()-MAX_STATUS_LINES; i++)
-		{
-			plstStatus->DeleteString(0);
-		}
-	}
-	plstStatus->SetCurSel(plstStatus->GetCount() - 1);
+	g_pTeachingClientDlg->AppendStatusText(LoginStatusText[nStatus]);
 
 	switch (nStatus)
 	{
@@ -329,45 +318,19 @@ void CALLBACK CTeachingClientDlg::onLoginFailed(long connId, LPCSTR lpszReason)
 	g_pTeachingClientDlg->GetDlgItem(IDC_DISCONNECT)->EnableWindow(FALSE);
 
 	CA2T text(lpszReason);
-
-	CTime time = CTime::GetCurrentTime();
-
-	CString str;
-	str.Format(_T("[%s]登录失败: %s"), time.Format("%H:%M:%S"), text.m_psz);
-
-	CListBox *plstStatus = (CListBox *)g_pTeachingClientDlg->GetDlgItem(IDC_STATUS);
-	plstStatus->InsertString(plstStatus->GetCount(), str);
-	if (plstStatus->GetCount()>MAX_STATUS_LINES)
-	{
-		for (int i=0; i<plstStatus->GetCount()-MAX_STATUS_LINES; i++)
-		{
-			plstStatus->DeleteString(0);
-		}
-	}
-	plstStatus->SetCurSel(plstStatus->GetCount() - 1);
+	g_pTeachingClientDlg->AppendStatusText(text.m_psz);
 
 	::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), _T("登录失败！"), _T("错误"), MB_OK|MB_ICONERROR);
 }
 
 void CALLBACK CTeachingClientDlg::onLog(long connId, LPCSTR lpszLogText, int nLogLevel)
 {
-	CA2T text(lpszLogText);
-
-	CTime time = CTime::GetCurrentTime();
-
-	CString str;
-	str.Format(_T("[%s]%s: %s"), time.Format("%H:%M:%S"), LogLevelText[nLogLevel], text.m_psz);
-
 	CListBox *plstStatus = (CListBox *)g_pTeachingClientDlg->GetDlgItem(IDC_STATUS);
-	plstStatus->InsertString(plstStatus->GetCount(), str);
-	if (plstStatus->GetCount()>MAX_STATUS_LINES)
-	{
-		for (int i=0; i<plstStatus->GetCount()-MAX_STATUS_LINES; i++)
-		{
-			plstStatus->DeleteString(0);
-		}
-	}
-	plstStatus->SetCurSel(plstStatus->GetCount() - 1);
+
+	CA2T text(lpszLogText);
+	CString str;
+	str.Format(_T("%s: %s"), LogLevelText[nLogLevel], text.m_psz);
+	g_pTeachingClientDlg->AppendStatusText(str);
 }
 
 void CALLBACK CTeachingClientDlg::onMsgKeyReceived(long connId, LPCSTR lpszMsgKey)
@@ -382,12 +345,46 @@ void CALLBACK CTeachingClientDlg::onMsgReceived(long connId, LPCSTR lpszMsg)
 {
 	MyMessage msg = MyMessage::parse(lpszMsg);
 	CA2T msgSender(msg.getSender().c_str());
+	CA2T msgType(msg.getSender().c_str());
+	CA2T msgTitle(msg.getTitle().c_str());
 	CA2T msgBody(msg.getBody().c_str());
 
-	CString str;
-	str.Format(_T("%s说: %s"), msgSender.m_psz, msgBody.m_psz);
+	if (StrCmp(msgType, _T("xml"))!=0)
+	{
+		CString str;
+		str.Format(_T("%s说: %s"), msgSender.m_psz, msgBody.m_psz);
 
-	g_pTeachingClientDlg->AppendChatMsg(str);
+		g_pTeachingClientDlg->AppendChatMsg(str);
+		return;
+	}
+
+	XNode xml;
+	PARSEINFO pi;
+	xml.Load(msgBody.m_psz, &pi);
+	if( pi.erorr_occur ) 
+	{
+		CString str;
+		str.Format(_T("XML解析失败: %s!"), pi.error_string);
+		g_pTeachingClientDlg->AppendStatusText(str);
+		return;
+	}
+
+	CString success = xml.GetChildText(_T("success"));
+	if (success==_T("false"))
+	{
+		CString reason = xml.GetChildText(_T("reason"));
+		CString str;
+		str.Format(_T("签到失败: %s!"), reason);
+		::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("警告"), MB_OK|MB_ICONWARNING);
+		return;
+	}
+
+	CString role = xml.GetChildText(_T("role"));
+	g_pTeachingClientDlg->m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU2);
+	g_pTeachingClientDlg->m_bSignIn = !g_pTeachingClientDlg->m_bSignIn;
+	CString str;
+	str.Format(_T("您已以 %s 身份签到成功。"), role==_T("student")?"学生":"教师");
+	::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("提示"), MB_OK|MB_ICONINFORMATION);
 }
 
 void CALLBACK CTeachingClientDlg::onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSuccess, LPCSTR lpszError)
@@ -518,6 +515,25 @@ void CTeachingClientDlg::OnBroadcastMsg()
 	}
 }
 
+void CTeachingClientDlg::OnTeachingSign()
+{
+	if (!m_bSignIn)
+	{
+		// 签到
+		CSignDialog dlg;
+		if (dlg.DoModal()==IDOK)
+		{
+			::MessageBox(m_hWnd, _T("签到信息已经发出。"), _T("提示"), MB_OK|MB_ICONINFORMATION);
+		}
+	}
+	else
+	{
+		// 签出
+		m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU);
+		m_bSignIn = !m_bSignIn;
+	}
+}
+
 void CTeachingClientDlg::AppendChatMsg(const CString& strChatMsg)
 {
 	CTime time = CTime::GetCurrentTime();
@@ -535,4 +551,23 @@ void CTeachingClientDlg::AppendChatMsg(const CString& strChatMsg)
 
 	pEdit->SetWindowText(strNew);
 	pEdit->LineScroll(pEdit->GetLineCount());
+}
+
+void CTeachingClientDlg::AppendStatusText(const CString& strStatusText)
+{
+	CTime time = CTime::GetCurrentTime();
+
+	CString str;
+	str.Format(_T("[%s]%s"), time.Format("%H:%M:%S"), strStatusText);
+
+	CListBox *plstStatus = (CListBox *)g_pTeachingClientDlg->GetDlgItem(IDC_STATUS);
+	plstStatus->InsertString(plstStatus->GetCount(), str);
+	if (plstStatus->GetCount()>MAX_STATUS_LINES)
+	{
+		for (int i=0; i<plstStatus->GetCount()-MAX_STATUS_LINES; i++)
+		{
+			plstStatus->DeleteString(0);
+		}
+	}
+	plstStatus->SetCurSel(plstStatus->GetCount() - 1);
 }

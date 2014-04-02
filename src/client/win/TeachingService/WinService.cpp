@@ -2,7 +2,7 @@
 #include "WinService.h"
 #include "NotificationPushAPI_proto.h"
 #include "MyMessage.h"
-#include <stdio.h>
+#include "XMLite.h"
 
 static CMyService *g_pMyService;
 
@@ -437,7 +437,9 @@ void CMyService::Run()
 	HRESULT hr;
 	try
 	{
+		DebugMsg(_T("初始化COM..."));
 		CoInitialize(NULL);
+		DebugMsg(_T("创建 ADODB.Connection 实例..."));
 		hr = m_pConnection.CreateInstance("ADODB.Connection");
 		if (SUCCEEDED(hr))
 		{
@@ -461,14 +463,17 @@ void CMyService::Run()
 		return;
 	}
 
+	DebugMsg(_T("进行数据库查询测试..."));
 	DoQueryTest();
 
+	DebugMsg(_T("连接消息推送平台..."));
 	if (!DoConnect())
 	{
 		m_bRun = false;
 		return;
 	}
 
+	DebugMsg(_T("等待服务被终止..."));
 	do
 	{
 		Sleep(1000);
@@ -597,9 +602,61 @@ void CALLBACK CMyService::onMsgReceived(long connId, LPCSTR lpszMsg)
 {
 	MyMessage msg = MyMessage::parse(lpszMsg);
 	CA2T msgSender(msg.getSender().c_str());
+	CA2T msgType(msg.getType().c_str());
+	CA2T msgTitle(msg.getTitle().c_str());
 	CA2T msgBody(msg.getBody().c_str());
 
-	DebugMsg(_T("%s说: %s"), msgSender.m_psz, msgBody.m_psz);
+	DebugMsg(_T("%s说: [%s]%s(%s)"), msgSender.m_psz, msgTitle.m_psz, msgBody.m_psz, msgType.m_psz);
+	if (StrCmp(msgType.m_psz, _T("xml"))==0 && 
+		StrCmp(msgTitle.m_psz, _T("signin")))
+	{
+		XNode xml;
+		PARSEINFO pi;
+		xml.Load(msgBody.m_psz, &pi);
+		if( pi.erorr_occur ) 
+		{
+			DebugMsg(_T("XML解析失败: %s!"), pi.error_string);
+			return;
+		}
+
+		MyMessage msg;
+		msg.setType("xml");
+		msg.setTitle("signin_result");
+		CString xmlResp;
+
+		CString userId = xml.GetChildText(_T("userid"));
+		CString realName = xml.GetChildText(_T("userid"));
+		CString userPassword = xml.GetChildText(_T("userid"));
+		int userType = g_pMyService->CheckUser(userId.GetBuffer(), realName.GetBuffer(), userPassword.GetBuffer());
+		if (userType)
+		{
+			// 身份检查成功
+			g_pMyService->Signin(userId.GetBuffer(), realName.GetBuffer(), msgSender.m_psz);
+
+			xmlResp.Format(
+				_T("<root>")
+				_T("  <success>true</success>")
+				_T("  <role>%s</role>")
+				_T("</root>"),
+				userType==1?_T("sudent"):_T("teacher"));
+		}
+		else
+		{
+			// 身份检查失败
+			xmlResp.Format(
+				_T("<root>")
+				_T("  <success>false</success>")
+				_T("  <reason>%s</reason>")
+				_T("</root>"),
+				_T("check failed."));
+		}
+		CT2A resp(xmlResp);
+		msg.setBody(resp.m_psz);
+		if (!SendMessageTo(0, msg.getSender().c_str(), "signin_result", msg.toJson().c_str()))
+		{
+			DebugMsg(_T("Failed to send message."));
+		}
+	}
 }
 
 void CALLBACK CMyService::onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSuccess, LPCSTR lpszError)
@@ -615,21 +672,86 @@ void CALLBACK CMyService::onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSucc
 	}
 }
 
+int CMyService::CheckUser(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szUserPassword)
+{
+	try
+	{
+		_variant_t RecordsAffected;
+		_RecordsetPtr pRecordset;
+		CString cmdText;
+		int len = lstrlen(szUserId);
+		int ret = 0;
+		if (len==10)
+		{
+			// 学生
+			cmdText.Format(_T("SELECT count(*) as matchedCount from student where student_id=\"%s\" and student_name=\"%s\" and login_password=\"%s\""),
+				szUserId, szRealName, szUserPassword);
+			DebugMsg(_T("Execute %s..."), cmdText);
+			pRecordset = m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
+			ret = 1;
+		}
+		else if (len==5 && szUserId[0]==_T('T'))
+		{
+			// 教师
+			cmdText.Format(_T("SELECT count(*) AS matchedCount FROM teacher WHERE teacher_id=\"%s\" AND teacher_name=\"%s\" AND login_password=\"%s\""),
+				szUserId, szRealName, szUserPassword);
+			DebugMsg(_T("Execute %s..."), cmdText);
+			pRecordset = m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
+			ret = 2;
+		}
+		else
+		{
+			// 错误!!!
+			DebugMsg(_T("Wrong used id: %s"), szUserId);
+			return 0;
+		}
+		_variant_t matchedCount;
+		matchedCount = pRecordset->GetCollect("matchedCount");
+		if ((int)matchedCount==0) ret = 0; 
+		pRecordset->Close();
+		return ret;
+	}
+	catch (_com_error e)
+	{
+		DebugMsg(_T("查询失败！\r\n错误信息:%s"), e.ErrorMessage());
+		return 0;
+
+	}
+}
+
+void CMyService::Signin(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szComputerName)
+{
+	try
+	{
+		_variant_t RecordsAffected;
+		CString cmdText;
+		cmdText.Format(_T("INSERT INTO sign (userId, realName, signinTime, szComputerName) values (\"%s\",\"%s\",getdate(),\"%s\""),
+			szUserId, szRealName, szComputerName);
+		DebugMsg(_T("Execute %s..."), cmdText);
+		m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
+	}
+	catch (_com_error e)
+	{
+		DebugMsg(_T("插入失败！\r\n错误信息:%s"), e.ErrorMessage());
+	}
+}
+
 bool CMyService::DoQueryTest()
 {
 	try
 	{
 		_variant_t RecordsAffected;
-		m_pRecordset = m_pConnection->Execute("SELECT getdate() as now", &RecordsAffected, adCmdText);
-		while (!m_pRecordset->ADOEOF)
+		_RecordsetPtr pRecordset;
+		pRecordset = m_pConnection->Execute("SELECT getdate() as now", &RecordsAffected, adCmdText);
+		while (!pRecordset->ADOEOF)
 		{
 			_variant_t now;
-			now = m_pRecordset->GetCollect("now");
+			now = pRecordset->GetCollect("now");
 			DebugMsg(_T("Server datetime: %s"), (TCHAR*)(_bstr_t)now);
 
-			m_pRecordset->MoveNext();
+			pRecordset->MoveNext();
 		}
-		m_pRecordset->Close();
+		pRecordset->Close();
 		return true;
 	}
 	catch (_com_error e)

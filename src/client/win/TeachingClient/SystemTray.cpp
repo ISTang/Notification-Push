@@ -830,9 +830,10 @@ void CSystemTray::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
 
 LRESULT CSystemTray::OnTrayNotification(UINT wParam, LONG lParam) 
 {
+	// 注释下列3行，允许调用者动态修改菜单(SetPopupMenu)
     //Return quickly if its not for this tray icon
-    if (wParam != m_tnd.uID)
-        return 0L;
+    //if (wParam != m_tnd.uID)
+    //    return 0L;
 
     CMenu menu, *pSubMenu;
     CWnd *pTargetWnd = GetTargetWnd();

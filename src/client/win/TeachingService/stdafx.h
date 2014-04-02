@@ -32,6 +32,7 @@
 #include <list>
 #include <map>
 #include <iostream>
+#include <stdio.h>
 
 void DebugMsg(const TCHAR * pwszFormat,...);
 void DebugLastError();

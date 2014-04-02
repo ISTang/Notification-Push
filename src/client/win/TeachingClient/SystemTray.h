@@ -108,6 +108,9 @@ public:
 
     UINT_PTR GetTimerID() const   { return m_nTimerID; }
 
+	// 设置新的弹出菜单
+	void SetPopupMenu(UINT uID) { m_tnd.uID = uID; }
+
 // Static functions
 public:
     static void MinimiseToTray(CWnd* pWnd, BOOL bForceAnimation = FALSE);

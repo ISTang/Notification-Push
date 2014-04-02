@@ -22,7 +22,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -30,7 +30,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Static</UseOfMfc>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -115,11 +115,13 @@
     <ClInclude Include="MyMessage.h" />
     <ClInclude Include="NotificationPushAPI_proto.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SignDialog.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SystemTray.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="teachingClient.h" />
     <ClInclude Include="teachingClientDlg.h" />
+    <ClInclude Include="XMLite.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cMD5.cpp" />
@@ -127,6 +129,7 @@
     <ClCompile Include="json_value.cpp" />
     <ClCompile Include="json_writer.cpp" />
     <ClCompile Include="MyMessage.cpp" />
+    <ClCompile Include="SignDialog.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -134,6 +137,7 @@
     <ClCompile Include="SystemTray.cpp" />
     <ClCompile Include="teachingClient.cpp" />
     <ClCompile Include="teachingClientDlg.cpp" />
+    <ClCompile Include="XMLite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="teachingClient.rc" />

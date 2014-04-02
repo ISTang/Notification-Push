@@ -54,6 +54,12 @@
     <ClInclude Include="cMD5.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="SignDialog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="XMLite.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="teachingClient.cpp">
@@ -81,6 +87,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="cMD5.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SignDialog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="XMLite.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

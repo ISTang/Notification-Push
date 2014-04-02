@@ -58,11 +58,13 @@ protected:
 	afx_msg void OnClose();
 	afx_msg void OnSendMsg();
 	afx_msg void OnBroadcastMsg();
+	afx_msg void OnTeachingSign();
 	DECLARE_MESSAGE_MAP()
 
 private:
 	void DoConnect();
 	void AppendChatMsg(const CString& strChatMsg);
+	void AppendStatusText(const CString& strStatusText);
 
 	// 服务器地址
 	CString m_strServer;
@@ -85,6 +87,12 @@ private:
 	// 是否跟踪分组
 	BOOL m_bTrackPacket;
 
+	// 登录状态
 	int m_nLoginStatus;
+
+	// 已有消息数量
 	int m_nMsgCount;
+
+	// 是否已签到
+	bool m_bSignIn;
 };

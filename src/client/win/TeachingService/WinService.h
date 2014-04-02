@@ -63,6 +63,9 @@ protected:
 	static void CALLBACK onMsgReceived(long connId, LPCSTR lpszMsg);
 	static void CALLBACK onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSuccess, LPCSTR lpszError);
 
+	int CheckUser(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szUserPassword); // 0-failed, 1-student, 2-teacher
+	void Signin(TCHAR *szUserId, TCHAR *szRealName, TCHAR *szComputerName);
+
 	void SaveStatus();
 	bool DoQueryTest();
 
@@ -81,7 +84,6 @@ protected:
 	int m_nLoginStatus;
 
 	_ConnectionPtr m_pConnection;
-	_RecordsetPtr m_pRecordset;
 
 	bool m_bRun;
 };
