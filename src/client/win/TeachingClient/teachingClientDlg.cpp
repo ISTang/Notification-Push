@@ -350,7 +350,7 @@ void CALLBACK CTeachingClientDlg::onMsgReceived(long connId, LPCSTR lpszMsg)
 	CA2T msgTitle(msg.getTitle().c_str());
 	CA2T msgBody(msg.getBody().c_str());
 
-	if (wcscmp(msgType, _T("xml")) != 0)
+	if (_tcscmp(msgType, _T("xml")) != 0)
 	{
 		CString str;
 		str.Format(_T("%s说: %s"), msgSender.m_psz, msgBody.m_psz);
@@ -362,7 +362,7 @@ void CALLBACK CTeachingClientDlg::onMsgReceived(long connId, LPCSTR lpszMsg)
 
 	CMarkup xml;
 	xml.SetDoc(msgBody.m_psz);
-	if (wcscmp(msgTitle.m_psz, _T("signin_result")) == 0)
+	if (_tcscmp(msgTitle.m_psz, _T("signin_result")) == 0)
 	{
 		if (!xml.FindChildElem(_T("success"))) return;
 		CString success = xml.GetChildData();
@@ -377,13 +377,38 @@ void CALLBACK CTeachingClientDlg::onMsgReceived(long connId, LPCSTR lpszMsg)
 		}
 
 		if (!xml.FindChildElem(_T("role"))) return;
-		CString role = xml.GetChildData();
-		g_pTeachingClientDlg->m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU2);
-		g_pTeachingClientDlg->m_bSignIn = !g_pTeachingClientDlg->m_bSignIn;
+		CString role = (xml.GetChildData()==_T("student")) ? _T("学生") : _T("教师");
+		if (!xml.FindChildElem(_T("signid"))) return;
+		g_pTeachingClientDlg->m_nSignId = StrToLong(xml.GetChildData());
 		CString str;
-		str.Format(_T("您已以 %s 身份签到成功。"), role == _T("student") ? "学生" : "教师");
+		str.Format(_T("您已以 %s 身份签到成功。"), role);
 		//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("提示"), MB_OK | MB_ICONINFORMATION);
 		g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("签到成功"));
+
+		g_pTeachingClientDlg->m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU2);
+		g_pTeachingClientDlg->m_bSignIn = !g_pTeachingClientDlg->m_bSignIn;
+	}
+	else if (_tcscmp(msgTitle.m_psz, _T("signout_result")) == 0)
+	{
+		if (!xml.FindChildElem(_T("success"))) return;
+		CString success = xml.GetChildData();
+		if (success != _T("true"))
+		{
+			if (!xml.FindChildElem(_T("reason"))) return;
+			CString str;
+			str.Format(_T("签出失败: %s!"), xml.GetChildData());
+			//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("警告"), MB_OK | MB_ICONWARNING);
+			g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("签出失败"));
+			return;
+		}
+
+		CString str;
+		str.Format(_T("您已签出。"));
+		//::MessageBox(g_pTeachingClientDlg->GetSafeHwnd(), str.GetBuffer(), _T("提示"), MB_OK | MB_ICONINFORMATION);
+		g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(str, _T("签出成功"));
+
+		g_pTeachingClientDlg->m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU2);
+		g_pTeachingClientDlg->m_bSignIn = !g_pTeachingClientDlg->m_bSignIn;
 	}
 }
 
@@ -531,8 +556,27 @@ void CTeachingClientDlg::OnTeachingSign()
 	else
 	{
 		// 签出
-		m_TrayIcon.SetPopupMenu(IDR_POPUP_MENU);
-		m_bSignIn = !m_bSignIn;
+		CString xmlReq;
+		xmlReq.Format(
+			_T("<root>")
+			_T("  <signid>%ld<signid>")
+			_T("</root>"),
+			m_nSignId);
+
+		CT2A req(xmlReq, CP_UTF8);
+		MyMessage msg;
+		msg.setType("xml");
+		msg.setTitle("signout");
+		msg.setBody(req.m_psz);
+		if (SendMessageTo(0, "TeachingService", "signout_request", msg.toJson().c_str()))
+		{
+			//::MessageBox(m_hWnd, _T("签出信息已经发出。"), _T("提示"), MB_OK|MB_ICONINFORMATION);
+			g_pTeachingClientDlg->m_TrayIcon.ShowBalloon(_T("签出信息已发出"), _T("签出"));
+		}
+		else
+		{
+			::MessageBox(m_hWnd, _T("发送签出信息失败！"), _T("错误"), MB_OK | MB_ICONERROR);
+		}
 	}
 }
 

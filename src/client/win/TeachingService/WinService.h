@@ -64,7 +64,8 @@ protected:
 	static void CALLBACK onMsgReplied(long connId, LPCSTR lpszMsgId, bool bSuccess, LPCSTR lpszError);
 
 	int CheckUser(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szUserPassword); // 0-failed, 1-student, 2-teacher
-	void Signin(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szComputerName);
+	long Signin(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szComputerName); // -1-error
+	bool Signout(long nSignId);
 
 	void SaveStatus();
 	bool DoQueryTest(); 
@@ -83,7 +84,15 @@ protected:
 	BOOL m_bTrackPacket;
 	int m_nLoginStatus;
 
+	CString m_strDatabaseName;
+	CString m_strDatabaseServer;
+	CString m_strDatabaseAccount;
+	CString m_strDatabasePassword;
 	_ConnectionPtr m_pConnection;
+
+	CString m_strAppId;
+	CString m_strAppPassword;
+	CString m_strProtectKey;
 
 	bool m_bRun;
 };

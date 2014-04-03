@@ -412,20 +412,132 @@ BOOL CNTService::OnUserControl(DWORD dwOpcode)
 
 CMyService::CMyService() : 
 CNTService(L"TeachingService")
-, m_strServer(_T("isajia.com"))
+, m_strServer(_T("127.0.0.1"))
 , m_nPort(3457)
 , m_strUsername(_T("TeachingService"))
-, m_strPassword(_T("ccp#istang"))
+, m_strPassword(_T("666666"))
 , m_bTrackPacket(false)
 , m_nReconnectDelay(1000)
 , m_nLoginStatus(0)
 , m_bRun(true)
+, m_strDatabaseName(_T("labinfo"))
+, m_strDatabaseServer(_T("127.0.0.1"))
+, m_strDatabaseAccount(_T("sa"))
+, m_strDatabasePassword(_T(""))
+, m_strAppId(_T("5A6D032A-DB6C-43BF-98EE-A699FBCAA628"))
+, m_strAppPassword(_T("THHgux8k"))
+, m_strProtectKey(_T(""))
 {
 	g_pMyService = this;
 }
 
 BOOL CMyService::OnInit()
 {
+	CFile file;
+	CString tmp, text;
+	CFileException ex;
+
+	TCHAR szPath[MAX_PATH];
+	if (!GetModuleFileName(NULL, szPath, MAX_PATH))
+	{
+		DebugMsg(_T("无法获取当前模块文件名"));
+		return FALSE;
+	}
+	TCHAR szDrv[_MAX_DRIVE], szDir[_MAX_DIR];
+	_tsplitpath(szPath, szDrv, szDir, NULL, NULL);
+	CString strTargetPath;
+	strTargetPath.Format(_T("%s%sTeachingService.xml"), szDrv, szDir);
+	DebugMsg(_T("打开配置文件 %s... "), strTargetPath);
+	if (!file.Open(strTargetPath, CFile::modeRead | CFile::shareDenyWrite))
+	{
+		DebugMsg(_T("无法打开配置文件"));
+	}
+	else
+	{
+		CArchive ar(&file, CArchive::load);
+		while (ar.ReadString(tmp))//循环读取文件，直到文件结束
+		{
+			text += tmp + _T("\r\n");
+		}
+		DebugMsg(text);
+
+		CMarkup xml;
+		xml.SetDoc(text);
+		//
+		if (xml.FindChildElem(_T("msgpush")))
+		{
+			xml.IntoElem();
+			if (xml.FindChildElem(_T("server")))
+			{
+				m_strServer = xml.GetChildData();
+				DebugMsg(_T("msgpush server: %s"), m_strServer);
+			}
+			if (xml.FindChildElem(_T("port")))
+			{
+				m_nPort = StrToInt(xml.GetChildData());
+				DebugMsg(_T("msgpush port: %d"), m_nPort);
+			}
+			if (xml.FindChildElem(_T("username")))
+			{
+				m_strUsername = xml.GetChildData();
+				DebugMsg(_T("msgpush username: %s"), m_strUsername);
+			}
+			if (xml.FindChildElem(_T("password")))
+			{
+				m_strPassword = xml.GetChildData();
+				DebugMsg(_T("msgpush password: %s"), m_strPassword);
+			}
+			xml.OutOfElem();
+		}
+		//
+		if (xml.FindChildElem(_T("database")))
+		{
+			xml.IntoElem();
+			if (xml.FindChildElem(_T("name")))
+			{
+				m_strDatabaseName = xml.GetChildData();
+				DebugMsg(_T("database name: %s"), m_strDatabaseName);
+			}
+			if (xml.FindChildElem(_T("server")))
+			{
+				m_strDatabaseServer = xml.GetChildData();
+				DebugMsg(_T("database server: %s"), m_strDatabaseServer);
+			}
+			if (xml.FindChildElem(_T("username")))
+			{
+				m_strDatabaseAccount = xml.GetChildData();
+				DebugMsg(_T("database account: %s"), m_strDatabaseAccount);
+			}
+			if (xml.FindChildElem(_T("password")))
+			{
+				m_strDatabasePassword = xml.GetChildData();
+				DebugMsg(_T("database password: %s"), m_strDatabasePassword);
+			}
+			xml.OutOfElem();
+		}
+		//
+		if (xml.FindChildElem(_T("app")))
+		{
+			xml.IntoElem();
+			if (xml.FindChildElem(_T("id")))
+			{
+				m_strAppId = xml.GetChildData();
+				DebugMsg(_T("app id: %s"), m_strAppPassword);
+			}
+			if (xml.FindChildElem(_T("password")))
+			{
+				m_strAppPassword = xml.GetChildData();
+				DebugMsg(_T("app password: %s"), m_strAppPassword);
+			}
+			if (xml.FindChildElem(_T("protectkey")))
+			{
+				m_strProtectKey = xml.GetChildData();
+				DebugMsg(_T("app protectkey: %s"), m_strProtectKey);
+			}
+			xml.OutOfElem();
+		}
+	}
+
 	return TRUE;
 }
 
@@ -445,8 +557,10 @@ void CMyService::Run()
 		{
 			//connect database
 			DebugMsg(_T("连接数据库..."));
-			_bstr_t strConnect = "Provider=SQLOLEDB.1;Initial Catalog=\"labinfo\";Data Source=192.168.1.102";
-			hr = m_pConnection->Open(strConnect, "sa", "kiko", adModeUnknown);
+			_bstr_t bstrDatabaseAccount = m_strDatabaseAccount;
+			_bstr_t bstrDatabasePassword = m_strDatabasePassword.AllocSysString();
+			_bstr_t bstrConnect = _T("Provider=SQLOLEDB.1;Initial Catalog=\"") + m_strDatabaseName + _T("\";Data Source=") + m_strDatabaseServer;
+			hr = m_pConnection->Open(bstrConnect, bstrDatabaseAccount, bstrDatabasePassword, adModeUnknown);
 			DebugMsg(_T("连接成功"));
 		}
 		else
@@ -521,10 +635,11 @@ bool CMyService::DoConnect()
 	_itoa_s(m_nPort, szPort, 10);
 	CT2A server(m_strServer);
 
-	CT2A username(m_strUsername);
-	CT2A password(m_strPassword);
+	CT2A appId(m_strAppId);
+	CT2A appPassword(m_strAppPassword);
+	CT2A protectKey(m_strProtectKey);
 
-	SetAppInfo("5A6D032A-DB6C-43BF-98EE-A699FBCAA628", "THHgux8k", "");
+	SetAppInfo(appId, appPassword, protectKey);
 	SetServerInfo(server.m_psz, m_nPort);
 
 	SetTextReceivedCallbackFunc(onTextReceived);
@@ -537,6 +652,8 @@ bool CMyService::DoConnect()
 	SetMsgReceivedCallbackFunc(onMsgReceived);
 	SetMsgRepliedCallbackFunc(onMsgReplied);
 
+	CT2A username(m_strUsername);
+	CT2A password(m_strPassword);
 	if (!LoginAsUser(0, username, password, true, m_nReconnectDelay, m_bTrackPacket == TRUE)) {
 		DebugMsg(_T("登录失败!"));
 		return false;
@@ -607,11 +724,11 @@ void CALLBACK CMyService::onMsgReceived(long connId, LPCSTR lpszMsg)
 	CA2T msgBody(msg.getBody().c_str());
 
 	DebugMsg(_T("%s说: [%s]%s(%s)"), msgSender.m_psz, msgTitle.m_psz, msgBody.m_psz, msgType.m_psz);
-	if (wcscmp(msgType.m_psz, _T("xml")) != 0) return;
+	if (_tcscmp(msgType.m_psz, _T("xml")) != 0) return;
 
 	CMarkup xml;
 	xml.SetDoc(msgBody);
-	if (wcscmp(msgTitle.m_psz, _T("signin")) == 0)
+	if (_tcscmp(msgTitle.m_psz, _T("signin")) == 0)
 	{
 		MyMessage msg2;
 		msg2.setType("xml");
@@ -629,14 +746,16 @@ void CALLBACK CMyService::onMsgReceived(long connId, LPCSTR lpszMsg)
 		if (userType)
 		{
 			// 身份检查成功
-			g_pMyService->Signin(userId, realName, msgSender.m_psz);
+			long signId = g_pMyService->Signin(userId, realName, msgSender.m_psz);
 
 			xmlResp.Format(
 				_T("<root>")
 				_T("  <success>true</success>")
 				_T("  <role>%s</role>")
+				_T("  <signid>%ld</signid>")
 				_T("</root>"),
-				userType==1?_T("sudent"):_T("teacher"));
+				userType==1?_T("sudent"):_T("teacher"),
+				signId);
 		}
 		else
 		{
@@ -646,11 +765,51 @@ void CALLBACK CMyService::onMsgReceived(long connId, LPCSTR lpszMsg)
 				_T("  <success>false</success>")
 				_T("  <reason>%s</reason>")
 				_T("</root>"),
-				_T("check failed."));
+				_T("签到信息有误！"));
 		}
-		CT2A resp(xmlResp);
+		CT2A resp(xmlResp, CP_UTF8);
+		CA2T receiver(msg.getSender().c_str());
+		CT2A receiver2(receiver, CP_UTF8);
 		msg2.setBody(resp.m_psz);
-		if (!SendMessageTo(0, msg.getSender().c_str(), "signin_result", msg2.toJson().c_str()))
+		if (!SendMessageTo(0, receiver2.m_psz, "signin_result", msg2.toJson().c_str()))
+		{
+			DebugMsg(_T("Failed to send message."));
+		}
+	}
+	else if (_tcscmp(msgTitle.m_psz, _T("signout")) == 0)
+	{
+		MyMessage msg2;
+		msg2.setType("xml");
+		msg2.setTitle("signout_result");
+		CString xmlResp;
+
+		if (!xml.FindChildElem(_T("signid"))) return;
+		long signId = StrToLong(xml.GetChildData());
+		DebugMsg(_T("Signout: %ld"), signId);
+		bool ok = g_pMyService->Signout(signId);
+		if (ok)
+		{
+			// 签出成功
+			xmlResp.Format(
+				_T("<root>")
+				_T("  <success>true</success>")
+				_T("</root>"));
+		}
+		else
+		{
+			// 签出失败
+			xmlResp.Format(
+				_T("<root>")
+				_T("  <success>false</success>")
+				_T("  <reason>%s</reason>")
+				_T("</root>"),
+				_T("服务器出错！"));
+		}
+		CT2A resp(xmlResp, CP_UTF8);
+		CA2T receiver(msg.getSender().c_str());
+		CT2A receiver2(receiver, CP_UTF8);
+		msg2.setBody(resp.m_psz);
+		if (!SendMessageTo(0, receiver2.m_psz, "signout_result", msg2.toJson().c_str()))
 		{
 			DebugMsg(_T("Failed to send message."));
 		}
@@ -682,7 +841,7 @@ int CMyService::CheckUser(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szUserPa
 		if (len==10)
 		{
 			// 学生
-			cmdText.Format(_T("SELECT count(*) as matchedCount from student where student_id=\"%s\" and student_name=\"%s\" and login_password=\"%s\""),
+			cmdText.Format(_T("SELECT count(*) as matchedCount from student where student_id='%s' and student_name='%s' and login_password='%s'"),
 				szUserId, szRealName, szUserPassword);
 			DebugMsg(_T("Execute %s..."), cmdText);
 			pRecordset = m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
@@ -691,7 +850,7 @@ int CMyService::CheckUser(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szUserPa
 		else if (len==5 && szUserId[0]==_T('T'))
 		{
 			// 教师
-			cmdText.Format(_T("SELECT count(*) AS matchedCount FROM teacher WHERE teacher_id=\"%s\" AND teacher_name=\"%s\" AND login_password=\"%s\""),
+			cmdText.Format(_T("SELECT count(*) AS matchedCount FROM teacher WHERE teacher_id='%s' AND teacher_name='%s' AND login_password='%s'"),
 				szUserId, szRealName, szUserPassword);
 			DebugMsg(_T("Execute %s..."), cmdText);
 			pRecordset = m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
@@ -717,20 +876,48 @@ int CMyService::CheckUser(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szUserPa
 	}
 }
 
-void CMyService::Signin(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szComputerName)
+long CMyService::Signin(LPCTSTR szUserId, LPCTSTR szRealName, LPCTSTR szComputerName)
 {
 	try
 	{
 		_variant_t RecordsAffected;
 		CString cmdText;
-		cmdText.Format(_T("INSERT INTO sign (userId, realName, signinTime, szComputerName) values (\"%s\",\"%s\",getdate(),\"%s\""),
+		cmdText.Format(_T("INSERT INTO sign (userId, realName, signinTime, computerName) values ('%s','%s',getdate(),'%s')"),
 			szUserId, szRealName, szComputerName);
 		DebugMsg(_T("Execute %s..."), cmdText);
 		m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
+		//
+		cmdText.Format(_T("SELECT TOP 1 id AS signid FROM sign ORDER BY signinTime desc"));
+		DebugMsg(_T("Execute %s..."), cmdText);
+		_RecordsetPtr pRecordset;
+		pRecordset = m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
+		_variant_t signId;
+		signId = pRecordset->GetCollect("signid");
+		pRecordset->Close();
+		return signId;
 	}
 	catch (_com_error e)
 	{
 		DebugMsg(_T("插入失败！\r\n错误信息:%s"), e.ErrorMessage());
+	}
+	return -1;
+}
+
+bool CMyService::Signout(long nSignId)
+{
+	try
+	{
+		_variant_t RecordsAffected;
+		CString cmdText;
+		cmdText.Format(_T("UPDATE sign SET signoutTime=getdate() WHERE id=%ld"), nSignId);
+		DebugMsg(_T("Execute %s..."), cmdText);
+		m_pConnection->Execute((_bstr_t)cmdText, &RecordsAffected, adCmdText);
+		return true;
+	}
+	catch (_com_error e)
+	{
+		DebugMsg(_T("更新失败！\r\n错误信息:%s"), e.ErrorMessage());
+		return false;
 	}
 }
 

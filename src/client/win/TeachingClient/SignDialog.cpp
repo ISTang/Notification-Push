@@ -65,7 +65,7 @@ void CSignDialog::OnBnClickedOk()
 		m_strRealName,
 		m_strUserPassword);
 
-	CT2A req(xmlReq);
+	CT2A req(xmlReq, CP_UTF8);
 	MyMessage msg;
 	msg.setType("xml");
 	msg.setTitle("signin");

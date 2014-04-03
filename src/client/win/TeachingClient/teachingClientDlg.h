@@ -95,4 +95,5 @@ private:
 
 	//  «∑Ò“—«©µΩ
 	bool m_bSignIn;
+	long m_nSignId;
 };
