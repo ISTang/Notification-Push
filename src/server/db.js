@@ -1473,12 +1473,12 @@ function getAllConnections(redis, handleResult) {
                 ], function (err) {
                     if (err) return callback(err);
                     if (typeof connectionInfo.latest_activity_time == "undefined") return callback();
-                    var inactiveTime = (now.getTime() - utils.DateParse(connectionInfo.latest_activity_time).getTime());
+                    /*var inactiveTime = (now.getTime() - utils.DateParse(connectionInfo.latest_activity_time).getTime());
                     if (inactiveTime > MAX_INACTIVE_TIME * 2) {
                         removeLoginInfo(redis, connId, function (err) {
                             if (err) logger.warn(err);
                         });
-                    } else {
+                    } else {*/
                         var arr = utils.timeDiff(now, utils.DateParse(connectionInfo.begin_time));
                         var duration = arr[1] + ":" + arr[2] + ":" + arr[3];
                         if (arr[0] != 0) duration = arr[0] + "天 " + duration;
@@ -1492,7 +1492,7 @@ function getAllConnections(redis, handleResult) {
                             msgChannel: connectionInfo.channel_id,
                             latestActivity: connectionInfo.latest_activity ? "[" + connectionInfo.latest_activity_time + "]" +
                                 connectionInfo.latest_activity : ""});
-                    }
+                    //}
                     callback();
                 });
             });
@@ -2294,7 +2294,7 @@ function getConnectionInfo(redis, username, callback) {
                         logger.trace("Getting application name for id " + connInfo.application_id + "...");
                         redis.get("application:" + connInfo.application_id + ":name", function (err, appName) {
                             if (err) return callback(err);
-                            result.push({appId:connInfo.application_id, appName: appName, beginTime: connInfo.begin_time});
+                            result.push({connId:connId, appId:connInfo.application_id, appName: appName, beginTime: connInfo.begin_time});
                             callback();
                         });
                     });

@@ -119,7 +119,23 @@ process.on('message', function (m, socket) {
                 logger.fatal("Process will exit: " + err);
                 process.exit(2);
             } else {
-                db.recordLatestActivity(redis, connId, "刚登录", function (err) {
+                async.series([
+                function (callback) {
+                    db.getConnectionInfo(redis, accountName, function (err, connectionInfo) {
+                        if (err) return callback(err);
+                        async.forEachSeries(connectionInfo, function (conn, callback) {
+                            if (conn.appId!=appId || conn.connId==connId) return callback();
+                            removeConnection(redis, conn.connId, "new connection established", callback);
+                        }, function (err) {
+                            callback(err);
+                        });
+                    });
+                },
+                function (callback) {
+                    db.recordLatestActivity(redis, connId, "刚登录", function (err) {
+                        callback(err);
+                    });
+                }], function (err) {
                     db.redisPool.release(redis);
                     if (err) {
                         logger.fatal("Process will exit: " + err);
@@ -424,13 +440,12 @@ process.on('message', function (m, socket) {
                         logger.fatal("Process will exit: " + err);
                         process.exit(9);
                     } else {
-                        db.removeLoginInfo(redis, connId, function (err) {
+                        removeConnection(redis, connId, "connection closed", function (err) {
                             db.redisPool.release(redis);
                             if (err) {
                                 logger.fatal("Process will exit: " + err);
                                 process.exit(10);
                             }
-                            clientConns.splice(clientConns.indexOf(connId), 1);
                         });
                     }
                 });
@@ -475,6 +490,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
 
     if (needReceipt) {
         if (typeof pendingMsgs[connId] != "undefined") {
+            logger.debug("Exists ppending message on connection "+connId);
             var msgs = queuedMsgs[connId];
             if (typeof msgs == "undefined") {
                 msgs = [{msgId: msgId, message: msg, msgKey: msgKey}];
@@ -482,6 +498,7 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
             } else {
                 msgs.push({msgId: msgId, message: msg, msgKey: msgKey});
             }
+            logger.trace("Message " + msgId + " queued"); 
             return;
         }
     }
@@ -542,10 +559,16 @@ function sendMessage(connId, msgId, msg, msgKey, needReceipt) {
 }
 
 function removeConnection(redis, connId, reason, callback) {
-	var clientAddress = clientConns[connId].clientAddress;
-	logger.warn("Client " + clientAddress + "[" + clientConns[connId].accountName + "] "+reason);
+        logger.trace("Try to delete connection "+connId+"("+(reason||"^_^")+")...");
 	db.removeLoginInfo(redis, connId, function (err) {
 		if (err) return callback(err);
+                if (clientConns.indexOf(connId)==-1) {
+                    logger.warn("Connection "+connId+" not exists yet.");
+                    return callback();
+                }
+
+                var clientAddress = clientConns[connId].clientAddress;
+                logger.warn("Client " + clientAddress + "[" + clientConns[connId].accountName + "] "+reason);
 		var socket = clientConns[connId].socket;
 		delete clientConns[connId];
 		try {
@@ -581,11 +604,14 @@ void main(function () {
         var now = new Date();
 
         var inactiveConnIds = [];
+        logger.trace("Finding inactive connections...");
         for (var connId in clientConns) {
 
             var lastActiveTime = clientConns[connId].lastActiveTime;
             var diff = (now.getTime() - lastActiveTime.getTime()); //ms
+            logger.trace("Connection "+connId+" last active time: "+lastActiveTime+"("+diff+"ms)");
             if (diff > MAX_INACTIVE_TIME * 2) {
+                logger.trace("Found a inactive connection: "+connId);
                 inactiveConnIds.push(connId);
             }
         }
