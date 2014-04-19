@@ -33,8 +33,17 @@
                 { "sName": "phoneNumber", "sDefaultContent": "" },
                 { "sName": "emailAddress", "sDefaultContent": "" },
                 { "sName": "disabled", "sDefaultContent": "启用", "sWidth": "56px" },
-                { "sName": "createTime", "sDefaultContent": "", "sWidth": "80px" },
-                { "sName": "updateTime", "sDefaultContent": "", "sWidth": "80px" }
+                { "sName": "createTime", "sDefaultContent": "", "fnRender": function (obj) {
+                        var s=obj.aData[5];
+                        var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                        return str;
+                    }, "sWidth": "112px" },
+                { "sName": "updateTime", "sDefaultContent": "", "fnRender": function (obj) {
+                        var s=obj.aData[6];
+                        if (!s) return  "";
+                        var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                        return str;
+                    }, "sWidth": "112px" }
             ],
             "aaSorting": [
                 [5, 'desc']

@@ -325,9 +325,9 @@ void main(function () {
     // 6)获取消息(适合web提交)
     webapp.get('/messages/AjaxHandler', ensureLoggedIn('/login'), user.can('view messages'), msgpush.getMessages);
     // 7)获取消息发送细节(适合web提交)
-    webapp.get('/message/:id', ensureLoggedIn('/login'), user.can('view messages'), msgpush.getMessageDetails);
+    webapp.get('/message/:id/AjaxHandler', ensureLoggedIn('/login'), user.can('view messages'), msgpush.getMessageDetails);
 
-    // 获取连接消息(适合web提交)
+    // 获取连接信息(适合web提交)
     webapp.get('/connections/AjaxHandler', ensureLoggedIn('/login'), user.can('view connections'), connman.getConnections);
 
     webapp.get('/', ensureLoggedIn('/login'), user.can('view connections'), function (req, res) {

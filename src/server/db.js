@@ -814,7 +814,6 @@ function getMessageAllById(redis, msgId, handleResult) {
                     if (arr[6]) message.sendTime = arr[6];
                     if (arr[7]) message.expiration = arr[7];
                     needReceipt = (arr[8] == 1);
-                    ;
                     if (arr[9]) message.senderId = arr[9];
                     callback();
                 });
@@ -1490,8 +1489,8 @@ function getAllConnections(redis, handleResult) {
                             beginTime: connectionInfo.begin_time,
                             duration: duration,
                             msgChannel: connectionInfo.channel_id,
-                            latestActivity: connectionInfo.latest_activity ? "[" + connectionInfo.latest_activity_time + "]" +
-                                connectionInfo.latest_activity : ""});
+                            latestActivityTime: connectionInfo.latest_activity_time,
+                            latestActivity: connectionInfo.latest_activity});
                     //}
                     callback();
                 });
@@ -1772,14 +1771,16 @@ function getAllMessages(redis, handleResult) {
 
 function getMessageDetails(redis, msgId, summaryOnly, callback) {
 	var appId;
-	var senderId;
-	var receiverIds;
+	var senderId, receiverIds;
 	var needReceipt;
-	var generateTime,expiration,sendTime;
+	var generateTime,expiration;
 	var sendDetails = [];
         var sendCount = 0;
+        var expireCount = 0;
 	var sentCount = 0;
 	var receiptCount = 0;
+        var receiptDelay = 0;
+        var now = new Date();
 	async.series([
 		function(callback) {
 			redis.hgetall("message:"+msgId+":meta", function(err, message) {
@@ -1794,13 +1795,10 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 		function(callback) {
 			redis.hgetall("message:"+msgId, function(err, message) {
 				if (err) return callback(err);
+	  		        generateTime = message.generate_time;
+                                expiration = message.expiration;
+                                senderId = message.sender_id;
 				needReceipt = message.need_receipt=="1"?true:false;
-                                if (!summaryOnly) {
-				    senderId = message.sender_id;
-				    generateTime = message.generate_time;
-				    expiration = message.expiration||"";
-				    sendTime = message.send_time||"";
-                                }
 				callback();
 			});
 		},
@@ -1816,7 +1814,7 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 		},
 		function(callback) {
 			async.forEachSeries(receiverIds, function(receiverId, callback) {
-				var receiverName, receiverPhone, receiverEmail;
+				var receiverName, receiverPhone, receiverEmail, receiverCreateTime;
 				async.series([
 					function(callback) {
                                                 if (summaryOnly) return callback();
@@ -1842,16 +1840,34 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 							callback();
                                                 });
 					},
+                                        function(callback) {
+                                                redis.get("account:"+receiverId+":create_time", function(err, createTime) {
+                                                        if (err) return callback(err);
+                                                        receiverCreateTime = createTime;
+                                                        callback();
+                                                });
+                                        },
 					function(callback) {
+                                                if (utils.DateParse(receiverCreateTime)>utils.DateParse(generateTime)) return callback();
 						redis.hgetall("account:"+receiverId+":application:"+appId+":message:"+msgId, function(err, timeInfo) {
 							if (err) return callback(err);
-                                                        sendCount++;
 							if (!timeInfo) {
-								if (!summaryOnly) sendDetails.push({account:{id:receiverId,name:receiverName,phone:receiverPhone||"",email:receiverEmail||""}});
+                                                                var expired = expiration && utils.DateParse(expiration).getTime()<now.getTime();
+                                                                if (expired) expireCount++;
+                                                                else sendCount++;
+								if (!summaryOnly) {
+									sendDetails.push({account:{id:receiverId,name:receiverName,phone:receiverPhone||"",email:receiverEmail||""},expired:expired});
+								}
 							} else {
-								if (!summaryOnly) sendDetails.push({account:{id:receiverId,name:receiverName,phone:receiverPhone||"",email:receiverEmail||""},sentTime:timeInfo.sent_time,receiptTime:timeInfo.receipt_time});
-								sentCount++;
-								if (timeInfo.receipt_time) receiptCount++;
+                                                                sendCount++;
+                                                                sentCount++;
+                                                                if (timeInfo.receipt_time) {
+                                                                    receiptCount++;
+                                                                    receiptDelay += Math.abs(utils.DateParse(timeInfo.receipt_time).getTime()-utils.DateParse(timeInfo.sent_time).getTime())/1000;
+                                                                }
+								if (!summaryOnly) {
+									sendDetails.push({account:{id:receiverId,name:receiverName,phone:receiverPhone||"",email:receiverEmail||""},sentTime:timeInfo.sent_time,receiptTime:timeInfo.receipt_time,expired:false});
+								}
 							}
 							callback();
 						});
@@ -1866,10 +1882,9 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 		}],
 		function(err) {
                         if (!summaryOnly)
-    			    callback(err, {generateTime:generateTime, expiration:expiration, needReceipt:needReceipt, sendTime:sendTime, sendDetails:sendDetails,
-			    	sentCount:sentCount, receiptCount:receiptCount});
+    			    callback(err, { sendDetails:sendDetails});
                         else
-                            callback(err, {needReceipt:needReceipt, sendCount:sendCount, sentCount:sentCount, receiptCount:receiptCount});
+                            callback(err, {needReceipt:needReceipt, expireCount:expireCount, sendCount:sendCount, sentCount:sentCount, receiptCount:receiptCount, receiptDelay:receiptCount?receiptDelay/receiptCount:0});
 		});
 }
 
@@ -2291,6 +2306,7 @@ function getConnectionInfo(redis, username, callback) {
                     logger.trace("Getting connection info for id " + connId + "...");
                     redis.hgetall("connection:" + connId, function (err, connInfo) {
                         if (err) return callback(err);
+                        if (!connInfo) { logger.warn("Connection "+connId+" not exists!"); return callback(); }
                         logger.trace("Getting application name for id " + connInfo.application_id + "...");
                         redis.get("application:" + connInfo.application_id + ":name", function (err, appName) {
                             if (err) return callback(err);

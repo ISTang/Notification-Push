@@ -18,7 +18,9 @@
             <th>网页链接</th>
             <th>附件</th>
             <th>生成时间</th>
-            <th>推送情况</th>
+            <th>推送时间</th>
+            <th>过期时间</th>
+            <th>推送完成情况</th>
         </tr>
         </thead>
         <tbody>
@@ -67,9 +69,29 @@
     </form>
 </div>
 
+<div id="message-details-dialog" title="消息发送详情">
+    <table id="message-send-details">
+        <thead>
+        <tr>
+            <th>接收者ID</th>
+            <th>接收者名称</th>
+            <th>接收者电话/邮箱</th>
+            <th>占位</th>
+            <th>消息发送过期</th>
+            <th>消息发出时间</th>
+            <th>消息确认时间</th>
+            <th>消息确认延时(s)</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
 <script type="text/javascript">
     $(function () {
         $('#messages').dataTable({
+
             "bServerSide": true,
             "bProcessing": true,
             "sAjaxSource": "/messages/AjaxHandler",
@@ -78,33 +100,52 @@
                 { "sName": "messageId", "sDefaultContent": "", "sWidth": "80px" },
                 { "sName": "applicationName", "sDefaultContent": "", "sWidth": "64px" },
                 { "sName": "sender", "sDefaultContent": "", "fnRender": function (obj) {
-                    return (obj.aData[2] == "" ? "(后台)" : obj.aData[2]);
-                }, "sWidth": "47px" },
+                        return (obj.aData[2] == "" ? "(后台)" : obj.aData[2]);
+                    }, "sWidth": "47px" },
                 { "sName": "receivers", "sDefaultContent": "", "fnRender": function (obj) {
-                    return (obj.aData[3] == "" ? "(全部)" : obj.aData[3]);
-                }, "sWidth": "48px" },
+                        return (obj.aData[3] == "" ? "(全部)" : obj.aData[3]);
+                    }, "sWidth": "48px" },
                 { "sName": "type", "sDefaultContent": "text", "sWidth": "56px" },
                 { "sName": "title", "sDefaultContent": "", "sWidth": "80px" },
                 { "sName": "body", "sDefaultContent": "", "fnRender": function (obj) {
-                    var body = obj.aData[ obj.iDataColumn ];
-                    var ss = (obj.aData[4]=='html'?'HTML代码':body);
-                    return (obj.aData[7] ? "<a href='" + obj.aData[7] + "' target='blank'>" + (body == null || body == '' || body == 'null' ? '_' : ss) + "</a>" : ss);
-                }
-                },
+                        var body = obj.aData[ obj.iDataColumn ];
+                        var ss = (obj.aData[4]=='html'?'HTML代码':body);
+                        return (obj.aData[7] ? "<a href='" + obj.aData[7] + "' target='blank'>" + (body == null || body == '' || body == 'null' ? '_' : ss) + "</a>" : ss);
+                    }},
                 { "sName": "url", "sDefaultContent": "", "bVisible": false },
                 { "sName": "attachments", "sDefaultContent": "", "sWidth": "56px", "fnRender": function (obj) {
-                    var attachments = obj.aData[ obj.iDataColumn ];
-                    var linksString = "";
-                    for (var i in attachments) {
-                        var attachment = attachments[i];
-                        if (linksString != "") linksString += "<br/>";
-                        linksString += "<a href='" + attachment.url + "' target='blank'>" + attachment.title + "</a>";
-                    }
-                    return linksString;
-                }
-                },
-                { "sName": "generateTime", "sDefaultContent": "", "sWidth": "56px" },
-                { "sName": "pushSummary", "sDefaultContent": "", "sWidth": "112px" }
+                        var attachments = obj.aData[ obj.iDataColumn ];
+                        var linksString = "";
+                        for (var i in attachments) {
+                            var attachment = attachments[i];
+                            if (linksString != "") linksString += "<br/>";
+                            linksString += "<a href='" + attachment.url + "' target='blank'>" + attachment.title + "</a>";
+                        }
+                        return linksString;
+                    }},
+                { "sName": "generateTime", "sDefaultContent": "",  "fnRender": function (obj) {
+                        var s=obj.aData[9];
+                        var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                        return str;
+                    }, "sWidth": "112px" },
+                { "sName": "sendTime", "sDefaultContent": "立即", "fnRender": function (obj) {
+                        var s=obj.aData[10];
+                        if (!s) return  "立即";
+                        var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                        return str;
+                    }, "sWidth": "112px" },
+                { "sName": "expiration", "sDefaultContent": "不过期", "fnRender": function (obj) {
+                        var s=obj.aData[11];
+                        if (!s) return "不过期";
+                        var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                        return str;
+                    }, "sWidth": "112px" },
+                { "sName": "pushSummary", "sDefaultContent": "", "fnRender": function (obj) {
+                        var s=obj.aData[12];
+                        var func = "initMessageDetailsTable('"+obj.aData[0]+"'); $('#message-details-dialog').dialog('open')";
+                        var link = "<a href=\"#\" onclick=\""+func+"; return false;\">详情</a>";
+                        return s+"&nbsp;"+link;
+                    }, "sWidth": "168px" }
             ],
             "aaSorting": [
                 [9, 'desc']
@@ -117,6 +158,65 @@
             "bSort": true,
             "bInfo": true,
             "bAutoWidth": true
+        });
+
+	window.initMessageDetailsTable = function(msgId) {
+            $('#message-send-details').dataTable().fnDestroy();
+            $('#message-send-details').dataTable({
+                "bServerSide": true,
+                "bProcessing": true,
+                "sAjaxSource": "/message/"+msgId+"/AjaxHandler",
+                "sAjaxDataProp": "aaData",
+                "aoColumns": [
+                    { "sName": "accountId", "sDefaultContent": "" },
+                    { "sName": "accountName", "sDefaultContent": "" },
+                    { "sName": "accountPhone", "sDefaultContent": "", "fnRender": function (obj) {
+                            var phone=obj.aData[2], email=obj.aData[3];
+                            if (!phone && !email) return "";
+                            else if (phone && email) return phone+"("+email+")";
+                            else if (phone) return phone;
+                            else return email;
+                        } },
+                    { "sName": "accountEmail", "sDefaultContent": "", "bVisible": false },
+                    { "sName": "expired", "sDefaultContent": "", "bVisible": false },
+                    { "sName": "sentTime", "sDefaultContent": "(未发出)", "fnRender": function (obj) {
+                            var s=obj.aData[5];
+                            if (!s) return obj.aData[4]?"(过期)":"(未发出)";
+                            var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                            return str;
+                        }, "sWidth": "112px" },
+                    { "sName": "receiptTime", "sDefaultContent": "", "fnRender": function (obj) {
+                            var s=obj.aData[6];
+			    if (!s) return "";
+                            var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                            return str;
+                        }, "sWidth": "112px" },
+                    { "sName": "receiptDelay", "sDefaultContent": "", "sWidth": "112px" }
+                ],
+                "aaSorting": [
+                    [5, 'desc']
+                ],
+                "oLanguage": dataTablesLanguage,
+                //"fnDrawCallback": groupMyTable,
+                "bPaginate": true,
+                "bLengthChange": true,
+                "bFilter": true,
+                "bSort": true,
+                "bInfo": true,
+                "bAutoWidth": true
+            });
+	}
+
+        $("#message-details-dialog").dialog({
+            autoOpen: false,
+            height: 560,
+            width: 1024,
+            modal: true,
+            buttons: {
+                "关闭": function () {
+                    $(this).dialog("close");
+                }
+            }
         });
 
         $("#pushMethod").buttonset();

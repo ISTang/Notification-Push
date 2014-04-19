@@ -56,7 +56,11 @@
                 { "sName": "autoCreateAccount", "sDefaultContent": "是", "sWidth": "72px" },
                 { "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
                 { "sName": "secureMessage", "sDefaultContent": "否", "sWidth": "48px" },
-                { "sName": "createTime", "sDefaultContent": "" }
+                { "sName": "createTime", "sDefaultContent": "", "fnRender": function (obj) {
+                        var s=obj.aData[7];
+                        var str = s.substr(0,4)+"-"+s.substr(4,2)+"-"+s.substr(6,2)+" "+s.substr(8,2)+":"+s.substr(10,2)+":"+s.substr(12,2);
+                        return str;
+                    }}
             ],
             "aaSorting": [
                 [7, 'desc']

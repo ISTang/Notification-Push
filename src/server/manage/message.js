@@ -448,7 +448,9 @@ function getMessages(req, res) {
                             message.title && message.title.indexOf(req.query.sSearch) != -1 ||
                             message.body.indexOf(req.query.sSearch) != -1 ||
                             //message.attachmentCount.toString().indexOf(req.query.sSearch)!=-1 ||
-                            message.generateTime.indexOf(req.query.sSearch) != -1) {
+                            message.generateTime.indexOf(req.query.sSearch) != -1 ||
+                            (message.expiration || "").indexOf(req.query.sSearch) != -1 ||
+                            (message.sendTime || "").indexOf(req.query.sSearch) != -1) {
                             filtered.push(message);
                         }
                     }
@@ -480,6 +482,10 @@ function getMessages(req, res) {
                             return compareInteger(x.attachmentCount, y.attachmentCount);
                         case 9: // generateTime
                             return compareString(x.generateTime, y.generateTime);
+                        case 10: // sendTime
+                            return compareString(x.sendTime, y.sendTime);
+                        case 11: // expiration
+                            return compareString(x.expiration, y.expiration);
                     }
                 });
 
@@ -492,10 +498,10 @@ function getMessages(req, res) {
                     db.getMessageDetails(redis, message.messageId, true, function(err, summary) {
                         if (!summary.needReceipt)
                             message.pushSummary = (summary.sentCount==summary.sendCount?"OK":((summary.sentCount*100.0/summary.sendCount).toFixed(2)+"%"))+
-                                "("+summary.sentCount+"/"+summary.sendCount+")";
+                                "("+summary.sentCount+"/"+summary.sendCount+"!"+summary.expireCount+")";
                         else
                             message.pushSummary = (summary.receiptCount==summary.sendCount?"OK":((summary.receiptCount*100.0/summary.sendCount).toFixed(2)+"%"))+
-                                "("+summary.receiptCount+"/"+summary.sentCount+"/"+summary.sendCount+")";
+                                "["+summary.receiptDelay.toFixed(2)+"s](↑"+summary.sentCount+"↓"+summary.receiptCount+"/"+summary.sendCount+"!"+summary.expireCount+")";
                         callback();
                                
                     });
@@ -506,7 +512,7 @@ function getMessages(req, res) {
                     if (err) {
                         return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1,
                             iTotalDisplayRecords: 1, aaData: [
-                                ['获取推送情况时出错: ' + err]
+                                ['获取推送完成情况时出错: ' + err]
                             ],
                             sColumns: "messageId"});
                     }
@@ -515,11 +521,11 @@ function getMessages(req, res) {
                         var message = paged[i];
                         var attachments = message.attachments;
                         result.push([message.messageId, message.applicationName, message.sender, message.receivers,
-                            message.type, message.title, message.body, message.url, attachments, message.generateTime, message.pushSummary]);
+                            message.type, message.title, message.body, message.url, attachments, message.generateTime, message.sendTime, message.expiration, message.pushSummary]);
                     }
                     res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: messages.length,
                         iTotalDisplayRecords: filtered.length, aaData: result,
-                        sColumns: "messageId,applicationName,sender,receivers,type,title,body,url,attachments,generateTime,pushSummary"});
+                        sColumns: "messageId,applicationName,sender,receivers,type,title,body,url,attachments,generateTime,sendTime,expiration,pushSummary"});
                 });
             });
         }
@@ -542,34 +548,105 @@ function getMessages(req, res) {
 function getMessageDetails(req, res) {
     logger.trace('Get message details: ' +
         'id=' + req.params.id +
-        'summaryOnly=' + req.query.summaryOnly +
+        ', sEcho=' + req.query.sEcho +
+        ', sSearch=' + req.query.sSearch +
+        ', iDisplayLength=' + req.query.iDisplayLength +
+        ', iDisplayStart=' + req.query.iDisplayStart +
+        ', iColumns=' + req.query.iSortingCols +
+        ', sColumns=' + req.query.sColumns +
         ''
     );
 
+    var iSortCol_0 = req.query.iSortCol_0;
+    var sSortDir_0 = req.query.sSortDir_0;
+
     var msgId = req.params.id;
-    var summaryOnly = req.query.summaryOnly=="1";
     db.redisPool.acquire(function (err, redis) {
         if (err) {
-            res.json({
-            success: false,
-            errcode: 1,
-            errmsg: '无法访问数据库: ' + err});
+            return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1,
+                iTotalDisplayRecords: 1, aaData: [
+                    ['数据库操作失败: ' + err]
+                  ], sColumns: "accountId"});
         } else {
-            db.getMessageDetails(redis, msgId, summaryOnly, function(err, result) {
+            db.getMessageDetails(redis, msgId, false, function(err, value) {
                 db.redisPool.release(redis);
                 if (err) {
-                    res.json({
-                    success: false,
-                    errcode: 2,
-                    errmsg: err.toString()});
-                } else {
-                    res.json({
-                        success: true,
-                        result: result});
+                    return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: 1,
+                        iTotalDisplayRecords: 1, aaData: [
+                        ['数据库查询失败: ' + err]
+                      ],sColumns: "accountId"});
+                 } else {
+
+                    var filtered = [];
+                    if (req.query.sSearch != "") {
+                        // 过滤
+                        for (var i in value.sendDetails) {
+                            var details = value.sendDetails[i];
+                            if (details.account.id.indexOf(req.query.sSearch) != -1 ||
+                                details.account.name.indexOf(req.query.sSearch) != -1 ||
+                                (details.account.phone||"").indexOf(req.query.sSearch) != -1 ||
+                                (details.account.email||"").indexOf(req.query.sSearch) != -1 ||
+                                (details.sentTime||"").indexOf(req.query.sSearch) != -1 ||
+                                (details.receiptTime||"").indexOf(req.query.sSearch) != -1 ||
+                                (details.receiptDelay||"").indexOf(req.query.sSearch) != -1) {
+                                filtered.push(details);
+                            }
+                        }
+                    } else {
+                        // 不需要过滤
+                        filtered = value.sendDetails;
+                    }
+
+                    // 排序
+                    filtered.sort(function (x, y) {
+                        switch (parseInt(iSortCol_0, 10)) {
+                            case 0: // accountId
+                                return compareString(x.account.Id, y.account.id);
+                            case 1: // accountName
+                                return compareString(x.account.name, y.account.name);
+                            case 2: // accountPhone
+                                return compareString(x.account.phone, y.account.phone);
+                            case 3: // accountEmail
+                                return compareString(x.account.email, y.account.email);
+                            case 4: // sentTime
+                                return compareString(x.sentTime, y.sentTime);
+                            case 5: // receiptTime
+                                return compareString(x.receiptTime, y.receiptTime);
+                            case 6: // receiptDelay
+                                return compareString(x.receiptDelay, y.receiptDelay);
+                        }
+                    });
+
+                    // 分页
+                    var iDisplayStart = parseInt(req.query.iDisplayStart, 10);
+                    var iDisplayLength = parseInt(req.query.iDisplayLength, 10);
+                    var paged = filtered.slice(iDisplayStart, Math.min(iDisplayStart + iDisplayLength, filtered.length));
+
+                    var result = [];
+                    paged.forEach(function(details) {
+                        result.push([details.account.id, details.account.name, details.account.phone, details.account.email, 
+				details.expired, details.sentTime, details.receiptTime, details.receiptTime?Math.abs(utils.DateParse(details.receiptTime).getTime()-utils.DateParse(details.sentTime).getTime())/1000:null]);
+                    });
+                    res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: value.sendDetails.length,
+                        iTotalDisplayRecords: filtered.length, aaData: result,
+                        sColumns: "accountId,accountName,accountPhone,accountEmail,expired,sentTime,receiptTime,receiptDelay"});
                 }
             });
         }
     });
+
+    function compareString(s1, s2) {
+        if (s1 == null && s2 == null) return 0;
+        if (s1 == null) return (sSortDir_0 == 'asc' ? 0 : 1);
+        if (s2 == null) return (sSortDir_0 == 'asc' ? 1 : 0);
+
+        return (sSortDir_0 == 'asc' ? s1.localeCompare(s2) : s2.localeCompare(s1));
+    }
+
+    function compareInteger(i1, i2) {
+        if (sSortDir_0 == 'asc') return (i1 < i2 ? 0 : 1);
+        else return (i1 > i2 ? 0 : 1);
+    }
 }
  
 function uploadFiles(req, res) {

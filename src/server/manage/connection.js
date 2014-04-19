@@ -63,7 +63,8 @@ function getConnections(req, res) {
                             connection.applicationName.indexOf(req.query.sSearch) != -1 ||
                             connection.beginTime.indexOf(req.query.sSearch) != -1 ||
                             connection.duration.indexOf(req.query.sSearch) != -1 ||
-                            connection.latestActivity.indexOf(req.query.sSearch) != -1) {
+                            (connection.latestActivityTime||"").indexOf(req.query.sSearch) != -1 ||
+                            (connection.latestActivity||"").indexOf(req.query.sSearch) != -1) {
                             filtered.push(connection);
                         }
                     }
@@ -87,6 +88,8 @@ function getConnections(req, res) {
                             return compareString(x.beginTime, y.beginTime);
                         case 5: // duration
                             return compareString(x.duration, y.duration);
+                        case 6: // latestActivityTime
+                            return compareString(x.latestActivityTime, y.latestActivityTime);
                         case 6: // latestActivity
                             return compareString(x.latestActivity, y.latestActivity);
                     }
@@ -100,12 +103,12 @@ function getConnections(req, res) {
                 for (var i in paged) {
                     var connection = paged[i];
                     result.push([connection.connId, connection.clientAddress, connection.accountInfo, connection.applicationName,
-                        connection.beginTime, connection.duration, connection.latestActivity]);
+                        connection.beginTime, connection.duration, connection.latestActivityTime, connection.latestActivity]);
                 }
 
                 return res.json({sEcho: parseInt(req.query.sEcho, 10), iTotalRecords: connections.length,
                     iTotalDisplayRecords: filtered.length, aaData: result,
-                    sColumns: "connId,clientAddress,accountInfo,applicationName,beginTime,duration,latestActivity"});
+                    sColumns: "connId,clientAddress,accountInfo,applicationName,beginTime,duration,latestActivityTime,latestActivity"});
             });
         }
     });
