@@ -1773,7 +1773,7 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 	var appId;
 	var senderId, receiverIds;
 	var needReceipt;
-	var generateTime,expiration;
+	var generateTime,expiration,expired;
 	var sendDetails = [];
         var sendCount = 0;
         var expireCount = 0;
@@ -1797,6 +1797,7 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 				if (err) return callback(err);
 	  		        generateTime = message.generate_time;
                                 expiration = message.expiration;
+                                expired = expiration && utils.DateParse(expiration).getTime()<now.getTime();
                                 senderId = message.sender_id;
 				needReceipt = message.need_receipt=="1"?true:false;
 				callback();
@@ -1852,7 +1853,6 @@ function getMessageDetails(redis, msgId, summaryOnly, callback) {
 						redis.hgetall("account:"+receiverId+":application:"+appId+":message:"+msgId, function(err, timeInfo) {
 							if (err) return callback(err);
 							if (!timeInfo) {
-                                                                var expired = expiration && utils.DateParse(expiration).getTime()<now.getTime();
                                                                 if (expired) expireCount++;
                                                                 else sendCount++;
 								if (!summaryOnly) {
